@@ -460,23 +460,23 @@ mepa_rc lan80xx_block_reset_priv(mepa_device_t *dev);
 
 mepa_rc lan80xx_kr_reg_dump(mepa_device_t            *dev,
                             const mepa_port_no_t     port_no,
-                            const mepa_debug_print_t pr);
+                            lmu_ss_t                 *const ss);
 
 mepa_rc lan80xx_pma_reg_dump(mepa_device_t            *dev,
                              const mepa_port_no_t     port_no,
-                             const mepa_debug_print_t pr);
+                             lmu_ss_t                 *const ss);
 
 mepa_rc lan80xx_pcs_reg_dump(mepa_device_t            *dev,
                              const mepa_port_no_t     port_no,
-                             const mepa_debug_print_t pr);
+                             lmu_ss_t                 *const ss);
 
 mepa_rc lan80xx_gpio_glb_slice_reg_dump(mepa_device_t            *dev,
                                         const mepa_port_no_t     port_no,
-                                        const mepa_debug_print_t pr);
+                                        lmu_ss_t                 *const ss);
 
 mepa_rc lan80xx_mac_reg_dump(mepa_device_t            *dev,
                              const mepa_port_no_t     port_no,
-                             const mepa_debug_print_t pr);
+                             lmu_ss_t                 *const ss);
 
 mepa_rc lan80xx_pmac_config(const mepa_device_t *dev, mepa_port_no_t port_no, const mepa_bool_t enable);
 

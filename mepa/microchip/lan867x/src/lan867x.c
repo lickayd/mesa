@@ -283,12 +283,12 @@ static mepa_rc lan867x_info_get(mepa_device_t *dev, mepa_phy_info_t *const phy_i
 }
 
 static mepa_rc lan867x_debug_info(struct mepa_device *dev,
-                                  const mepa_debug_print_t pr,
+                                  lmu_ss_t *const ss,
                                   const mepa_debug_info_t   *const info)
 {
     mepa_rc rc = MEPA_RC_ERROR;
 
-    if (dev != NULL && pr != NULL && info != NULL) {
+    if (dev != NULL && ss != NULL && info != NULL) {
         phy_data_t *data = (phy_data_t *)dev->data;
         mepa_t1s_plca_cfg_t *p;
 

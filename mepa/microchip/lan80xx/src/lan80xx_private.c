@@ -5416,7 +5416,7 @@ mepa_rc lan80xx_conf_set_priv(struct mepa_device *dev, const mepa_conf_t *config
 
 mepa_rc lan80xx_kr_reg_dump(mepa_device_t            *dev,
                             const mepa_port_no_t     port_no,
-                            const mepa_debug_print_t pr)
+                            lmu_ss_t                 *const ss)
 {
     u32 mmd = 0;
     mepa_bool_t is_32 = FALSE;
@@ -5441,7 +5441,7 @@ mepa_rc lan80xx_kr_reg_dump(mepa_device_t            *dev,
 
 mepa_rc lan80xx_pcs_reg_dump(mepa_device_t            *dev,
                              const mepa_port_no_t     port_no,
-                             const mepa_debug_print_t pr)
+                             lmu_ss_t                 *const ss)
 {
     u32 mmd = 0;
     mepa_bool_t is_32 = FALSE;
@@ -5512,7 +5512,7 @@ mepa_rc lan80xx_pcs_reg_dump(mepa_device_t            *dev,
 
 mepa_rc lan80xx_gpio_glb_slice_reg_dump(mepa_device_t            *dev,
                                         const mepa_port_no_t     port_no,
-                                        const mepa_debug_print_t pr)
+                                        lmu_ss_t                 *const ss)
 {
     u32 mmd = 0;
     mepa_bool_t is_32 = FALSE;
@@ -5591,7 +5591,7 @@ mepa_rc lan80xx_gpio_glb_slice_reg_dump(mepa_device_t            *dev,
 
 mepa_rc lan80xx_mac_reg_dump(mepa_device_t            *dev,
                              const mepa_port_no_t     port_no,
-                             const mepa_debug_print_t pr)
+                             lmu_ss_t                 *const ss)
 {
     u32 mmd = 0;
     mepa_bool_t is_32 = TRUE;
@@ -5623,7 +5623,7 @@ mepa_rc lan80xx_mac_reg_dump(mepa_device_t            *dev,
 
 mepa_rc lan80xx_pma_reg_dump(mepa_device_t            *dev,
                              const mepa_port_no_t     port_no,
-                             const mepa_debug_print_t pr)
+                             lmu_ss_t                 *const ss)
 {
     u32 mmd = 0;
     mepa_bool_t is_32 = FALSE;

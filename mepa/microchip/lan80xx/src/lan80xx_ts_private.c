@@ -7469,7 +7469,7 @@ mepa_rc lan80xx_linkup_delay(mepa_device_t *dev)
 
 mepa_rc lan80xx_ptp_reg_dump(mepa_device_t            *dev,
                              const mepa_port_no_t     port_no,
-                             const mepa_debug_print_t pr)
+                             lmu_ss_t                 *const ss)
 {
     u32 mmd = 0;
     mepa_bool_t is_32 = TRUE;

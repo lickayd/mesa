@@ -1078,10 +1078,10 @@ static mepa_rc lan8814_ts_rx_classifier_conf_get (mepa_device_t *dev, uint16_t f
 }
 
 static void lan8814_ts_deb_pr_reg (mepa_device_t *dev,
-                                   const mepa_debug_print_t pr,
+                                   lmu_ss_t *const ss,
                                    const char *str, uint16_t page, uint16_t addr, uint16_t *value)
 {
-    if (pr != NULL) {
+    if (ss != NULL) {
         lan8814_data_t *data = (lan8814_data_t *)dev->data;
         mepa_port_no_t port_no = data->port_no;
         if (MEPA_RC_OK == lan8814_ext_reg_rd(dev, page, addr, value)) {
@@ -1091,165 +1091,165 @@ static void lan8814_ts_deb_pr_reg (mepa_device_t *dev,
 }
 
 static mepa_rc lan8814_ts_classifier_conf_reg_dump(mepa_device_t *dev,
-                                                   const mepa_debug_print_t pr)
+                                                   lmu_ss_t *const ss)
 {
     uint16_t val = 0;
 
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_MAC_HI", LAN8814_PTP_RX_USER_MAC_HI, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_MAC_MID", LAN8814_PTP_RX_USER_MAC_MID, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_MAC_LO", LAN8814_PTP_RX_USER_MAC_LO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_MAC_HI", LAN8814_PTP_RX_USER_MAC_HI, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_MAC_MID", LAN8814_PTP_RX_USER_MAC_MID, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_MAC_LO", LAN8814_PTP_RX_USER_MAC_LO, &val);
 
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_ADDR_0", LAN8814_PTP_RX_USER_IP_ADDR_0, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_ADDR_1", LAN8814_PTP_RX_USER_IP_ADDR_1, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_ADDR_2", LAN8814_PTP_RX_USER_IP_ADDR_2, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_ADDR_3", LAN8814_PTP_RX_USER_IP_ADDR_3, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_ADDR_4", LAN8814_PTP_RX_USER_IP_ADDR_4, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_ADDR_5", LAN8814_PTP_RX_USER_IP_ADDR_5, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_ADDR_6", LAN8814_PTP_RX_USER_IP_ADDR_6, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_ADDR_7", LAN8814_PTP_RX_USER_IP_ADDR_7, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_ADDR_0", LAN8814_PTP_RX_USER_IP_ADDR_0, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_ADDR_1", LAN8814_PTP_RX_USER_IP_ADDR_1, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_ADDR_2", LAN8814_PTP_RX_USER_IP_ADDR_2, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_ADDR_3", LAN8814_PTP_RX_USER_IP_ADDR_3, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_ADDR_4", LAN8814_PTP_RX_USER_IP_ADDR_4, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_ADDR_5", LAN8814_PTP_RX_USER_IP_ADDR_5, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_ADDR_6", LAN8814_PTP_RX_USER_IP_ADDR_6, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_ADDR_7", LAN8814_PTP_RX_USER_IP_ADDR_7, &val);
 
     //PTP User IP Mask Registers
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_MASK_0", LAN8814_PTP_RX_USER_IP_MASK_0, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_MASK_1", LAN8814_PTP_RX_USER_IP_MASK_1, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_MASK_2", LAN8814_PTP_RX_USER_IP_MASK_2, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_MASK_3", LAN8814_PTP_RX_USER_IP_MASK_3, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_MASK_4", LAN8814_PTP_RX_USER_IP_MASK_4, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_MASK_5", LAN8814_PTP_RX_USER_IP_MASK_5, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_MASK_6", LAN8814_PTP_RX_USER_IP_MASK_6, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_USER_IP_MASK_7", LAN8814_PTP_RX_USER_IP_MASK_7, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_MASK_0", LAN8814_PTP_RX_USER_IP_MASK_0, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_MASK_1", LAN8814_PTP_RX_USER_IP_MASK_1, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_MASK_2", LAN8814_PTP_RX_USER_IP_MASK_2, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_MASK_3", LAN8814_PTP_RX_USER_IP_MASK_3, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_MASK_4", LAN8814_PTP_RX_USER_IP_MASK_4, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_MASK_5", LAN8814_PTP_RX_USER_IP_MASK_5, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_MASK_6", LAN8814_PTP_RX_USER_IP_MASK_6, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_USER_IP_MASK_7", LAN8814_PTP_RX_USER_IP_MASK_7, &val);
 
     // VLAN Registers for both ingress and Egress
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_VLAN_TYPE_ID", LAN8814_PTP_VLAN_ETH_TYPE_ID, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_VLAN1_TYPE_ID", LAN8814_VLAN1_TYPE_ID, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_VLAN1_ID_MASK", LAN8814_VLAN1_ID_MASK, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_VLAN1_VID_RANGE_UP", LAN8814_VLAN1_VID_RANGE_UP, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_VLAN1_VID_RANGE_LO", LAN8814_VLAN1_VID_RANGE_LO, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_VLAN2_TYPE_ID", LAN8814_VLAN2_TYPE_ID, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_VLAN2_ID_MASK", LAN8814_VLAN2_ID_MASK, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_VLAN2_VID_RANGE_UP", LAN8814_VLAN2_VID_RANGE_UP, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_VLAN2_VID_RANGE_LO", LAN8814_VLAN2_VID_RANGE_LO, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_LLC_TYPE_ID", LAN8814_LLC_TYPE_ID, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_VLAN_TYPE_ID", LAN8814_PTP_VLAN_ETH_TYPE_ID, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_VLAN1_TYPE_ID", LAN8814_VLAN1_TYPE_ID, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_VLAN1_ID_MASK", LAN8814_VLAN1_ID_MASK, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_VLAN1_VID_RANGE_UP", LAN8814_VLAN1_VID_RANGE_UP, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_VLAN1_VID_RANGE_LO", LAN8814_VLAN1_VID_RANGE_LO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_VLAN2_TYPE_ID", LAN8814_VLAN2_TYPE_ID, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_VLAN2_ID_MASK", LAN8814_VLAN2_ID_MASK, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_VLAN2_VID_RANGE_UP", LAN8814_VLAN2_VID_RANGE_UP, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_VLAN2_VID_RANGE_LO", LAN8814_VLAN2_VID_RANGE_LO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_LLC_TYPE_ID", LAN8814_LLC_TYPE_ID, &val);
 
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_CAP_INFO", LAN8814_PTP_CAP_INFO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_CAP_INFO", LAN8814_PTP_CAP_INFO, &val);
     //PTP TX USER MAC ADDRESS
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_MAC_HI", LAN8814_PTP_TX_USER_MAC_HI, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_MAC_MID", LAN8814_PTP_TX_USER_MAC_MID, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_MAC_LO", LAN8814_PTP_TX_USER_MAC_LO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_MAC_HI", LAN8814_PTP_TX_USER_MAC_HI, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_MAC_MID", LAN8814_PTP_TX_USER_MAC_MID, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_MAC_LO", LAN8814_PTP_TX_USER_MAC_LO, &val);
     //PTP TX USER IP ADDRESS REGISTERS
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_ADDR_0", LAN8814_PTP_TX_USER_IP_ADDR_0, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_ADDR_1", LAN8814_PTP_TX_USER_IP_ADDR_1, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_ADDR_2", LAN8814_PTP_TX_USER_IP_ADDR_2, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_ADDR_3", LAN8814_PTP_TX_USER_IP_ADDR_3, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_ADDR_4", LAN8814_PTP_TX_USER_IP_ADDR_4, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_ADDR_5", LAN8814_PTP_TX_USER_IP_ADDR_5, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_ADDR_6", LAN8814_PTP_TX_USER_IP_ADDR_6, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_ADDR_7", LAN8814_PTP_TX_USER_IP_ADDR_7, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_ADDR_0", LAN8814_PTP_TX_USER_IP_ADDR_0, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_ADDR_1", LAN8814_PTP_TX_USER_IP_ADDR_1, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_ADDR_2", LAN8814_PTP_TX_USER_IP_ADDR_2, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_ADDR_3", LAN8814_PTP_TX_USER_IP_ADDR_3, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_ADDR_4", LAN8814_PTP_TX_USER_IP_ADDR_4, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_ADDR_5", LAN8814_PTP_TX_USER_IP_ADDR_5, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_ADDR_6", LAN8814_PTP_TX_USER_IP_ADDR_6, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_ADDR_7", LAN8814_PTP_TX_USER_IP_ADDR_7, &val);
     //PTP TX USER IP MASK REGISTERS
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_MASK_0", LAN8814_PTP_TX_USER_IP_MASK_0, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_MASK_1", LAN8814_PTP_TX_USER_IP_MASK_1, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_MASK_2", LAN8814_PTP_TX_USER_IP_MASK_2, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_MASK_3", LAN8814_PTP_TX_USER_IP_MASK_3, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_MASK_4", LAN8814_PTP_TX_USER_IP_MASK_4, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_MASK_5", LAN8814_PTP_TX_USER_IP_MASK_5, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_MASK_6", LAN8814_PTP_TX_USER_IP_MASK_6, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_USER_IP_MASK_7", LAN8814_PTP_TX_USER_IP_MASK_7, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_MASK_0", LAN8814_PTP_TX_USER_IP_MASK_0, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_MASK_1", LAN8814_PTP_TX_USER_IP_MASK_1, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_MASK_2", LAN8814_PTP_TX_USER_IP_MASK_2, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_MASK_3", LAN8814_PTP_TX_USER_IP_MASK_3, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_MASK_4", LAN8814_PTP_TX_USER_IP_MASK_4, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_MASK_5", LAN8814_PTP_TX_USER_IP_MASK_5, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_MASK_6", LAN8814_PTP_TX_USER_IP_MASK_6, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_USER_IP_MASK_7", LAN8814_PTP_TX_USER_IP_MASK_7, &val);
     //PTP RX Parsing Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_PARSE_CONFIG", LAN8814_PTP_RX_PARSE_CONFIG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_PARSE_CONFIG", LAN8814_PTP_RX_PARSE_CONFIG, &val);
     //PTP RX Parsing VLAN Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_PARSE_VLAN_CONFIG", LAN8814_PTP_RX_PARSE_VLAN_CONFIG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_PARSE_VLAN_CONFIG", LAN8814_PTP_RX_PARSE_VLAN_CONFIG, &val);
     //PTP RX Parsing Layer2 Format Address Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_PARSE_L2_ADDR_EN", LAN8814_PTP_RX_PARSE_L2_ADDR_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_PARSE_L2_ADDR_EN", LAN8814_PTP_RX_PARSE_L2_ADDR_EN, &val);
     //PTP RX Parsing IP Format Address Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_PARSE_IP_ADDR_EN", LAN8814_PTP_RX_PARSE_IP_ADDR_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_PARSE_IP_ADDR_EN", LAN8814_PTP_RX_PARSE_IP_ADDR_EN, &val);
     //PTP RX Parsing UDP Source Port Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_PARSE_UDP_SRC_PORT", LAN8814_PTP_RX_PARSE_UDP_SRC_PORT, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_PARSE_UDP_SRC_PORT", LAN8814_PTP_RX_PARSE_UDP_SRC_PORT, &val);
     //PTP RX Parsing UDP Destination Port Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_PARSE_UDP_DEST_PORT", LAN8814_PTP_RX_PARSE_UDP_DEST_PORT, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_PARSE_UDP_DEST_PORT", LAN8814_PTP_RX_PARSE_UDP_DEST_PORT, &val);
     //PTP RX Version Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_VERSION", LAN8814_PTP_RX_VERSION, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_VERSION", LAN8814_PTP_RX_VERSION, &val);
     //PTP RX Domain / Domain Range Lower Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_DOMAIN_DOMAIN_LO", LAN8814_PTP_RX_DOMAIN_DOMAIN_LO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_DOMAIN_DOMAIN_LO", LAN8814_PTP_RX_DOMAIN_DOMAIN_LO, &val);
     //PTP RX Domain Mask / Domain Range Upper Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_DOMAIN_MASK_DOMAIN_UP", LAN8814_PTP_RX_DOMAIN_MASK_DOMAIN_UP, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_DOMAIN_MASK_DOMAIN_UP", LAN8814_PTP_RX_DOMAIN_MASK_DOMAIN_UP, &val);
     //PTP RX SdoId / SdoId Range Lower Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_SDOID_SDOID_LO", LAN8814_PTP_RX_SDOID_SDOID_LO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_SDOID_SDOID_LO", LAN8814_PTP_RX_SDOID_SDOID_LO, &val);
     //PTP RX SdoId Mask / SdoId Range Upper Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_SDOID_MASK_SDOID_UP", LAN8814_PTP_RX_SDOID_MASK_SDOID_UP, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_SDOID_MASK_SDOID_UP", LAN8814_PTP_RX_SDOID_MASK_SDOID_UP, &val);
 
     //PTP TX Parsing Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_PARSE_CONFIG", LAN8814_PTP_TX_PARSE_CONFIG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_PARSE_CONFIG", LAN8814_PTP_TX_PARSE_CONFIG, &val);
     //PTP TX Parsing VLAN Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_PARSE_VLAN_CONFIG", LAN8814_PTP_TX_PARSE_VLAN_CONFIG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_PARSE_VLAN_CONFIG", LAN8814_PTP_TX_PARSE_VLAN_CONFIG, &val);
     //PTP TX Parsing Layer2 Format Address Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_PARSE_L2_ADDR_EN", LAN8814_PTP_TX_PARSE_L2_ADDR_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_PARSE_L2_ADDR_EN", LAN8814_PTP_TX_PARSE_L2_ADDR_EN, &val);
     //PTP TX Parsing IP Format Address Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_PARSE_IP_ADDR_EN", LAN8814_PTP_TX_PARSE_IP_ADDR_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_PARSE_IP_ADDR_EN", LAN8814_PTP_TX_PARSE_IP_ADDR_EN, &val);
     //PTP TX Parsing UDP Source Port Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_PARSE_UDP_SRC_PORT", LAN8814_PTP_TX_PARSE_UDP_SRC_PORT, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_PARSE_UDP_SRC_PORT", LAN8814_PTP_TX_PARSE_UDP_SRC_PORT, &val);
     //PTP TX Parsing UDP Destination Port Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_PARSE_UDP_DEST_PORT", LAN8814_PTP_TX_PARSE_UDP_DEST_PORT, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_PARSE_UDP_DEST_PORT", LAN8814_PTP_TX_PARSE_UDP_DEST_PORT, &val);
     // PTP TX Version Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_VERSION", LAN8814_PTP_TX_VERSION, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_VERSION", LAN8814_PTP_TX_VERSION, &val);
     // PTP TX Domain / Domain Range Lower Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_DOMAIN_DOMAIN_LO", LAN8814_PTP_TX_DOMAIN_DOMAIN_LO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_DOMAIN_DOMAIN_LO", LAN8814_PTP_TX_DOMAIN_DOMAIN_LO, &val);
     // PTP TX Domain Mask / Domain Range Upper Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_DOMAIN_MASK_DOMAIN_UP", LAN8814_PTP_TX_DOMAIN_MASK_DOMAIN_UP, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_DOMAIN_MASK_DOMAIN_UP", LAN8814_PTP_TX_DOMAIN_MASK_DOMAIN_UP, &val);
     // PTP TX SdoId / SdoId Range Lower Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_SDOID_SDOID_LO", LAN8814_PTP_TX_SDOID_SDOID_LO, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_SDOID_SDOID_LO", LAN8814_PTP_TX_SDOID_SDOID_LO, &val);
     // PTP TX SdoId Mask / SdoId Range Upper Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_SDOID_MASK_SDOID_UP", LAN8814_PTP_TX_SDOID_MASK_SDOID_UP, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_SDOID_MASK_SDOID_UP", LAN8814_PTP_TX_SDOID_MASK_SDOID_UP, &val);
 
     //MEPA_EXIT(dev);
     return MEPA_RC_OK;
 }
 static mepa_rc lan8814_ts_clock_conf_reg_dump(mepa_device_t *dev,
-                                              const mepa_debug_print_t pr)
+                                              lmu_ss_t *const ss)
 {
     uint16_t val = 0;
 
     // PTP TSU Interrupt Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TSU_INT_EN", LAN8814_PTP_TSU_INT_EN, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TSU_INT_STS", LAN8814_PTP_TSU_INT_STS, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TSU_INT_EN", LAN8814_PTP_TSU_INT_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TSU_INT_STS", LAN8814_PTP_TSU_INT_STS, &val);
 
     //PTP RX Timestamp Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_TIMESTAMP_EN", LAN8814_PTP_RX_TIMESTAMP_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_TIMESTAMP_EN", LAN8814_PTP_RX_TIMESTAMP_EN, &val);
     //PTP RX Timestamp Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_TIMESTAMP_CONFIG", LAN8814_PTP_RX_TIMESTAMP_CONFIG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_TIMESTAMP_CONFIG", LAN8814_PTP_RX_TIMESTAMP_CONFIG, &val);
     //PTP RX Modification Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_MOD", LAN8814_PTP_RX_MOD, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_MOD", LAN8814_PTP_RX_MOD, &val);
     //PTP RX Reserved Bytes Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_RSVD_BYTE_CFG", LAN8814_PTP_RX_RSVD_BYTE_CFG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_RSVD_BYTE_CFG", LAN8814_PTP_RX_RSVD_BYTE_CFG, &val);
     //PTP RX Tail Tag Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_TAIL_TAG", LAN8814_PTP_RX_TAIL_TAG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_TAIL_TAG", LAN8814_PTP_RX_TAIL_TAG, &val);
     //PTP RX Correction Field Modification Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_CF_MOD_EN", LAN8814_PTP_RX_CF_MOD_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_CF_MOD_EN", LAN8814_PTP_RX_CF_MOD_EN, &val);
     //PTP RX Correction Field Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_RX_CF_CFG", LAN8814_PTP_RX_CF_CFG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_RX_CF_CFG", LAN8814_PTP_RX_CF_CFG, &val);
 
     // PTP TX Timestamp Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_TIMESTAMP_EN", LAN8814_PTP_TX_TIMESTAMP_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_TIMESTAMP_EN", LAN8814_PTP_TX_TIMESTAMP_EN, &val);
     // PTP TX Timestamp Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_TIMESTAMP_CONFIG", LAN8814_PTP_TX_TIMESTAMP_CONFIG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_TIMESTAMP_CONFIG", LAN8814_PTP_TX_TIMESTAMP_CONFIG, &val);
     // PTP TX Modification Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_MOD", LAN8814_PTP_TX_MOD, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_MOD", LAN8814_PTP_TX_MOD, &val);
     // PTP TX Reserved Bytes Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_RSVD_BYTE_CFG", LAN8814_PTP_TX_RSVD_BYTE_CFG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_RSVD_BYTE_CFG", LAN8814_PTP_TX_RSVD_BYTE_CFG, &val);
     // PTP TX Tail Tag Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_TAIL_TAG", LAN8814_PTP_TX_TAIL_TAG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_TAIL_TAG", LAN8814_PTP_TX_TAIL_TAG, &val);
     // PTP TX Correction Field Modification Enable Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_CF_MOD_EN", LAN8814_PTP_TX_CF_MOD_EN, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_CF_MOD_EN", LAN8814_PTP_TX_CF_MOD_EN, &val);
     // PTP TX Correction Field Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_CF_CFG", LAN8814_PTP_TX_CF_CFG, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_CF_CFG", LAN8814_PTP_TX_CF_CFG, &val);
     // PTP TX Message Header
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_MSG_HEADER1", LAN8814_PTP_TX_MSG_HEADER1, &val);
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TX_MSG_HEADER2", LAN8814_PTP_TX_MSG_HEADER2, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_MSG_HEADER1", LAN8814_PTP_TX_MSG_HEADER1, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TX_MSG_HEADER2", LAN8814_PTP_TX_MSG_HEADER2, &val);
 
     // TSU General Configuration Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TSU_GEN_CONF", LAN8814_PTP_TSU_GEN_CONF, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TSU_GEN_CONF", LAN8814_PTP_TSU_GEN_CONF, &val);
     // TSU Hard Reset Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TSU_HARD_RESET", LAN8814_PTP_TSU_HARD_RESET, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TSU_HARD_RESET", LAN8814_PTP_TSU_HARD_RESET, &val);
     // TSU Soft Reset Register
-    lan8814_ts_deb_pr_reg(dev,  pr,  "LAN8814_PTP_TSU_SOFT_RESET", LAN8814_PTP_TSU_SOFT_RESET, &val);
+    lan8814_ts_deb_pr_reg(dev,  ss,  "LAN8814_PTP_TSU_SOFT_RESET", LAN8814_PTP_TSU_SOFT_RESET, &val);
     return MEPA_RC_OK;
 }
 static mepa_rc lan8814_ts_classifier_ptp_conf_priv(mepa_device_t *dev, mepa_bool_t ing, const mepa_ts_classifier_ptp_t *ptp_hdr_conf)
@@ -2576,7 +2576,7 @@ mepa_rc lan8814_ts_pch_mch_error_get(struct mepa_device *dev,
 }
 
 mepa_rc lan8814_ts_debug_info_dump(struct mepa_device *dev,
-                                   const mepa_debug_print_t pr,
+                                   lmu_ss_t *const ss,
                                    const mepa_debug_info_t   *const info)
 {
     mepa_rc rc = MEPA_RC_OK;
@@ -2585,8 +2585,8 @@ mepa_rc lan8814_ts_debug_info_dump(struct mepa_device *dev,
     case MEPA_DEBUG_GROUP_ALL:
     case MEPA_DEBUG_GROUP_PHY_TS: {
         MEPA_ENTER(dev);
-        lan8814_ts_classifier_conf_reg_dump(dev, pr);
-        lan8814_ts_clock_conf_reg_dump(dev, pr);
+        lan8814_ts_classifier_conf_reg_dump(dev, ss);
+        lan8814_ts_clock_conf_reg_dump(dev, ss);
         MEPA_EXIT(dev);
     }
     break;

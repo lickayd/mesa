@@ -508,7 +508,7 @@ static mesa_rc intl_if_set(mepa_device_t *dev,
 
 
 static mepa_rc intl_debug_info_dump(struct mepa_device *dev,
-                                    const mepa_debug_print_t pr,
+                                    lmu_ss_t *const ss,
                                     const mepa_debug_info_t   *const info)
 
 {

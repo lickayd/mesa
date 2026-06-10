@@ -4,6 +4,7 @@
 #ifndef MICROCHIP_ETHERNET_PHY_API_PHY_DRV_H
 #define MICROCHIP_ETHERNET_PHY_API_PHY_DRV_H
 
+#include <lm_utils.h>
 #include <mepa_os.h>
 #include <mepa_ts_driver.h>
 #include <mepa_macsec_driver.h>
@@ -577,15 +578,15 @@ typedef mepa_rc (*mepa_driver_chip_temp_get_t)(struct mepa_device *dev, i16 *con
  * \brief  Debug dump API for PHY.
  *
  * \param dev  [IN]   Driver instance.
- * \param pr   [IN]   Debug printf function.
- * \param info [OUT]  Debug information.
+ * \param ss   [OUT]  Contains the dump of the PHY
+ * \param info [IN]   Debug information.
  *
  * \return
  *   MEPA_RC_NOT_IMPLEMENTED when not supported.\n
  *   MEPA_RC_OK on success.
  **/
 typedef mepa_rc (*mepa_debug_info_dump_t)(struct mepa_device *dev,
-                                          const mepa_debug_print_t pr,
+                                          lmu_ss_t *const ss,
                                           const mepa_debug_info_t   *const info);
 
 /**

@@ -543,7 +543,7 @@ static mepa_rc pfe_ext_mmd_reg_write(mepa_device_t *dev, uint32_t address, uint1
 }
 
 static void pfe_phy_deb_pr_reg(mepa_device_t *dev,
-                               const mepa_debug_print_t pr,
+                               lmu_ss_t *const ss,
                                uint16_t mmd, uint16_t page, uint16_t addr,
                                const char *str, uint16_t *value)
 {
@@ -559,54 +559,54 @@ static void pfe_phy_deb_pr_reg(mepa_device_t *dev,
         rc = pfe_direct_reg_rd(dev, addr, value);
     }
     if (MEPA_RC_OK == rc) {
-        (void)pr("%-45s:  0x%02x  0x%02x   0x%04x     0x%08x\n", str, to_u32(port_no), id, addr, *value);
+        pr("%-45s:  0x%02x  0x%02x   0x%04x     0x%08x\n", str, to_u32(port_no), id, addr, *value);
     }
 }
 
 static mepa_rc reg_dump(struct mepa_device *dev,
-                        const mepa_debug_print_t pr)
+                        lmu_ss_t *const ss)
 {
     uint16_t val = 0;
 
     //Direct registers
-    (void)pr("%-45s   PORT_NO PAGE_ID REG_ADDR   VALUE\n", "REG_NAME");
-    (void)pr("Main Page Registers\n");
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 0, "Basic Control Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 1, "Basic Status Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 2, "Device Identifier 1 Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 3, "Device Identifier 2 Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 4, "Auto-Negotiation Advertisement Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 5, "Auto-Negotiation Link Partner Base Page Ability Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 6, "Auto-Negotiation Expansion Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 7, "Auto-Negotiation Next Page TX Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 8, "Auto-Negotiation Next Page RX Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 9, "Auto-Negotiation Master Slave Control Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 10, "Auto-Negotiation Master Slave Status Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 13, "MMD Access Control Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 14, "MMD Access Address/Data Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 15, "Extended Status Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 16, "PCS Loop-back Lane Skew Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 17, "PCS Loop-back Swap/Polarity Control Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 18, "Cable Diagnostic Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 19, "Digital PMA/PCS Status Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 20, "Digital AX/AN Status Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 21, "RXER Counter Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 22, "LED Mode Select Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 23, "LED Behavior Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 24, "Interrupt Enable Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 25, "Output control Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 26, "UNH Test Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 27, "Interrupt Status Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 28, "Digital Debug Control 1 Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 29, "Digital Debug Control 2 Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 30, "Reserved Register", &val);
-    pfe_phy_deb_pr_reg(dev, pr, 0, 0, 31, "Control Register", &val);
+    pr("%-45s   PORT_NO PAGE_ID REG_ADDR   VALUE\n", "REG_NAME");
+    pr("Main Page Registers\n");
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 0, "Basic Control Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 1, "Basic Status Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 2, "Device Identifier 1 Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 3, "Device Identifier 2 Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 4, "Auto-Negotiation Advertisement Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 5, "Auto-Negotiation Link Partner Base Page Ability Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 6, "Auto-Negotiation Expansion Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 7, "Auto-Negotiation Next Page TX Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 8, "Auto-Negotiation Next Page RX Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 9, "Auto-Negotiation Master Slave Control Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 10, "Auto-Negotiation Master Slave Status Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 13, "MMD Access Control Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 14, "MMD Access Address/Data Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 15, "Extended Status Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 16, "PCS Loop-back Lane Skew Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 17, "PCS Loop-back Swap/Polarity Control Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 18, "Cable Diagnostic Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 19, "Digital PMA/PCS Status Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 20, "Digital AX/AN Status Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 21, "RXER Counter Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 22, "LED Mode Select Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 23, "LED Behavior Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 24, "Interrupt Enable Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 25, "Output control Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 26, "UNH Test Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 27, "Interrupt Status Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 28, "Digital Debug Control 1 Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 29, "Digital Debug Control 2 Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 30, "Reserved Register", &val);
+    pfe_phy_deb_pr_reg(dev, ss, 0, 0, 31, "Control Register", &val);
     return MEPA_RC_OK;
 }
 
 
 static mepa_rc pfe_debug_info_dump(struct mepa_device *dev,
-                                   const mepa_debug_print_t pr,
+                                   lmu_ss_t *const ss,
                                    const mepa_debug_info_t   *const info)
 {
     mepa_rc rc = MEPA_RC_OK;
@@ -618,7 +618,7 @@ static mepa_rc pfe_debug_info_dump(struct mepa_device *dev,
 
     if (info->layer == MEPA_DEBUG_LAYER_AIL || info->layer == MEPA_DEBUG_LAYER_ALL) {
         MEPA_ENTER(dev);
-        (void)pr("Port:%d   Family:Pfeiffer   Type:%d   Rev:%d   MacIf:%s\n", dev->numeric_handle,
+        pr("Port:%d   Family:Pfeiffer   Type:%d   Rev:%d   MacIf:%s\n", dev->numeric_handle,
            phy_info.part_number, phy_info.revision, if2txt(mac_if));
         MEPA_EXIT(dev);
     }
@@ -629,7 +629,7 @@ static mepa_rc pfe_debug_info_dump(struct mepa_device *dev,
         case MEPA_DEBUG_GROUP_ALL:
         case MEPA_DEBUG_GROUP_PHY: {
             MEPA_ENTER(dev);
-            rc = reg_dump(dev, pr);
+            rc = reg_dump(dev, ss);
             MEPA_EXIT(dev);
         }
         break;

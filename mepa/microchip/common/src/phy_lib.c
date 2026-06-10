@@ -3,6 +3,7 @@
 
 #include <microchip/ethernet/phy/api.h>
 #include <mepa_driver.h>
+#include <mepa_trace.h>
 #include <phy_lib.h>
 
 //CL22 read register
@@ -283,14 +284,14 @@ mepa_rc phy_mmd_reg_poll32(mepa_device_t *const dev, uint8_t const devad,
 
 //callout print API
 static void phy_dbg_pr(mepa_device_t *const dev,
-                       const mepa_debug_print_t pr,
+                       lmu_ss_t *const ss,
                        uint8_t mmd, uint16_t offset,
                        const char *str, const uint8_t is_ms)
 {
     if (is_ms == 0U) {
         uint16_t value = 0;
         (void) phy_mmd_reg_rd(dev, mmd, offset, &value);
-        (void) pr("%-45s:\t[0X%02X].[0X%X]\t=\t0X%08X \r\n", str, mmd, offset, value);
+        pr("%-45s:\t[0X%02X].[0X%X]\t=\t0X%08X \r\n", str, mmd, offset, value);
     }
 
     return;
@@ -298,7 +299,7 @@ static void phy_dbg_pr(mepa_device_t *const dev,
 
 //Register dump
 void phy_reg_dump(struct mepa_device *dev,
-                  const mepa_debug_print_t pr,
+                  lmu_ss_t *const ss,
                   const struct phy_reg_dbg *const regs,
                   const uint8_t reglen, const uint8_t is_ms)
 {
@@ -306,10 +307,10 @@ void phy_reg_dump(struct mepa_device *dev,
     uint8_t dev_id = (uint8_t)dev->drv->id;
 
     //Direct registers
-    (void) pr("************ Register Dump for PHY-0x%x ************ \r\n", dev_id);
-    (void) pr("%-45s:\tPAGE.REG\t=\tVALUE \r\n", "REG_NAME");
+    pr("************ Register Dump for PHY-0x%x ************ \r\n", dev_id);
+    pr("%-45s:\tPAGE.REG\t=\tVALUE \r\n", "REG_NAME");
     for (i = 0; i < reglen; i++) {
-        phy_dbg_pr(dev, pr, regs[i].mmd, regs[i].reg,
+        phy_dbg_pr(dev, ss, regs[i].mmd, regs[i].reg,
                    regs[i].string, is_ms);
     }
 }

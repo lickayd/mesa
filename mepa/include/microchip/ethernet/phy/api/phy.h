@@ -792,8 +792,25 @@ mepa_rc mepa_isolate_mode_conf(struct mepa_device *dev,
  *   MEPA_RC_OK on success.
  **/
 mepa_rc mepa_debug_info_dump(struct mepa_device *dev,
-                             const mepa_debug_print_t pr,
+                             const mepa_debug_print_t prntf,
                              const mepa_debug_info_t   *const info);
+
+/**
+ * \brief Dump API for PHY into the buf
+ *
+ * \param dev  [IN]   Driver instance.
+ * \param info [IN]   Driver information
+ * \param len  [IN]   Lenght of the buf
+ * \param buf  [OUT]  Contains the dump of the PHY
+ *
+ * \return
+ *   MEPA_RC_NOT_IMPLEMENTED when not supported.\n
+ *   MEPA_RC_OK on success.
+ **/
+mepa_rc mepa_debug_info_print_buf(struct mepa_device *dev,
+                                  const mepa_debug_info_t   *const info,
+                                  int len,
+                                  char *const buf);
 
 /** - I2C ---------------------------------------------------- */
 /**

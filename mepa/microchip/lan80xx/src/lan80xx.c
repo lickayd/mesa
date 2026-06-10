@@ -481,19 +481,19 @@ static mepa_rc lan80xx_chip_temp_get(mepa_device_t *dev, i16 *const temp)
 }
 
 static mepa_rc lan80xx_debug_info_dump(mepa_device_t *dev,
-                                       const mepa_debug_print_t pr,
+                                       lmu_ss_t *const ss,
                                        const mepa_debug_info_t   *const info)
 {
     phy25g_phy_state_t *data = (phy25g_phy_state_t *) dev->data;
     MEPA_ENTER(dev);
-    lan80xx_pma_reg_dump(dev, data->port_no, pr);
-    lan80xx_pcs_reg_dump(dev, data->port_no, pr);
-    lan80xx_kr_reg_dump(dev, data->port_no, pr);
-    lan80xx_gpio_glb_slice_reg_dump(dev, data->port_no, pr);
-    lan80xx_mac_reg_dump(dev, data->port_no, pr);
-    lan80xx_ptp_reg_dump(dev, data->port_no, pr);
+    lan80xx_pma_reg_dump(dev, data->port_no, ss);
+    lan80xx_pcs_reg_dump(dev, data->port_no, ss);
+    lan80xx_kr_reg_dump(dev, data->port_no, ss);
+    lan80xx_gpio_glb_slice_reg_dump(dev, data->port_no, ss);
+    lan80xx_mac_reg_dump(dev, data->port_no, ss);
+    lan80xx_ptp_reg_dump(dev, data->port_no, ss);
 #ifdef MEPA_LAN80XX_MSEC
-    lan80xx_macsec_dbg_reg_dump_priv(dev, data->port_no, pr);
+    lan80xx_macsec_dbg_reg_dump_priv(dev, data->port_no, ss);
 #endif
     MEPA_EXIT(dev);
     return MEPA_RC_OK;

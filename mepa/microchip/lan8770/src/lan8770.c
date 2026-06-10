@@ -518,10 +518,10 @@ static mepa_rc phy_led_mode_set(mepa_device_t *const dev, mepa_gpio_mode_t const
     return rc;
 }
 
-static void phy_dbg_pr (mepa_device_t *dev, const mepa_debug_print_t pr,
+static void phy_dbg_pr (mepa_device_t *dev, lmu_ss_t *const ss,
                         uint16_t bank, uint16_t offset, const char *str)
 {
-    if (pr != NULL) {
+    if (ss != NULL) {
         phy_data_t *data = (phy_data_t *)dev->data;
         mepa_port_no_t port_no = data->port_no;
         uint16_t value = 0;
@@ -532,45 +532,45 @@ static void phy_dbg_pr (mepa_device_t *dev, const mepa_debug_print_t pr,
 }
 
 static mepa_rc phy_reg_dump(struct mepa_device *dev,
-                            const mepa_debug_print_t pr)
+                            lmu_ss_t *const ss)
 {
     //Direct registers
     pr("%-45s:\tPORT\tPAGE\tREG\tVALUE \r\n", "REG_NAME");
     pr("SMI Main Registers\r\n");
-    phy_dbg_pr(dev, pr, 0, 0, "Basic Control Register");
-    phy_dbg_pr(dev, pr, 0, 1, "Basic Status Register");
-    phy_dbg_pr(dev, pr, 0, 2, "PHY Identifier 1 Register");
-    phy_dbg_pr(dev, pr, 0, 3, "PHY Identifier 2 Register");
-    phy_dbg_pr(dev, pr, 0, 9, "Master Slave Control Register");
-    phy_dbg_pr(dev, pr, 0, 10, "Master Slave Status Register");
-    phy_dbg_pr(dev, pr, 0, 15, "MDIO Control 1 Register");
-    phy_dbg_pr(dev, pr, 0, 16, "MDIO Control 2 Register");
-    phy_dbg_pr(dev, pr, 0, 17, "Mode Status Register");
-    phy_dbg_pr(dev, pr, 0, 18, "Loopback Control Register");
-    phy_dbg_pr(dev, pr, 0, 19, "Reset Control Register");
-    phy_dbg_pr(dev, pr, 0, 20, "External Register Control Register");
-    phy_dbg_pr(dev, pr, 0, 21, "External Register Read Data Register");
-    phy_dbg_pr(dev, pr, 0, 22, "External Register Write Data Register");
-    phy_dbg_pr(dev, pr, 0, 23, "PCS Control Register");
-    phy_dbg_pr(dev, pr, 0, 24, "Interrupt Source Register");
-    phy_dbg_pr(dev, pr, 0, 25, "Interrupt Mask Register");
-    phy_dbg_pr(dev, pr, 0, 26, "Power Down Control Register");
-    phy_dbg_pr(dev, pr, 0, 27, "BIST Control Register");
-    phy_dbg_pr(dev, pr, 0, 28, "BIST Status Register");
-    phy_dbg_pr(dev, pr, 0, 29, "BIST Error Count Status Register");
-    phy_dbg_pr(dev, pr, 0, 30, "PCS Receive Error Count Status Register");
-    phy_dbg_pr(dev, pr, 0, 31, "Test Control Status Register");
+    phy_dbg_pr(dev, ss, 0, 0, "Basic Control Register");
+    phy_dbg_pr(dev, ss, 0, 1, "Basic Status Register");
+    phy_dbg_pr(dev, ss, 0, 2, "PHY Identifier 1 Register");
+    phy_dbg_pr(dev, ss, 0, 3, "PHY Identifier 2 Register");
+    phy_dbg_pr(dev, ss, 0, 9, "Master Slave Control Register");
+    phy_dbg_pr(dev, ss, 0, 10, "Master Slave Status Register");
+    phy_dbg_pr(dev, ss, 0, 15, "MDIO Control 1 Register");
+    phy_dbg_pr(dev, ss, 0, 16, "MDIO Control 2 Register");
+    phy_dbg_pr(dev, ss, 0, 17, "Mode Status Register");
+    phy_dbg_pr(dev, ss, 0, 18, "Loopback Control Register");
+    phy_dbg_pr(dev, ss, 0, 19, "Reset Control Register");
+    phy_dbg_pr(dev, ss, 0, 20, "External Register Control Register");
+    phy_dbg_pr(dev, ss, 0, 21, "External Register Read Data Register");
+    phy_dbg_pr(dev, ss, 0, 22, "External Register Write Data Register");
+    phy_dbg_pr(dev, ss, 0, 23, "PCS Control Register");
+    phy_dbg_pr(dev, ss, 0, 24, "Interrupt Source Register");
+    phy_dbg_pr(dev, ss, 0, 25, "Interrupt Mask Register");
+    phy_dbg_pr(dev, ss, 0, 26, "Power Down Control Register");
+    phy_dbg_pr(dev, ss, 0, 27, "BIST Control Register");
+    phy_dbg_pr(dev, ss, 0, 28, "BIST Status Register");
+    phy_dbg_pr(dev, ss, 0, 29, "BIST Error Count Status Register");
+    phy_dbg_pr(dev, ss, 0, 30, "PCS Receive Error Count Status Register");
+    phy_dbg_pr(dev, ss, 0, 31, "Test Control Status Register");
     pr("Miscellaneous Registers\r\n");
-    phy_dbg_pr(dev, pr, 1, 0x10, "Control 0 Register");
-    phy_dbg_pr(dev, pr, 1, 0x11, "Control 1 Register");
-    phy_dbg_pr(dev, pr, 1, 0x15, "Control 2 Register");
-    phy_dbg_pr(dev, pr, 1, 0x17, "Control 3 Register");
-    phy_dbg_pr(dev, pr, 1, 0x1A, "DCQ Error Max Register");
-    phy_dbg_pr(dev, pr, 1, 0x20, "Wakeup Common Control 0 Register");
-    phy_dbg_pr(dev, pr, 1, 0x21, "Wakeup Common Control 1 Register");
-    phy_dbg_pr(dev, pr, 1, 0x24, "Wakeup Port Control Register");
+    phy_dbg_pr(dev, ss, 1, 0x10, "Control 0 Register");
+    phy_dbg_pr(dev, ss, 1, 0x11, "Control 1 Register");
+    phy_dbg_pr(dev, ss, 1, 0x15, "Control 2 Register");
+    phy_dbg_pr(dev, ss, 1, 0x17, "Control 3 Register");
+    phy_dbg_pr(dev, ss, 1, 0x1A, "DCQ Error Max Register");
+    phy_dbg_pr(dev, ss, 1, 0x20, "Wakeup Common Control 0 Register");
+    phy_dbg_pr(dev, ss, 1, 0x21, "Wakeup Common Control 1 Register");
+    phy_dbg_pr(dev, ss, 1, 0x24, "Wakeup Port Control Register");
     pr("PCS and Energy Registers\r\n");
-    phy_dbg_pr(dev, pr, 2, 0x20, "Sleep Wake Detect Register");
+    phy_dbg_pr(dev, ss, 2, 0x20, "Sleep Wake Detect Register");
     pr("AFE Registers\r\n");
     pr("DSP Registers\r\n");
 
@@ -1095,18 +1095,18 @@ error:
 }
 
 static mepa_rc lan8770_debug_info(struct mepa_device *dev,
-                                  const mepa_debug_print_t pr,
+                                  lmu_ss_t *const ss,
                                   const mepa_debug_info_t   *const info)
 {
     mepa_rc rc = MEPA_RC_ERROR;
 
-    if (pr != NULL) {
+    if (ss != NULL) {
         //PHY Debugging
         switch (info->group) {
         case MEPA_DEBUG_GROUP_ALL:
         case MEPA_DEBUG_GROUP_PHY: {
             MEPA_ENTER(dev);
-            rc = phy_reg_dump(dev, pr);
+            rc = phy_reg_dump(dev, ss);
             MEPA_EXIT(dev);
         }
         break;

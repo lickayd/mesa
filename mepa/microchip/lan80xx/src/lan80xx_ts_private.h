@@ -914,7 +914,7 @@ mepa_rc lan80xx_phy_ts_ltc_ls_action_set(mepa_device_t *dev, const mepa_port_no_
 
 mepa_rc lan80xx_ptp_reg_dump(mepa_device_t            *dev,
                              const mepa_port_no_t     port_no,
-                             const mepa_debug_print_t pr);
+                             lmu_ss_t                 *const ss);
 
 mepa_rc lan80xx_ts_tx_classifier_conf_set_priv(struct mepa_device *dev,
                                                uint16_t flow_index,

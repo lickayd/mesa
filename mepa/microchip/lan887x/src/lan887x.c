@@ -2232,18 +2232,18 @@ static mepa_rc lan887x_info_get(mepa_device_t *dev, mepa_phy_info_t *const phy_i
 }
 
 static mepa_rc lan887x_debug_info(struct mepa_device *dev,
-                                  const mepa_debug_print_t pr,
+                                  lmu_ss_t *const ss,
                                   const mepa_debug_info_t   *const info)
 {
     mepa_rc rc = MEPA_RC_ERROR;
 
-    if (dev != NULL && pr != NULL && info != NULL) {
+    if (dev != NULL && ss != NULL && info != NULL) {
         //PHY Debugging
         switch (info->group) {
         case MEPA_DEBUG_GROUP_ALL:
         case MEPA_DEBUG_GROUP_PHY: {
             MEPA_ENTER(dev);
-            phy_reg_dump(dev, pr, lan887x_regs, ARRAY_SIZE(lan887x_regs), 0U);
+            phy_reg_dump(dev, ss, lan887x_regs, ARRAY_SIZE(lan887x_regs), 0U);
             rc = MEPA_RC_OK;
             MEPA_EXIT(dev);
         }

@@ -5,6 +5,8 @@
 #include <vtss_phy_api.h>
 #include "vtss_private.h"
 
+// vtss_dbg_ss / vtss_dbg_ss_printf shim is defined in vtss.c (see vtss_private.h).
+
 static mepa_rc vtss_phy_macsec_init_set(struct mepa_device       *dev,
                                         const mepa_macsec_init_t *const macsec_init)
 {
@@ -694,10 +696,15 @@ static mepa_rc vtss_phy_macsec_is_capable(struct mepa_device *dev,
 
 static mepa_rc vtss_phy_macsec_dbg_reg_dump(struct mepa_device *dev,
                                             const mepa_port_no_t port_no,
-                                            const mepa_debug_print_t pr)
+                                            lmu_ss_t *const ss)
 {
     phy_data_t *data = (phy_data_t *)dev->data;
-    return vtss_macsec_dbg_reg_dump(data->vtss_instance, port_no, pr);
+    mepa_rc rc;
+
+    vtss_dbg_ss = ss;
+    rc = vtss_macsec_dbg_reg_dump(data->vtss_instance, port_no, vtss_dbg_ss_printf);
+    vtss_dbg_ss = NULL;
+    return rc;
 }
 
 static mepa_rc vtss_phy_macsec_inst_count_get(struct mepa_device *dev,
@@ -835,19 +842,29 @@ static mepa_rc vtss_phy_macsec_fcbuf_frame_gap_comp_set(struct mepa_device *dev,
 
 static mepa_rc vtss_phy_macsec_dbg_fcb_block_reg_dump(struct mepa_device *dev,
                                                       const mepa_port_no_t port_no,
-                                                      const mepa_debug_print_t pr)
+                                                      lmu_ss_t *const ss)
 {
     phy_data_t *data = (phy_data_t *)dev->data;
-    return vtss_macsec_dbg_fcb_block_reg_dump(data->vtss_instance, port_no, pr);
+    mepa_rc rc;
+
+    vtss_dbg_ss = ss;
+    rc = vtss_macsec_dbg_fcb_block_reg_dump(data->vtss_instance, port_no, vtss_dbg_ss_printf);
+    vtss_dbg_ss = NULL;
+    return rc;
 }
 
 static mepa_rc vtss_phy_macsec_dbg_frm_match_handling_ctrl_reg_dump(struct mepa_device *dev,
                                                                     const mepa_port_no_t port_no,
-                                                                    const mepa_debug_print_t pr)
+                                                                    lmu_ss_t *const ss)
 
 {
     phy_data_t *data = (phy_data_t *)dev->data;
-    return vtss_macsec_dbg_frm_match_handling_ctrl_reg_dump(data->vtss_instance, port_no, pr);
+    mepa_rc rc;
+
+    vtss_dbg_ss = ss;
+    rc = vtss_macsec_dbg_frm_match_handling_ctrl_reg_dump(data->vtss_instance, port_no, vtss_dbg_ss_printf);
+    vtss_dbg_ss = NULL;
+    return rc;
 }
 
 #ifdef MEPA_MACSEC_FIFO_OVERFLOW_WORKAROUND

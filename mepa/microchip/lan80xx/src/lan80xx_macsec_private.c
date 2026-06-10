@@ -6455,7 +6455,7 @@ mepa_rc lan80xx_macsec_cleartags_conf_set_priv(mepa_device_t                    
  
 static mepa_rc lan80xx_macsec_dbg_ms_ctrl_reg_dump_(mepa_device_t     *dev,
                                                     mepa_port_no_t     port_no,
-                                                    mepa_debug_print_t pr)
+                                                    lmu_ss_t          *const ss)
 {
     u32             value;
     pr("\n\nMACSEC_CTL_REGS MACsec Ingress Control registers\n\n");
@@ -6504,7 +6504,7 @@ static mepa_rc lan80xx_macsec_dbg_ms_ctrl_reg_dump_(mepa_device_t     *dev,
 
 static mepa_rc lan80xx_macsec_dbg_cls_ctrl_reg_dump_(mepa_device_t     *dev,
                                                      mepa_port_no_t     port_no,
-                                                     mepa_debug_print_t pr)
+                                                     lmu_ss_t          *const ss)
 {
     u32  value;
     pr("\n\nMACSEC_CLASSIFIER_VARIOUS_CTRL_REGS Ingress Control registers\n\n");
@@ -6646,7 +6646,7 @@ static mepa_rc lan80xx_macsec_dbg_cls_ctrl_reg_dump_(mepa_device_t     *dev,
 
 static mepa_rc lan80xx_macsec_dbg_eip62_reg_dump_(mepa_device_t     *dev,
                                                   mepa_port_no_t     port_no,
-                                                  mepa_debug_print_t pr)
+                                                  lmu_ss_t          *const ss)
 {
     u32 value;
     pr("\n\nMACSEC_EIP62_REGS Ingress Control registers\n\n");
@@ -6663,7 +6663,7 @@ static mepa_rc lan80xx_macsec_dbg_eip62_reg_dump_(mepa_device_t     *dev,
 
 static mepa_rc lan80xx_macsec_control_packet_dump(mepa_device_t     *dev,
                                                   mepa_port_no_t     port_no,
-                                                  mepa_debug_print_t pr)
+                                                  lmu_ss_t          *const ss)
 {
     u32 val = 0;
     u32 mmd = MMD_ID_MACSEC_EGR;
@@ -6691,7 +6691,7 @@ static mepa_rc lan80xx_macsec_control_packet_dump(mepa_device_t     *dev,
 
 static mepa_rc lan80xx_macsec_flow_ctrl_dump(mepa_device_t     *dev,
                                              mepa_port_no_t     port_no,
-                                             mepa_debug_print_t pr)
+                                             lmu_ss_t          *const ss)
 {
     u32 val1 = 0, val2 = 0;
     u32 mmd = 0, addr = 0;
@@ -6739,7 +6739,7 @@ static mepa_rc lan80xx_macsec_flow_ctrl_dump(mepa_device_t     *dev,
 
 static mepa_rc lan80xx_macsec_tcam_register_dump(mepa_device_t     *dev,
                                                  mepa_port_no_t     port_no,
-                                                 mepa_debug_print_t pr)
+                                                 lmu_ss_t          *const ss)
 {
     u32 key1 = 0, key2 = 0, key4 = 0, key5 = 0, key0 = 0;
     u32 mask1 = 0, mask2 = 0, mask4 = 0, mask5 = 0, mask0 = 0;
@@ -6775,7 +6775,7 @@ static mepa_rc lan80xx_macsec_tcam_register_dump(mepa_device_t     *dev,
 
 static mepa_rc lan80xx_macsec_xform_record_dump(mepa_device_t     *dev,
                                                 mepa_port_no_t     port_no,
-                                                mepa_debug_print_t pr)
+                                                lmu_ss_t          *const ss)
 {
     u32 mmd = 0;
     u32 val = 0, addr = 0, i = 0;
@@ -6812,7 +6812,7 @@ static mepa_rc lan80xx_macsec_xform_record_dump(mepa_device_t     *dev,
 
 static mepa_rc lan80xx_macsec_tcam_policy_dump(mepa_device_t     *dev,
                                                mepa_port_no_t     port_no,
-                                               mepa_debug_print_t pr)
+                                               lmu_ss_t          *const ss)
 {
     u32 mmd = 0;
     u32 val = 0, addr = 0, i = 0;
@@ -6839,7 +6839,7 @@ static mepa_rc lan80xx_macsec_tcam_policy_dump(mepa_device_t     *dev,
 
 static mepa_rc lan80xx_macsec_sc_sa_map_dump(mepa_device_t     *dev,
                                              mepa_port_no_t     port_no,
-                                             mepa_debug_print_t pr)
+                                             lmu_ss_t          *const ss)
 {
     u32 mmd = 0;
     u32 val = 0, addr = 0, i = 0;
@@ -6866,18 +6866,18 @@ static mepa_rc lan80xx_macsec_sc_sa_map_dump(mepa_device_t     *dev,
 
 mepa_rc lan80xx_macsec_dbg_reg_dump_priv(mepa_device_t     *dev,
                                          mepa_port_no_t     port_no,
-                                         mepa_debug_print_t pr)
+                                         lmu_ss_t          *const ss)
 {
     pr("\n\n\t\t:-:-:-:  MACSEC  :-:-:-:\n\n");
-    lan80xx_macsec_dbg_ms_ctrl_reg_dump_(dev, port_no, pr);
-    lan80xx_macsec_dbg_cls_ctrl_reg_dump_(dev, port_no, pr);
-    lan80xx_macsec_dbg_eip62_reg_dump_(dev, port_no, pr);
-    lan80xx_macsec_flow_ctrl_dump(dev, port_no, pr);
-    lan80xx_macsec_tcam_register_dump(dev, port_no, pr);
-    lan80xx_macsec_tcam_policy_dump(dev, port_no, pr);
-    lan80xx_macsec_control_packet_dump(dev, port_no, pr);
-    lan80xx_macsec_sc_sa_map_dump(dev, port_no, pr);
-    lan80xx_macsec_xform_record_dump(dev, port_no, pr);
+    lan80xx_macsec_dbg_ms_ctrl_reg_dump_(dev, port_no, ss);
+    lan80xx_macsec_dbg_cls_ctrl_reg_dump_(dev, port_no, ss);
+    lan80xx_macsec_dbg_eip62_reg_dump_(dev, port_no, ss);
+    lan80xx_macsec_flow_ctrl_dump(dev, port_no, ss);
+    lan80xx_macsec_tcam_register_dump(dev, port_no, ss);
+    lan80xx_macsec_tcam_policy_dump(dev, port_no, ss);
+    lan80xx_macsec_control_packet_dump(dev, port_no, ss);
+    lan80xx_macsec_sc_sa_map_dump(dev, port_no, ss);
+    lan80xx_macsec_xform_record_dump(dev, port_no, ss);
     pr("\n\n");
     return MEPA_RC_OK;
 }

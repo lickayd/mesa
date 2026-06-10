@@ -1579,7 +1579,7 @@ static mepa_rc lan8814_prbs_set_priv(mepa_device_t *dev, mepa_bool_t enable, mep
 
 #if !defined MEPA_LAN8814_LIGHT
 static void lan8814_phy_deb_pr_reg (mepa_device_t *dev,
-                                    const mepa_debug_print_t pr,
+                                    lmu_ss_t *const ss,
                                     uint16_t mmd, uint16_t page, uint16_t addr,
                                     const char *str, uint16_t *value)
 {
@@ -1596,7 +1596,7 @@ static void lan8814_phy_deb_pr_reg (mepa_device_t *dev,
     } else {
         rc = lan8814_direct_reg_rd(dev, addr, value);
     }
-    if (pr && (MEPA_RC_OK == rc)) {
+    if (ss && (MEPA_RC_OK == rc)) {
         pr("%-45s:  0x%02x  0x%02x   0x%04x     0x%08x\n", str, to_u32(port_no), id, addr, *value);
     }
 }
@@ -1604,7 +1604,7 @@ static void lan8814_phy_deb_pr_reg (mepa_device_t *dev,
 
 #if !defined MEPA_LAN8814_LIGHT
 static mepa_rc lan8814_reg_dump(struct mepa_device *dev,
-                                const mepa_debug_print_t pr)
+                                lmu_ss_t *const ss)
 {
     uint16_t val = 0;
     uint16_t id = 0;
@@ -1612,121 +1612,121 @@ static mepa_rc lan8814_reg_dump(struct mepa_device *dev,
     //Direct registers
     pr("%-45s   PORT_NO PAGE_ID REG_ADDR   VALUE\n", "REG_NAME");
     pr("Main Page Registers\n");
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 0, "Basic Control Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 1, "Basic Status Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 2, "Device Identifier 1 Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 3, "Device Identifier 2 Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 4, "Auto-Negotiation Advertisement Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 5, "Auto-Negotiation Link Partner Base Page Ability Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 6, "Auto-Negotiation Expansion Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 7, "Auto-Negotiation Next Page TX Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 8, "Auto-Negotiation Next Page RX Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 9, "Auto-Negotiation Master Slave Control Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 10, "Auto-Negotiation Master Slave Status Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 13, "MMD Access Control Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 14, "MMD Access Address/Data Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 15, "Extended Status Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 16, "PCS Loop-back Lane Skew Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 17, "PCS Loop-back Swap/Polarity Control Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 18, "Cable Diagnostic Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 19, "Digital PMA/PCS Status Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 20, "Digital AX/AN Status Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 21, "RXER Counter Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 22, "EP Access Control Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 23, "EP Access Address/Data Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 24, "GPHY Interrupt Enable Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 25, "GPHY Revision Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 26, "UNH Test Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 27, "GPHY Interrupt Status Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 28, "Digital Debug Control 1 Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 29, "Digital Debug Control 2 Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 30, "Reserved Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 0, 31, "Control Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 0, "Basic Control Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 1, "Basic Status Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 2, "Device Identifier 1 Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 3, "Device Identifier 2 Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 4, "Auto-Negotiation Advertisement Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 5, "Auto-Negotiation Link Partner Base Page Ability Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 6, "Auto-Negotiation Expansion Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 7, "Auto-Negotiation Next Page TX Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 8, "Auto-Negotiation Next Page RX Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 9, "Auto-Negotiation Master Slave Control Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 10, "Auto-Negotiation Master Slave Status Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 13, "MMD Access Control Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 14, "MMD Access Address/Data Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 15, "Extended Status Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 16, "PCS Loop-back Lane Skew Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 17, "PCS Loop-back Swap/Polarity Control Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 18, "Cable Diagnostic Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 19, "Digital PMA/PCS Status Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 20, "Digital AX/AN Status Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 21, "RXER Counter Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 22, "EP Access Control Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 23, "EP Access Address/Data Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 24, "GPHY Interrupt Enable Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 25, "GPHY Revision Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 26, "UNH Test Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 27, "GPHY Interrupt Status Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 28, "Digital Debug Control 1 Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 29, "Digital Debug Control 2 Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 30, "Reserved Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 0, 31, "Control Register", &val);
 
     //Extended page-0,1,2,3,4,5,7,28,29,31 registers
     pr("Extended Page-0 Registers\n");
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 0, "Debug-Mode First-Level-Select Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 1, "Debug-Mode Second-Level-Select for DIGITOP Part 1 Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 2, "Debug-Mode Second-Level-Select for DIGITOP Part 2 Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 3, "Auto-Negotiation Timer Register 1", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 4, "Auto-Negotiation Timer Register 2", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 5, "Auto-Negotiation Timer Register 3", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 6, "Auto-Negotiation Timer Register 4", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 7, "Auto-Negotiation Timer Register 5", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 8, "Auto-Negotiation Timer Register 6", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 9, "Auto-Negotiation Timer Register 7", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 10, "MDIX Select Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 11, "Max-Timer for 1.24 Millisecond Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 12, "Auto-Negotiation Wait Timer Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 13, "Max Link Timer Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 14, "Debug Bus Option Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 15, "Fast Link Fail (FLF) Configuration and Status Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 1, 16, "Link Partner Force FD Override Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 0, "Debug-Mode First-Level-Select Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 1, "Debug-Mode Second-Level-Select for DIGITOP Part 1 Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 2, "Debug-Mode Second-Level-Select for DIGITOP Part 2 Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 3, "Auto-Negotiation Timer Register 1", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 4, "Auto-Negotiation Timer Register 2", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 5, "Auto-Negotiation Timer Register 3", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 6, "Auto-Negotiation Timer Register 4", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 7, "Auto-Negotiation Timer Register 5", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 8, "Auto-Negotiation Timer Register 6", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 9, "Auto-Negotiation Timer Register 7", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 10, "MDIX Select Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 11, "Max-Timer for 1.24 Millisecond Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 12, "Auto-Negotiation Wait Timer Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 13, "Max Link Timer Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 14, "Debug Bus Option Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 15, "Fast Link Fail (FLF) Configuration and Status Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 1, 16, "Link Partner Force FD Override Register", &val);
 
     pr("Extended Page-1 Registers\n");
     for (id = 0; id < 239; id++) {
-        lan8814_phy_deb_pr_reg(dev, pr, 0, 2, id, "Extended Page 1 Registers", &val);
+        lan8814_phy_deb_pr_reg(dev, ss, 0, 2, id, "Extended Page 1 Registers", &val);
     }
 
     pr("Extended Page-2 Registers\n");
     for (id = 0; id < 111; id++) {
-        lan8814_phy_deb_pr_reg(dev, pr, 0, 3, id, "Extended Page 2 Registers", &val);
+        lan8814_phy_deb_pr_reg(dev, ss, 0, 3, id, "Extended Page 2 Registers", &val);
     }
 
     pr("Extended Page-3 Registers\n");
     for (id = 0; id < 28; id++) {
-        lan8814_phy_deb_pr_reg(dev, pr, 0, 4, id, "Extended Page 3 Registers", &val);
+        lan8814_phy_deb_pr_reg(dev, ss, 0, 4, id, "Extended Page 3 Registers", &val);
     }
 
     pr("Extended Page-4 Registers\n");
     for (id = 0; id < 772; id++) {
-        lan8814_phy_deb_pr_reg(dev, pr, 0, 5, id, "Extended Page 4 Registers", &val);
+        lan8814_phy_deb_pr_reg(dev, ss, 0, 5, id, "Extended Page 4 Registers", &val);
     }
 
     pr("Extended Page-5 Registers\n");
     for (id = 0; id < 708; id++) {
-        lan8814_phy_deb_pr_reg(dev, pr, 0, 6, id, "Extended Page 5 Registers", &val);
+        lan8814_phy_deb_pr_reg(dev, ss, 0, 6, id, "Extended Page 5 Registers", &val);
     }
 
     pr("Extended Page-7 Registers\n");
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 8, 58, "EP7 Register 58", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 8, 59, "EP7 Register 59", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 8, 62, "EEE Link Partner Ability Override Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 8, 63, "EEE Message Code Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 8, 58, "EP7 Register 58", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 8, 59, "EP7 Register 59", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 8, 62, "EEE Link Partner Ability Override Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 8, 63, "EEE Message Code Register", &val);
 
     pr("Extended Page-28 Registers\n");
     for (id = 0; id < 80; id++) {
-        lan8814_phy_deb_pr_reg(dev, pr, 0, 29, id, "Extended Page 28 Registers", &val);
+        lan8814_phy_deb_pr_reg(dev, ss, 0, 29, id, "Extended Page 28 Registers", &val);
     }
 
     pr("Extended Page-29 Registers\n");
     for (id = 0; id < 80; id++) {
-        lan8814_phy_deb_pr_reg(dev, pr, 0, 30, id, "Extended Page 29 Registers", &val);
+        lan8814_phy_deb_pr_reg(dev, ss, 0, 30, id, "Extended Page 29 Registers", &val);
     }
 
     pr("Extended Page-31 Registers\n");
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 0, "Speed Mode with TESTBUS Control Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 8, "Clock Management Mode 0", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 9, "Clock Management Mode 1", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 10, "Clock Management Mode 2", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 11, "Clock Management Mode 3", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 12, "Clock Management Mode 4", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 13, "Clock Management Mode 5", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 14, "Clock Management Mode 6", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 15, "Clock Management Mode 7", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 16, "Clock Management Mode 8", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 0, 32, 17, "Clock Management Mode 9", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 0, "Speed Mode with TESTBUS Control Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 8, "Clock Management Mode 0", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 9, "Clock Management Mode 1", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 10, "Clock Management Mode 2", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 11, "Clock Management Mode 3", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 12, "Clock Management Mode 4", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 13, "Clock Management Mode 5", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 14, "Clock Management Mode 6", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 15, "Clock Management Mode 7", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 16, "Clock Management Mode 8", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 0, 32, 17, "Clock Management Mode 9", &val);
 
     //MMD-3,7 registers
     pr("%-45s   PORT_NO DEV_ID REG_ADDR   VALUE\n", "REG_NAME");
     pr("MMD-3 Registers\n");
-    lan8814_phy_deb_pr_reg(dev, pr, 3, 0x0, 0, "PCS Control 1 Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 3, 0x0, 1, "PCS Status 1 Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 3, 0x0, 20, "EEE Control and Capability Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 3, 0x0, 0, "PCS Control 1 Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 3, 0x0, 1, "PCS Status 1 Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 3, 0x0, 20, "EEE Control and Capability Register", &val);
 
     pr("MMD-7 Registers\n");
-    lan8814_phy_deb_pr_reg(dev, pr, 7, 0x0, 60, "EEE Advertisement Register", &val);
-    lan8814_phy_deb_pr_reg(dev, pr, 7, 0x0, 61, "EEE Link Partner Ability Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 7, 0x0, 60, "EEE Advertisement Register", &val);
+    lan8814_phy_deb_pr_reg(dev, ss, 7, 0x0, 61, "EEE Link Partner Ability Register", &val);
 
     return MEPA_RC_OK;
 }
@@ -2679,7 +2679,7 @@ static const char *lan8814_mac_if_to_str(mesa_port_interface_t mac_if)
 
 
 static mepa_rc lan8814_debug_info_dump(struct mepa_device *dev,
-                                       const mepa_debug_print_t pr,
+                                       lmu_ss_t *const ss,
                                        const mepa_debug_info_t   *const info)
 {
     mepa_rc rc = MEPA_RC_OK;
@@ -2698,7 +2698,7 @@ static mepa_rc lan8814_debug_info_dump(struct mepa_device *dev,
     if (info->layer == MEPA_DEBUG_LAYER_CIL || info->layer == MEPA_DEBUG_LAYER_ALL) {
         if (info->group == MEPA_DEBUG_GROUP_ALL || info->group == MEPA_DEBUG_GROUP_PHY) {
             // PHY Debugging
-            rc = lan8814_reg_dump(dev, pr);
+            rc = lan8814_reg_dump(dev, ss);
         }
     }
 
@@ -2707,7 +2707,7 @@ static mepa_rc lan8814_debug_info_dump(struct mepa_device *dev,
 #if !defined(MEPA_LAN8814_LIGHT)
     // PHY_TS Debugging
     if (dev->drv->mepa_ts != NULL) {
-        lan8814_ts_debug_info_dump(dev, pr, info);
+        lan8814_ts_debug_info_dump(dev, ss, info);
     }
 #endif
 

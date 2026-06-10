@@ -51,7 +51,7 @@ mepa_rc lan8814_mmd_reg_rd(mepa_device_t *dev, uint16_t mmd, uint16_t addr, uint
 mepa_rc lan8814_mmd_reg_wr(mepa_device_t *dev, uint16_t mmd, uint16_t addr, uint16_t value, uint16_t mask);
 #if !defined(MEPA_LAN8814_LIGHT)
 mepa_rc lan8814_ts_debug_info_dump(struct mepa_device *dev,
-                                   const mepa_debug_print_t pr,
+                                   lmu_ss_t *const ss,
                                    const mepa_debug_info_t   *const info);
 #endif
 

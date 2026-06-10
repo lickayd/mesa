@@ -1367,14 +1367,65 @@ mepa_rc mepa_ts_csr_reg_write(struct mepa_device *dev, const uint16_t mmd,
 }
 
 mepa_rc mepa_debug_info_dump(struct mepa_device *dev,
-                             const mepa_debug_print_t pr,
+                             const mepa_debug_print_t prntf,
                              const mepa_debug_info_t   *const info)
 {
+    mepa_rc rc;
+    size_t  i = 0, j = 0;
+    size_t  len = (1024 * 1024);
+    char    c, *buf = dev->callout->mem_alloc(dev->callout_ctx, len);
+
+    if (buf == NULL) {
+        return MEPA_RC_ERROR;
+    }
+
+    *buf = '\0';
+    len--;
+    rc = mepa_debug_info_print_buf(dev, info, (int)len, buf);
+    // Print in chunks for backward compatibility
+    while (i < len) {
+        c = buf[i++];
+        if (c == '\0') {
+            (void)prntf("%s", buf + j);
+            break;
+        } else if (i == (j + 128U)) {
+            c = buf[i];
+            buf[i] = '\0';
+            (void)prntf("%s", buf + j);
+            buf[i] = c;
+            j = i;
+        } else {
+            // Empty on purpose
+        }
+    }
+    if (i >= len) {
+        (void)prntf("\n--- Truncated due to buffer size ---\n");
+    }
+    dev->callout->mem_free(dev->callout_ctx, buf);
+    return rc;
+}
+
+mepa_rc mepa_debug_info_print_buf(struct mepa_device *dev,
+                                  const mepa_debug_info_t   *const info,
+                                  int len,
+                                  char *const buf)
+{
+    lmu_ss_t ss = {};
+    mepa_rc rc;
+
     if ((dev == NULL) || (dev->drv->mepa_driver_debug_info_dump == NULL)) {
         return MESA_RC_NOT_IMPLEMENTED;
     }
 
-    return dev->drv->mepa_driver_debug_info_dump(dev, pr, info);
+    ss.buf.begin = buf;
+    ss.buf.end = (buf + len);
+
+    rc = dev->drv->mepa_driver_debug_info_dump(dev, &ss, info);
+    if (ss.overflow != 0) {
+        rc = MEPA_RC_ERROR;
+    }
+
+    return rc;
 }
 
 mepa_rc mepa_sqi_read(struct mepa_device *dev, uint32_t *const value)
@@ -2724,8 +2775,51 @@ mepa_rc mepa_macsec_is_capable(struct mepa_device *dev,
 
 mepa_rc mepa_macsec_dbg_reg_dump(struct mepa_device *dev,
                                  const mepa_port_no_t port_no,
-                                 const mepa_debug_print_t pr)
+                                 const mepa_debug_print_t prntf)
 {
+    mepa_rc rc;
+    size_t  i = 0, j = 0;
+    size_t  len = (1024 * 1024);
+    char    c, *buf = dev->callout->mem_alloc(dev->callout_ctx, len);
+
+    if (buf == NULL) {
+        return MEPA_RC_ERROR;
+    }
+
+    *buf = '\0';
+    len--;
+    rc = mepa_macsec_dbg_reg_print_buf(dev, port_no, (int)len, buf);
+    // Print in chunks for backward compatibility
+    while (i < len) {
+        c = buf[i++];
+        if (c == '\0') {
+            (void)prntf("%s", buf + j);
+            break;
+        } else if (i == (j + 128U)) {
+            c = buf[i];
+            buf[i] = '\0';
+            (void)prntf("%s", buf + j);
+            buf[i] = c;
+            j = i;
+        } else {
+            // Empty on purpose
+        }
+    }
+    if (i >= len) {
+        (void)prntf("\n--- Truncated due to buffer size ---\n");
+    }
+    dev->callout->mem_free(dev->callout_ctx, buf);
+    return rc;
+}
+
+mepa_rc mepa_macsec_dbg_reg_print_buf(struct mepa_device *dev,
+                                      const mepa_port_no_t port_no,
+                                      int len,
+                                      char *const buf)
+{
+    lmu_ss_t ss = {};
+    mepa_rc rc;
+
     if ((dev == NULL) || (dev->drv->mepa_macsec == NULL)) {
         return MESA_RC_NOT_IMPLEMENTED;
     }
@@ -2734,7 +2828,15 @@ mepa_rc mepa_macsec_dbg_reg_dump(struct mepa_device *dev,
         return MESA_RC_NOT_IMPLEMENTED;
     }
 
-    return dev->drv->mepa_macsec->mepa_driver_macsec_dbg_reg_dump(dev, port_no, pr);
+    ss.buf.begin = buf;
+    ss.buf.end = (buf + len);
+
+    rc = dev->drv->mepa_macsec->mepa_driver_macsec_dbg_reg_dump(dev, port_no, &ss);
+    if (ss.overflow != 0) {
+        rc = MEPA_RC_ERROR;
+    }
+
+    return rc;
 }
 
 mepa_rc mepa_macsec_inst_count_get(struct mepa_device *dev,
@@ -2991,8 +3093,51 @@ mepa_rc mepa_macsec_fcbuf_frame_gap_comp_set(struct mepa_device *dev,
 
 mepa_rc mepa_macsec_dbg_fcb_block_reg_dump(struct mepa_device *dev,
                                            const mepa_port_no_t port_no,
-                                           const mepa_debug_print_t pr)
+                                           const mepa_debug_print_t prntf)
 {
+    mepa_rc rc;
+    size_t  i = 0, j = 0;
+    size_t  len = (1024 * 1024);
+    char    c, *buf = dev->callout->mem_alloc(dev->callout_ctx, len);
+
+    if (buf == NULL) {
+        return MEPA_RC_ERROR;
+    }
+
+    *buf = '\0';
+    len--;
+    rc = mepa_macsec_dbg_fcb_block_reg_print_buf(dev, port_no, (int)len, buf);
+    // Print in chunks for backward compatibility
+    while (i < len) {
+        c = buf[i++];
+        if (c == '\0') {
+            (void)prntf("%s", buf + j);
+            break;
+        } else if (i == (j + 128U)) {
+            c = buf[i];
+            buf[i] = '\0';
+            (void)prntf("%s", buf + j);
+            buf[i] = c;
+            j = i;
+        } else {
+            // Empty on purpose
+        }
+    }
+    if (i >= len) {
+        (void)prntf("\n--- Truncated due to buffer size ---\n");
+    }
+    dev->callout->mem_free(dev->callout_ctx, buf);
+    return rc;
+}
+
+mepa_rc mepa_macsec_dbg_fcb_block_reg_print_buf(struct mepa_device *dev,
+                                                const mepa_port_no_t port_no,
+                                                int len,
+                                                char *const buf)
+{
+    lmu_ss_t ss = {};
+    mepa_rc rc;
+
     if ((dev == NULL) || (dev->drv->mepa_macsec == NULL)) {
         return MESA_RC_NOT_IMPLEMENTED;
     }
@@ -3001,13 +3146,70 @@ mepa_rc mepa_macsec_dbg_fcb_block_reg_dump(struct mepa_device *dev,
         return MESA_RC_NOT_IMPLEMENTED;
     }
 
-    return dev->drv->mepa_macsec->mepa_driver_macsec_dbg_fcb_block_reg_dump(dev, port_no, pr);
+    ss.buf.begin = buf;
+    ss.buf.end = (buf + len);
+
+    rc = dev->drv->mepa_macsec->mepa_driver_macsec_dbg_fcb_block_reg_dump(dev, port_no, &ss);
+    if (ss.overflow != 0) {
+        rc = MEPA_RC_ERROR;
+    }
+
+    return rc;
 }
 
+#pragma coverity compliance deviate                                            \
+    "MISRA C-2023 Rule 5.1"                                                    \
+    "MACsec API identifiers share long common prefixes; names are part of the public API"
 mepa_rc mepa_macsec_dbg_frm_match_handling_ctrl_reg_dump(struct mepa_device *dev,
                                                          const mepa_port_no_t port_no,
-                                                         const mepa_debug_print_t pr)
+                                                         const mepa_debug_print_t prntf)
 {
+    mepa_rc rc;
+    size_t  i = 0, j = 0;
+    size_t  len = (1024 * 1024);
+    char    c, *buf = dev->callout->mem_alloc(dev->callout_ctx, len);
+
+    if (buf == NULL) {
+        return MEPA_RC_ERROR;
+    }
+
+    *buf = '\0';
+    len--;
+    rc = mepa_macsec_dbg_frm_match_handling_ctrl_reg_print_buf(dev, port_no, (int)len, buf);
+    // Print in chunks for backward compatibility
+    while (i < len) {
+        c = buf[i++];
+        if (c == '\0') {
+            (void)prntf("%s", buf + j);
+            break;
+        } else if (i == (j + 128U)) {
+            c = buf[i];
+            buf[i] = '\0';
+            (void)prntf("%s", buf + j);
+            buf[i] = c;
+            j = i;
+        } else {
+            // Empty on purpose
+        }
+    }
+    if (i >= len) {
+        (void)prntf("\n--- Truncated due to buffer size ---\n");
+    }
+    dev->callout->mem_free(dev->callout_ctx, buf);
+    return rc;
+}
+
+#pragma coverity compliance deviate                                            \
+    "MISRA C-2023 Rule 5.1"                                                    \
+    "MACsec API identifiers share long common prefixes; names are part of the public API"
+mepa_rc mepa_macsec_dbg_frm_match_handling_ctrl_reg_print_buf(struct mepa_device *dev,
+                                                              const mepa_port_no_t port_no,
+                                                              int len,
+                                                              char *const buf)
+{
+    lmu_ss_t ss = {};
+    mepa_rc rc;
+
     if ((dev == NULL) || (dev->drv->mepa_macsec == NULL)) {
         return MESA_RC_NOT_IMPLEMENTED;
     }
@@ -3016,7 +3218,15 @@ mepa_rc mepa_macsec_dbg_frm_match_handling_ctrl_reg_dump(struct mepa_device *dev
         return MESA_RC_NOT_IMPLEMENTED;
     }
 
-    return dev->drv->mepa_macsec->mepa_driver_macsec_dbg_frm_match_handling_ctrl_reg_dump(dev, port_no, pr);
+    ss.buf.begin = buf;
+    ss.buf.end = (buf + len);
+
+    rc = dev->drv->mepa_macsec->mepa_driver_macsec_dbg_frm_match_handling_ctrl_reg_dump(dev, port_no, &ss);
+    if (ss.overflow != 0) {
+        rc = MEPA_RC_ERROR;
+    }
+
+    return rc;
 }
 
 #ifdef MEPA_MACSEC_FIFO_OVERFLOW_WORKAROUND

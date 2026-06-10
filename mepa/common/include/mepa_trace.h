@@ -236,4 +236,9 @@ MEPA_TRACE_TYPES
 #define T_E(grp, format, ...) MEPA_trace((grp), MEPA_TRACE_LVL_ERROR, __FUNCTION__, __LINE__, __FILE__, format, ##__VA_ARGS__);
 #endif
 
+// Debug print
+#define pr(fmt_str, ...)                                                                           \
+    LMU_PP_VA_ARGS_OVERLOAD_ONE_OR_MORE(LMU_SS_FMT, ##__VA_ARGS__)                                 \
+    ((ss), (fmt_str), ##__VA_ARGS__)
+
 #endif /**< MICROCHIP_ETHERNET_PHY_API_TRACE_H */

@@ -6,6 +6,8 @@
 #include <mepa_macsec_driver.h>
 #include <mepa_ts_driver.h>
 #include <mepa_trace.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <vtss_phy_api.h>
 #include "vtss_private.h"
 #include "phy_1g/vtss_phy.h"
@@ -1668,9 +1670,32 @@ static uint32_t phy_1g_capability(struct mepa_device *dev , uint32_t capability)
     return c;
 }
 
+// The vtss base debug-print API (vtss_phy_debug_info_print / vtss_macsec_dbg_reg_dump)
+// renders through a printf-style vtss_debug_printf_t callback. This shim renders each
+// invocation with vsnprintf and appends it to the active lmu_ss_t string-stream, so the
+// MEPA ss-based debug dump can drive the unchanged vtss base. The dump path is
+// serialized by MEPA_ENTER(), so the file-scope stream pointer needs no further locking.
+// Shared with vtss_macsec.c via vtss_private.h.
+lmu_ss_t *vtss_dbg_ss;
+
+int vtss_dbg_ss_printf(const char *fmt, ...)
+{
+    va_list args;
+    char    buf[512];
+
+    va_start(args, fmt);
+    (void)vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+
+    if (vtss_dbg_ss != NULL) {
+        LMU_SS_FMT(vtss_dbg_ss, "%s", buf);
+    }
+    return 0;
+}
+
 // Debug dump API for PHY
 mepa_rc phy_debug_info_dump(struct mepa_device *dev,
-                            const mepa_debug_print_t pr,
+                            lmu_ss_t *const ss,
                             const mepa_debug_info_t   *const info)
 {
     phy_data_t *data = (phy_data_t *)(dev->data);
@@ -1699,7 +1724,11 @@ mepa_rc phy_debug_info_dump(struct mepa_device *dev,
     phy_info.clear = info->clear;
     phy_info.vml_format = info->vml_format;
 
-    return vtss_phy_debug_info_print(data->vtss_instance, pr, &phy_info);
+    mepa_rc rc;
+    vtss_dbg_ss = ss;
+    rc = vtss_phy_debug_info_print(data->vtss_instance, vtss_dbg_ss_printf, &phy_info);
+    vtss_dbg_ss = NULL;
+    return rc;
 }
 
 // API for QSGMII synchronization

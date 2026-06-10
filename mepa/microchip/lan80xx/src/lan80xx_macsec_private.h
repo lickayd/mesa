@@ -596,7 +596,7 @@ mepa_rc lan80xx_macsec_inst_count_get_priv(mepa_device_t             *dev,
 
 mepa_rc lan80xx_macsec_dbg_reg_dump_priv(mepa_device_t     *dev,
                                          mepa_port_no_t     port_no,
-                                         mepa_debug_print_t pr);
+                                         lmu_ss_t          *const ss);
 
 
 mepa_rc lan80xx_macsec_dbg_counter_get_priv(mepa_device_t *dev, const mepa_port_no_t port_no, mepa_macsec_rc_dbg_counters_t *const counters);

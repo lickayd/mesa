@@ -1403,7 +1403,15 @@ mepa_rc mepa_macsec_is_capable(struct mepa_device *dev,
 
 mepa_rc mepa_macsec_dbg_reg_dump(struct mepa_device *dev,
                                  const mepa_port_no_t port_no,
-                                 const mepa_debug_print_t pr);
+                                 const mepa_debug_print_t prntf);
+
+/**
+ * Function for dump MACSEC register into the buf
+ **/
+mepa_rc mepa_macsec_dbg_reg_print_buf(struct mepa_device *dev,
+                                      const mepa_port_no_t port_no,
+                                      int len,
+                                      char *const buf);
 
 /*--------------------------------------------------------------------*/
 /* Macsec SC Instance Counters structures                                */
@@ -1536,14 +1544,24 @@ mepa_rc mepa_macsec_fcbuf_frame_gap_comp_set(struct mepa_device *dev,
 /** Flow Control buffer Block Reg Dump. */
 mepa_rc mepa_macsec_dbg_fcb_block_reg_dump(struct mepa_device *dev,
                                            const mepa_port_no_t port_no,
-                                           const mepa_debug_print_t pr);
+                                           const mepa_debug_print_t prntf);
 
+/** Flow Control buffer Block Reg Dump into buf. */
+mepa_rc mepa_macsec_dbg_fcb_block_reg_print_buf(struct mepa_device *dev,
+                                                const mepa_port_no_t port_no,
+                                                int len,
+                                                char *const buf);
 
 /** Flow Control buffer Block Reg Dump. */
 mepa_rc mepa_macsec_dbg_frm_match_handling_ctrl_reg_dump(struct mepa_device *dev,
                                                          const mepa_port_no_t port_no,
-                                                         const mepa_debug_print_t pr);
+                                                         const mepa_debug_print_t prntf);
 
+/** Flow Control buffer Block Reg Dump into buf. */
+mepa_rc mepa_macsec_dbg_frm_match_handling_ctrl_reg_print_buf(struct mepa_device *dev,
+                                                              const mepa_port_no_t port_no,
+                                                              int len,
+                                                              char *const buf);
 
 #ifdef MEPA_MACSEC_FIFO_OVERFLOW_WORKAROUND
 /** MACsec Debug Re-configuration.

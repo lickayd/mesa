@@ -71,7 +71,7 @@ mepa_rc phy_mmd_reg_mod32(mepa_device_t *const phydev,
                           uint32_t const mask, uint32_t const value);
 
 void phy_reg_dump(struct mepa_device *dev,
-                  const mepa_debug_print_t pr,
+                  lmu_ss_t *const ss,
                   const struct phy_reg_dbg *const regs,
                   const uint8_t reglen, const uint8_t is_ms);
 #endif //PHY_LIB_H

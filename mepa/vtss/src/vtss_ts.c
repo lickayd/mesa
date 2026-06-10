@@ -14,11 +14,9 @@
 //#define PRINT 1
 #ifdef PRINT
 #include <stdio.h>
-#define pr(...) printf(__VA_ARGS__)
-#define spr(...) sprintf(__VA_ARGS__)
+#define pr_ts(...) printf(__VA_ARGS__)
 #else
-#define pr(fmt,...)
-#define spr(...)
+#define pr_ts(fmt,...)
 #endif
 
 
@@ -158,77 +156,77 @@ static void dump_chip_matching_flow(mepa_device_t *dev, mepa_bool_t ingress)
     uint32_t blk_id = ingress ? 0 : 1;
     uint32_t value, cnt = 0;
 
-    pr(" Dump class flows\n");
+    pr_ts(" Dump class flows\n");
     while (cnt++ < 2) {
-        pr("\n*** %s class BLK-ID : %d ***\n", ingress ? "ingress" : "egress", blk_id);
+        pr_ts("\n*** %s class BLK-ID : %d ***\n", ingress ? "ingress" : "egress", blk_id);
         // print common conf
         for (i = eth_comm[0]; i <= eth_comm[1]; i++) {
             vtss_phy_1588_csr_reg_read(data->vtss_instance, data->port_no, blk_id, i, &value);
-            pr("0x%x : 0x%x\n", i, value);
+            pr_ts("0x%x : 0x%x\n", i, value);
         }
-        pr("\n\n");
+        pr_ts("\n\n");
         // print header
         st_fl = eth_fl[0];
-        pr("%8s", " ");
+        pr_ts("%8s", " ");
         for (i = 0; i < 8; i++) {
-            pr("0x%-8x ", st_fl);
+            pr_ts("0x%-8x ", st_fl);
             st_fl += incr;
         }
-        pr("\n");
-        pr("%8s", " ");
+        pr_ts("\n");
+        pr_ts("%8s", " ");
         for (i = 0; i < 8; i++) {
             for (j = 0; j < 10; j++) {
-                pr("-");
+                pr_ts("-");
             }
-            pr(" ");
+            pr_ts(" ");
         }
-        pr("\n");
+        pr_ts("\n");
 
         // print eth flows
         for (j = eth_fl[0]; j <= eth_fl[1]; j++) {
-            pr("0x%-4x: ", j);
+            pr_ts("0x%-4x: ", j);
             st_fl = j;
             for (i = 0; i < 8; i++) {
                 vtss_phy_1588_csr_reg_read(data->vtss_instance, data->port_no, blk_id, st_fl, &value);
-                pr("0x%-8x ", value);
+                pr_ts("0x%-8x ", value);
                 st_fl += incr;
             }
-            pr("\n");
+            pr_ts("\n");
         }
-        pr("\n\n");
+        pr_ts("\n\n");
         // print ip common conf
         for (i = ip_comm[0]; i <= ip_comm[1]; i++) {
             vtss_phy_1588_csr_reg_read(data->vtss_instance, data->port_no, blk_id, i, &value);
-            pr("0x%x : 0x%x\n", i, value);
+            pr_ts("0x%x : 0x%x\n", i, value);
         }
-        pr("\n\n");
+        pr_ts("\n\n");
         // print header
         st_fl = ip_fl[0];
-        pr("%8s", " ");
+        pr_ts("%8s", " ");
         for (i = 0; i < 8; i++) {
-            pr("0x%-8x ", st_fl);
+            pr_ts("0x%-8x ", st_fl);
             st_fl += incr;
         }
-        pr("\n");
-        pr("%8s", " ");
+        pr_ts("\n");
+        pr_ts("%8s", " ");
         for (i = 0; i < 8; i++) {
             for (j = 0; j < 10; j++) {
-                pr("-");
+                pr_ts("-");
             }
-            pr(" ");
+            pr_ts(" ");
         }
-        pr("\n");
+        pr_ts("\n");
 
         // print ip flows
         for (j = ip_fl[0]; j <= ip_fl[1]; j++) {
-            pr("0x%-4x: ", j);
+            pr_ts("0x%-4x: ", j);
             st_fl = j;
             for (i = 0; i < 8; i++) {
                 vtss_phy_1588_csr_reg_read(data->vtss_instance, data->port_no, blk_id, st_fl, &value);
-                pr("0x%-8x ", value);
+                pr_ts("0x%-8x ", value);
                 st_fl += incr;
             }
-            pr("\n");
+            pr_ts("\n");
         }
         blk_id += 2;
     }
@@ -242,34 +240,34 @@ static void dump_chip_ptp_flow(mepa_device_t *dev, mepa_bool_t ingress)
 
     blk_id = ingress ? 0 : 1;
     while (cnt++ < 2) {
-        pr("\n*** %s ptp BLK-ID : %d ***\n", ingress ? "ingress" : "egress", blk_id);
+        pr_ts("\n*** %s ptp BLK-ID : %d ***\n", ingress ? "ingress" : "egress", blk_id);
         // print header
         st_fl = ptp_fl[0];
-        pr("%8s", " ");
+        pr_ts("%8s", " ");
         for (i = 0; i < 6; i++) {
-            pr("0x%-8x ", st_fl);
+            pr_ts("0x%-8x ", st_fl);
             st_fl += incr;
         }
-        pr("\n");
-        pr("%8s", " ");
+        pr_ts("\n");
+        pr_ts("%8s", " ");
         for (i = 0; i < 6; i++) {
             for (j = 0; j < 10; j++) {
-                pr("-");
+                pr_ts("-");
             }
-            pr(" ");
+            pr_ts(" ");
         }
-        pr("\n");
+        pr_ts("\n");
 
         // print ptp flows
         for (j = ptp_fl[0]; j <= ptp_fl[1]; j++) {
-            pr("0x%-4x: ", j);
+            pr_ts("0x%-4x: ", j);
             st_fl = j;
             for (i = 0; i < 6; i++) {
                 vtss_phy_1588_csr_reg_read(data->vtss_instance, data->port_no, blk_id, st_fl, &value);
-                pr("0x%-8x ", value);
+                pr_ts("0x%-8x ", value);
                 st_fl += incr;
             }
-            pr("\n");
+            pr_ts("\n");
         }
         blk_id += 2;
     }
@@ -278,40 +276,40 @@ static void dump_flow_conf(vtss_phy_ts_engine_flow_conf_t *flow_conf)
 {
     int i;
 
-    pr("\nflow conf: eng_mode %d ", flow_conf->eng_mode);
-    pr("ptp comm: ppb_en %d, etype %x, tpid %x\n", flow_conf->flow_conf.ptp.eth1_opt.comm_opt.pbb_en,
-       flow_conf->flow_conf.ptp.eth1_opt.comm_opt.etype,
-       flow_conf->flow_conf.ptp.eth1_opt.comm_opt.tpid);
+    pr_ts("\nflow conf: eng_mode %d ", flow_conf->eng_mode);
+    pr_ts("ptp comm: ppb_en %d, etype %x, tpid %x\n", flow_conf->flow_conf.ptp.eth1_opt.comm_opt.pbb_en,
+          flow_conf->flow_conf.ptp.eth1_opt.comm_opt.etype,
+          flow_conf->flow_conf.ptp.eth1_opt.comm_opt.tpid);
     for (i = 0; i < 8; i++) {
-        pr(" channel_map[%d] %d ", i, flow_conf->channel_map[i]);
-        pr(" ptp flow: flow_en %d, match_mode %d, match_select %d\n", flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].flow_en,
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].addr_match_mode,
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].addr_match_select);
-        pr(" mac address : %02x-%02x-%02x-%02x-%02x-%02x\n", flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[0],
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[1],
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[2],
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[3],
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[4],
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[5]);
-        pr(" vlan_check %d, num_tag %d, outer_tag_type %d, inner_tag_type %d, tag_range_mode %d\n",
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].vlan_check,
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].num_tag,
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].outer_tag_type,
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].inner_tag_type,
-           flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].tag_range_mode);
+        pr_ts(" channel_map[%d] %d ", i, flow_conf->channel_map[i]);
+        pr_ts(" ptp flow: flow_en %d, match_mode %d, match_select %d\n", flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].flow_en,
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].addr_match_mode,
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].addr_match_select);
+        pr_ts(" mac address : %02x-%02x-%02x-%02x-%02x-%02x\n", flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[0],
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[1],
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[2],
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[3],
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[4],
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].mac_addr[5]);
+        pr_ts(" vlan_check %d, num_tag %d, outer_tag_type %d, inner_tag_type %d, tag_range_mode %d\n",
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].vlan_check,
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].num_tag,
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].outer_tag_type,
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].inner_tag_type,
+              flow_conf->flow_conf.ptp.eth1_opt.flow_opt[i].tag_range_mode);
     }
 }
 static void dump_ptp_action(vtss_phy_ts_engine_action_t *ptp_action)
 {
     int i;
-    pr("\naction_ptp %d\n", ptp_action->action_ptp);
+    pr_ts("\naction_ptp %d\n", ptp_action->action_ptp);
     for (i = 0; i < 2; i++) {
-        pr(" action[%d]: enable %d, channel_map %d\n", i, ptp_action->action.ptp_conf[i].enable, ptp_action->action.ptp_conf[i].channel_map);
-        pr("  ptpconf: range_en %d, val/upper %d, mask/lower %d\n", ptp_action->action.ptp_conf[i].ptp_conf.range_en,
-           ptp_action->action.ptp_conf[i].ptp_conf.domain.value.val,
-           ptp_action->action.ptp_conf[i].ptp_conf.domain.value.mask);
-        pr("   clk__mode %d, delaym_type %d\n", ptp_action->action.ptp_conf[i].clk_mode,
-           ptp_action->action.ptp_conf[i].delaym_type);
+        pr_ts(" action[%d]: enable %d, channel_map %d\n", i, ptp_action->action.ptp_conf[i].enable, ptp_action->action.ptp_conf[i].channel_map);
+        pr_ts("  ptpconf: range_en %d, val/upper %d, mask/lower %d\n", ptp_action->action.ptp_conf[i].ptp_conf.range_en,
+              ptp_action->action.ptp_conf[i].ptp_conf.domain.value.val,
+              ptp_action->action.ptp_conf[i].ptp_conf.domain.value.mask);
+        pr_ts("   clk__mode %d, delaym_type %d\n", ptp_action->action.ptp_conf[i].clk_mode,
+              ptp_action->action.ptp_conf[i].delaym_type);
     }
 }
 

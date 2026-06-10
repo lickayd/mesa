@@ -1158,11 +1158,11 @@ static mepa_rc lan80xx_macsec_inst_count_get(mepa_device_t             *dev,
 
 static mepa_rc lan80xx_macsec_dbg_reg_dump(mepa_device_t     *dev,
                                            mepa_port_no_t     port_no,
-                                           mepa_debug_print_t pr)
+                                           lmu_ss_t          *const ss)
 {
     mepa_rc rc = MEPA_RC_ERROR;
     MEPA_ENTER(dev);
-    rc = lan80xx_macsec_dbg_reg_dump_priv(dev, port_no, pr);
+    rc = lan80xx_macsec_dbg_reg_dump_priv(dev, port_no, ss);
     MEPA_EXIT(dev);
     return rc;
 }

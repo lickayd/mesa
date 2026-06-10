@@ -86,7 +86,7 @@ typedef mepa_rc (*mepa_macsec_dbg_counter_get_t)(struct mepa_device *dev, const 
 typedef mepa_rc (*mepa_macsec_hmac_counters_get_t)(struct mepa_device *dev, const mepa_port_no_t port_no, mepa_macsec_mac_counters_t *const counters, const mepa_bool_t clear);
 typedef mepa_rc (*mepa_macsec_lmac_counters_get_t)(struct mepa_device *dev, const mepa_port_no_t port_no, mepa_macsec_mac_counters_t *const counters, const mepa_bool_t clear);
 typedef mepa_rc (*mepa_macsec_is_capable_t)(struct mepa_device *dev, const mepa_port_no_t port_no, mepa_bool_t *capable);
-typedef mepa_rc (*mepa_macsec_dbg_reg_dump_t)(struct mepa_device *dev, const mepa_port_no_t port_no, const mepa_debug_print_t pr);
+typedef mepa_rc (*mepa_macsec_dbg_reg_dump_t)(struct mepa_device *dev, const mepa_port_no_t port_no, lmu_ss_t *const ss);
 typedef mepa_rc (*mepa_macsec_inst_count_get_t)(struct mepa_device *dev, const mepa_port_no_t port_no, mepa_macsec_inst_count_t *count);
 typedef mepa_rc (*mepa_macsec_lmac_counters_clear_t)(struct mepa_device *dev, const mepa_port_no_t port_no);
 typedef mepa_rc (*mepa_macsec_hmac_counters_clear_t)(struct mepa_device *dev, const mepa_port_no_t port_no);
@@ -104,8 +104,8 @@ typedef mepa_rc (*mepa_macsec_rxsa_an_status_get_t)(struct mepa_device *dev, con
 typedef mepa_rc (*mepa_mac_block_mtu_get_t)(struct mepa_device *dev, const mepa_port_no_t port_no, uint16_t *const mtu_value, mepa_bool_t *const mtu_tag_check);
 typedef mepa_rc (*mepa_mac_block_mtu_set_t)(struct mepa_device *dev, const mepa_port_no_t port_no, const uint16_t mtu_value, const mepa_bool_t mtu_tag_check);
 typedef mepa_rc (*mepa_macsec_fcbuf_frame_gap_comp_set_t)(struct mepa_device *dev, const mepa_port_no_t port_no, const uint8_t frm_gap);
-typedef mepa_rc (*mepa_macsec_dbg_fcb_block_reg_dump_t)(struct mepa_device *dev, const mepa_port_no_t port_no, const mepa_debug_print_t pr);
-typedef mepa_rc (*mepa_macsec_dbg_frm_match_handling_ctrl_reg_dump_t)(struct mepa_device *dev, const mepa_port_no_t port_no, const mepa_debug_print_t pr);
+typedef mepa_rc (*mepa_macsec_dbg_fcb_block_reg_dump_t)(struct mepa_device *dev, const mepa_port_no_t port_no, lmu_ss_t *const ss);
+typedef mepa_rc (*mepa_macsec_dbg_frm_match_handling_ctrl_reg_dump_t)(struct mepa_device *dev, const mepa_port_no_t port_no, lmu_ss_t *const ss);
 #ifdef MEPA_MACSEC_FIFO_OVERFLOW_WORKAROUND
 typedef mepa_rc (*mepa_macsec_dbg_reconfig_t)(struct mepa_device *dev, const mepa_port_no_t port_no);
 #endif

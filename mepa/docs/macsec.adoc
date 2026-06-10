@@ -864,6 +864,7 @@ Reffer link:mepa-app-doc.html#mepa_demo/docs/macsec-demo[MACsec-Demo App User Gu
 `mepa_macsec_lmac_counters_get()` +
 `mepa_macsec_is_capable()` +
 `mepa_macsec_dbg_reg_dump()` +
+`mepa_macsec_dbg_reg_print_buf()` +
 `mepa_macsec_inst_count_get()` +
 `mepa_macsec_lmac_counters_clear()` +
 `mepa_macsec_hmac_counters_clear()` +
@@ -882,6 +883,8 @@ Reffer link:mepa-app-doc.html#mepa_demo/docs/macsec-demo[MACsec-Demo App User Gu
 `mepa_mac_block_mtu_set()` +
 `mepa_macsec_fcbuf_frame_gap_comp_set()` +
 `mepa_macsec_dbg_fcb_block_reg_dump()` +
+`mepa_macsec_dbg_fcb_block_reg_print_buf()` +
 `mepa_macsec_dbg_frm_match_handling_ctrl_reg_dump()` +
+`mepa_macsec_dbg_frm_match_handling_ctrl_reg_print_buf()` +
 `mepa_macsec_dbg_reconfig()` +
 `mepa_macsec_dbg_update_seq_set()`

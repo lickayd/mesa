@@ -1,7 +1,16 @@
 // Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
 // SPDX-License-Identifier: MIT
 
+#include <lm_utils.h>
+
 #define MEPA_RC(expr) { mesa_rc __rc__ = (expr); if (__rc__ < MESA_RC_OK) return __rc__; }
+
+// Shim rendering the vtss base printf-style debug callback into the active MEPA
+// lmu_ss_t string-stream. Defined in vtss.c and shared by vtss_macsec.c: set
+// vtss_dbg_ss to the target stream, pass vtss_dbg_ss_printf to the vtss base
+// dump API, then reset vtss_dbg_ss to NULL. Serialized by MEPA_ENTER().
+extern lmu_ss_t *vtss_dbg_ss;
+int vtss_dbg_ss_printf(const char *fmt, ...);
 
 
 #define true 1
