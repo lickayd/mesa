@@ -1949,8 +1949,11 @@ static void port_init(meba_inst_t inst)
             pc->speed = MESA_SPEED_2500M;
             break;
         case MESA_PORT_INTERFACE_USXGMII:
-            entry->media_type = MSCC_PORT_TYPE_SFP;
-            pc->speed = MESA_SPEED_10G;
+            entry->media_type =
+                (cap & MEBA_PORT_CAP_COPPER) ? MSCC_PORT_TYPE_CU : MSCC_PORT_TYPE_SFP;
+            pc->speed = (cap & MEBA_PORT_CAP_10G_FDX)  ? MESA_SPEED_10G
+                        : (cap & MEBA_PORT_CAP_5G_FDX) ? MESA_SPEED_5G
+                                                       : MESA_SPEED_2500M;
             pc->autoneg = 1;
             break;
         default: T_E("unknown if_type on port %u", port_no); break;
