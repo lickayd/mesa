@@ -143,8 +143,8 @@ update:
     pdata->t1s_cfg.plca_cfg.max_burst_cnt = 0;
     pdata->t1s_cfg.plca_cfg.burst_timer = 128;
 
-    MEPA_RC(rc, lan867x_miim_reg_rd(pdev, LAN867X_PHY_ID0_REG, (uint16_t *)&val1));
-    MEPA_RC(rc, lan867x_miim_reg_rd(pdev, LAN867X_PHY_ID1_REG, (uint16_t *)&val2));
+    MEPA_RC_GOTO(rc, lan867x_miim_reg_rd(pdev, LAN867X_PHY_ID0_REG, (uint16_t *)&val1));
+    MEPA_RC_GOTO(rc, lan867x_miim_reg_rd(pdev, LAN867X_PHY_ID1_REG, (uint16_t *)&val2));
 
     pdata->ctx_status = true;
     pdata->dev.id = LAN867X_OUI((uint32_t)val1, (uint32_t)val2);
@@ -220,10 +220,10 @@ static mepa_rc lan867x_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_c
 
     T_I( MEPA_TRACE_GRP_GEN, "Initializing PHY! \r\n");
 
-    MEPA_RC(rc, lan867x_init_conf(dev, data->t1s_cfg.plca_cfg));
+    MEPA_RC_GOTO(rc, lan867x_init_conf(dev, data->t1s_cfg.plca_cfg));
 
     // Reconfigure the phy after reset
-    MEPA_RC(rc, lan867x_phy_conf_set(dev, &data->conf));
+    MEPA_RC_GOTO(rc, lan867x_phy_conf_set(dev, &data->conf));
 
 error:
     MEPA_EXIT(dev);

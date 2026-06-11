@@ -20,111 +20,111 @@ static mepa_rc phy_init_conf(mepa_device_t *const dev, mepa_bool_t master)
     uint16_t value = 0, timeout = 200;
 
     /* Remember previous interrupt settings. */
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_INTR_MASK_OFFSET, &intr_val));
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_INT2_MASK_OFFSET, &intr2_val));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_INTR_MASK_OFFSET, &intr_val));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_INT2_MASK_OFFSET, &intr2_val));
 
     /**** HW_INIT LOW ***/
-    MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_POWER_DOWN_CTRL_OFFSET, LAN8770_POWER_DOWN_CTRL_FORCE_TX_EN));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_POWER_DOWN_CTRL_OFFSET, LAN8770_POWER_DOWN_CTRL_FORCE_TX_EN));
 
     /*** SOFT RESET ***/
-    MEPA_RC(rc, phy_direct_read_mod_write_register(dev, LAN8770_BASIC_CONTROL_OFFSET, LAN8770_BASIC_CTRL_SW_RESET, LAN8770_BASIC_CTRL_SW_RESET));
+    MEPA_RC_GOTO(rc, phy_direct_read_mod_write_register(dev, LAN8770_BASIC_CONTROL_OFFSET, LAN8770_BASIC_CTRL_SW_RESET, LAN8770_BASIC_CTRL_SW_RESET));
     MEPA_NSLEEP(100);
 
     /*** SET MASTER/SLAVE ***/
     value = ( LAN8770_MASTER_SLAVE_CTRL_MAN_CFG_EN |
               (master ? LAN8770_MASTER_SLAVE_CTRL_MAN_CFG_VAL : 0x0) );
-    MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_MASTER_SLAVE_CTRL_OFFSET, value));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_MASTER_SLAVE_CTRL_OFFSET, value));
 
     /*** SOFT RESET ***/
-    MEPA_RC(rc, phy_direct_read_mod_write_register(dev, LAN8770_BASIC_CONTROL_OFFSET, LAN8770_BASIC_CTRL_SW_RESET, LAN8770_BASIC_CTRL_SW_RESET));
+    MEPA_RC_GOTO(rc, phy_direct_read_mod_write_register(dev, LAN8770_BASIC_CONTROL_OFFSET, LAN8770_BASIC_CTRL_SW_RESET, LAN8770_BASIC_CTRL_SW_RESET));
     MEPA_NSLEEP(100);
 
     /*** Script 13v ****/
 
     /* Script Wrapper */
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_AFE, LAN8770_AFE_PORT_CFG1_OFFSET, 0x002B));
-    MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_POWER_DOWN_CTRL_OFFSET, 0x0308));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_AFE, LAN8770_AFE_PORT_CFG1_OFFSET, 0x002B));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_POWER_DOWN_CTRL_OFFSET, 0x0308));
 
     /* Auto Polarity */
-    MEPA_RC(rc, phy_direct_read_mod_write_register(dev, LAN8770_PCS_CTRL_OFFSET, 0x0000, 0x0380));
+    MEPA_RC_GOTO(rc, phy_direct_read_mod_write_register(dev, LAN8770_PCS_CTRL_OFFSET, 0x0000, 0x0380));
 
     /* Slave DSP Config */
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MASTER_SLAVE_STATUS_OFFSET, &value));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MASTER_SLAVE_STATUS_OFFSET, &value));
     if ((value & LAN8770_MASTER_SLAVE_STATUS_CFG_RESOL) == 0) {
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQ_FD_STG1_FRZ_CFG, 0x0002));
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQ_FD_STG2_FRZ_CFG, 0x0002));
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQ_FD_STG3_FRZ_CFG, 0x0002));
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQ_FD_STG4_FRZ_CFG, 0x0002));
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_EQ_WT_FD_LCK_FRZ_CFG, 0x0002));
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_PST_EQ_LCK_STG1_FRZ_CFG, 0x0002));
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_DFE_TAP1_INIT_COEF, 0x0014));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQ_FD_STG1_FRZ_CFG, 0x0002));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQ_FD_STG2_FRZ_CFG, 0x0002));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQ_FD_STG3_FRZ_CFG, 0x0002));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQ_FD_STG4_FRZ_CFG, 0x0002));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_EQ_WT_FD_LCK_FRZ_CFG, 0x0002));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_PST_EQ_LCK_STG1_FRZ_CFG, 0x0002));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_DFE_TAP1_INIT_COEF, 0x0014));
         /* Auto polarity fix */
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_DESCM_CONTROL0, 0x6FFF));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_DESCM_CONTROL0, 0x6FFF));
     }
 
     /* DSP Config */
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CDR_CFG_PRE_LOCK, 0x0AB1));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CDR_CFG_POST_LOCK, 0x0AB3));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQU_LOCK_STG1_THR, 0x5274));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_SLV_HD_MULT_CFG, 0x0D74));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_SLV_FD_MULT_CFG, 0x0D53));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_COEF_PROT_DIS, 0x0360));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_KP_LOOP_SAT_CFG, 0x0C30));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_LCK_STG2_MUFACT_CFG, 0x0AEA));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_LCK_STG3_MUFACT_CFG, 0x0AEB));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_POST_LCK_MUFACT_CFG, 0x0AEB));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_TX_RX_FIFO_CFG, 0x1C00));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CDR_CFG_PRE_LOCK, 0x0AB1));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CDR_CFG_POST_LOCK, 0x0AB3));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_EQU_LOCK_STG1_THR, 0x5274));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_SLV_HD_MULT_CFG, 0x0D74));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_SLV_FD_MULT_CFG, 0x0D53));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_COEF_PROT_DIS, 0x0360));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_KP_LOOP_SAT_CFG, 0x0C30));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_LCK_STG2_MUFACT_CFG, 0x0AEA));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_LCK_STG3_MUFACT_CFG, 0x0AEB));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_POST_LCK_MUFACT_CFG, 0x0AEB));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_TX_RX_FIFO_CFG, 0x1C00));
 
     /* TX IIR */
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1000));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1821));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1021));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1842));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1042));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1863));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1063));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18a4));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10a4));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18c5));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10c5));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18e6));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10e6));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18c7));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10c7));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18c8));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10c8));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1889));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1089));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x184a));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x104a));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180b));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100b));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180c));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100c));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180d));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100d));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180e));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100e));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180f));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100f));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1810));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1010));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1811));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1011));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1000));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1000));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1821));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1021));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1842));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1042));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1863));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1063));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18a4));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10a4));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18c5));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10c5));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18e6));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10e6));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18c7));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10c7));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x18c8));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x10c8));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1889));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1089));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x184a));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x104a));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180b));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100b));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180c));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100c));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180d));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100d));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180e));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100e));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x180f));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x100f));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1810));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1010));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1811));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1011));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_TX_LPF_FIR_CFG, 0x1000));
 
     /* SQI Enable  */
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_SQI_CONFIG, 0x9572));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_SQI_CONFIG, 0x9572));
 
     /* Flag LPS and WUR as idle errors  */
-    MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_MDIO_CTRL2_OFFSET, 0x0014));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_MDIO_CTRL2_OFFSET, 0x0014));
 
     /* Script Wrapper */
-    MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_POWER_DOWN_CTRL_OFFSET, 0x0200));
-    MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_MDIO_CTRL2_OFFSET, 0x0094));
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MDIO_CTRL2_OFFSET, &value));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_POWER_DOWN_CTRL_OFFSET, 0x0200));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_MDIO_CTRL2_OFFSET, 0x0094));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MDIO_CTRL2_OFFSET, &value));
     while ((value & 0x0080) == 0x0080) {
-        MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MDIO_CTRL2_OFFSET, &value));
+        MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MDIO_CTRL2_OFFSET, &value));
         timeout--;
         if (timeout) {
             MEPA_NSLEEP(10);
@@ -135,43 +135,43 @@ static mepa_rc phy_init_conf(mepa_device_t *const dev, mepa_bool_t master)
         rc = MEPA_RC_ERROR;
         goto error;
     }
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_AFE, LAN8770_AFE_PORT_CFG1_OFFSET, 0x000A));
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_INTR_SRC_OFFSET, &value));
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_INT2_SRC_OFFSET, &value));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_AFE, LAN8770_AFE_PORT_CFG1_OFFSET, 0x000A));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_INTR_SRC_OFFSET, &value));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_INT2_SRC_OFFSET, &value));
     /******************/
 
     /* TC10 */
     // Turn on ROSC
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, 0x0020, 0x0020));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, 0x0020, 0x0020));
     // Set WUR and LPS detect length
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_SLEEP_WAKE_DET_OFFSET, 0x3C3C));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_SLEEP_WAKE_DET_OFFSET, 0x3C3C));
     // Enable LPS/WUR detection in idles
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_MDIO_CTRL2_OFFSET, 0x0020, 0x0020));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_MDIO_CTRL2_OFFSET, 0x0020, 0x0020));
     //Set WAKE_IN debounce length
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL1_OFFSET, 0x2700, 0xFF00));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL1_OFFSET, 0x2700, 0xFF00));
     //Sleep en, INH en, WI debouce units, write to VBAT domain
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, 0x8006, 0x800E));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, 0x8006, 0x800E));
     //// Write to VBAT domain, WUP digital filt, WUP debouce units, WUP debounce units
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, 0xD010));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, 0xD010));
     // Fix for Slave TXPD in sleep silent (does not need to be written to VBAT domain)
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL2_OFFSET, 0x0020, 0x0020));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL2_OFFSET, 0x0020, 0x0020));
     //EnableRemoteWakeupReaction
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, 0x8100, 0x8100));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, 0x8100, 0x8100));
     //set wake out len
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL1_OFFSET, 0x0064, 0x0064));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL1_OFFSET, 0x0064, 0x0064));
 
     /* Enable interrupts again. */
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_INTR_MASK_OFFSET, &value));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_INTR_MASK_OFFSET, &value));
     if (value != intr_val) {
-        MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_INTR_MASK_OFFSET, intr_val));
+        MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_INTR_MASK_OFFSET, intr_val));
     }
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_INT2_MASK_OFFSET, &value));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_INT2_MASK_OFFSET, &value));
     if (value != intr2_val) {
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_INT2_MASK_OFFSET, intr2_val));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_INT2_MASK_OFFSET, intr2_val));
     }
 
     /* HW_INIT HIGH */
-    MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_POWER_DOWN_CTRL_OFFSET, (LAN8770_POWER_DOWN_CTRL_FORCE_TX_EN | LAN8770_POWER_DOWN_CTRL_HW_INIT_EN)));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_POWER_DOWN_CTRL_OFFSET, (LAN8770_POWER_DOWN_CTRL_FORCE_TX_EN | LAN8770_POWER_DOWN_CTRL_HW_INIT_EN)));
 
 error:
     return rc;
@@ -183,13 +183,13 @@ static mepa_rc phy_get_device_info(mepa_device_t *const dev)
     mepa_rc rc = MEPA_RC_ERROR;
     phy_data_t *data = (phy_data_t *)dev->data;
 
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_PHY_ID1_OFFSET, &val));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_PHY_ID1_OFFSET, &val));
     /**
      *  PHY_ID_NUM0: Assigned to the 3rd through 18th bits of the Organizationally Unique Identifier (OUI), respectively.
      */
     data->dev.id = LAN8770_PHY_ID_NUM0(val);
 
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_PHY_ID2_OFFSET, &val));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_PHY_ID2_OFFSET, &val));
     data->dev.rev   = LAN8770_PHY_REV_NUM(val);
     data->dev.model = LAN8770_PHY_MODEL_NUM(val);
     /**
@@ -197,7 +197,7 @@ static mepa_rc phy_get_device_info(mepa_device_t *const dev)
      */
     data->dev.id |= LAN8770_PHY_ID_NUM1(val);
 
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MASTER_SLAVE_STATUS_OFFSET, &val));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MASTER_SLAVE_STATUS_OFFSET, &val));
     data->dev.is_master = LAN8770_MASTER_SLAVE_STATUS_IS_MASTER(val);
     data->dev.is_master_fault = LAN8770_MASTER_SLAVE_STATUS_IS_FAULT(val);
 
@@ -234,23 +234,23 @@ static mepa_rc phy_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
     data->conf.flow_control = config->flow_control;
 
     if (!data->init_done) {
-        MEPA_RC(rc, phy_init_conf(dev, (config->man_neg == MEPA_MANUAL_NEG_REF)));
+        MEPA_RC_GOTO(rc, phy_init_conf(dev, (config->man_neg == MEPA_MANUAL_NEG_REF)));
         data->init_done = TRUE;
 
         regval = config->admin.enable ? 0x0 : LAN8770_BASIC_CTRL_POWER_DOWN;
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_BASIC_CONTROL_OFFSET, regval, LAN8770_BASIC_CTRL_POWER_DOWN));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_BASIC_CONTROL_OFFSET, regval, LAN8770_BASIC_CTRL_POWER_DOWN));
 
         data->conf.man_neg = config->man_neg;
         data->conf.admin.enable = config->admin.enable;
     }
 
     if (data->conf.man_neg != config->man_neg) {
-        MEPA_RC(rc, phy_init_conf(dev, (config->man_neg == MEPA_MANUAL_NEG_REF)));
+        MEPA_RC_GOTO(rc, phy_init_conf(dev, (config->man_neg == MEPA_MANUAL_NEG_REF)));
     }
 
     if (data->conf.admin.enable != config->admin.enable) {
         regval = config->admin.enable ? 0x0 : LAN8770_BASIC_CTRL_POWER_DOWN;
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_BASIC_CONTROL_OFFSET, regval, LAN8770_BASIC_CTRL_POWER_DOWN));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_BASIC_CONTROL_OFFSET, regval, LAN8770_BASIC_CTRL_POWER_DOWN));
     }
 
     data->conf.admin        = config->admin;
@@ -267,12 +267,12 @@ static mepa_rc phy_get_link_status_enhanced(mepa_device_t *const dev, mepa_statu
     uint16_t reg_0A_data = 0, reg_11_data = 0, pcs_descram_st = 0;
 
     /* bit 12 remote recceiver status; bit 13 local receiver status */
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MASTER_SLAVE_STATUS_OFFSET, &reg_0A_data));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MASTER_SLAVE_STATUS_OFFSET, &reg_0A_data));
     /*bit 0 link status; bit 2:1 tx mode status; bit 3 scrambler lock status*/
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MODE_STATUS_OFFSET, &reg_11_data));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MODE_STATUS_OFFSET, &reg_11_data));
     /* get pcs descrambler state */
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, LAN8770_BIT(11U), LAN8770_BIT(11U)));
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_DEBUG_BUS_STS_OFFSET, &pcs_descram_st));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, LAN8770_BIT(11U), LAN8770_BIT(11U)));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_DEBUG_BUS_STS_OFFSET, &pcs_descram_st));
 
     status->link = LAN8770_LINKDOWN;
 
@@ -300,12 +300,12 @@ static mepa_rc phy_cable_diag_start(mepa_device_t *dev, int32_t mode)
     }
 
     /*** SOFT RESET ***/
-    MEPA_RC(rc, phy_direct_read_mod_write_register(dev, LAN8770_BASIC_CONTROL_OFFSET, LAN8770_BASIC_CTRL_SW_RESET, LAN8770_BASIC_CTRL_SW_RESET));
+    MEPA_RC_GOTO(rc, phy_direct_read_mod_write_register(dev, LAN8770_BASIC_CONTROL_OFFSET, LAN8770_BASIC_CTRL_SW_RESET, LAN8770_BASIC_CTRL_SW_RESET));
     MEPA_NSLEEP(100);
 
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_POWER_DOWN_CTRL_OFFSET,
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_POWER_DOWN_CTRL_OFFSET,
                                             LAN8770_POWER_DOWN_CTRL_HW_INIT_EN, LAN8770_POWER_DOWN_CTRL_HW_INIT_EN));
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_BASIC_CONTROL_OFFSET, &tempReg));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_BASIC_CONTROL_OFFSET, &tempReg));
     // check if part is alive - if not, return diagnostic error
     if (tempReg !=  (LAN8770_BASIC_CTRL_DUPLEX_MODE | LAN8770_BASIC_CTRL_SPEED_SEL_LSB)/*0x2100*/) {
         T_E(MEPA_TRACE_GRP_GEN, "PHY diagnositc error\r\n");
@@ -313,30 +313,30 @@ static mepa_rc phy_cable_diag_start(mepa_device_t *dev, int32_t mode)
         return rc;
     }
     tempReg = 0;
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MASTER_SLAVE_STATUS_OFFSET, &tempReg));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MASTER_SLAVE_STATUS_OFFSET, &tempReg));
     // master/slave specific writes
     /* Local PHY configuration resolved to Slave */
     if ((tempReg & LAN8770_MASTER_SLAVE_STATUS_CFG_RESOL /*0x4000*/) != LAN8770_MASTER_SLAVE_STATUS_CFG_RESOL /*0x4000*/) {
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_AFE, LAN8770_AFE_AFE_PORT_CFG4_OFFSET, 0x0005, 0x0007));
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_POWER_DOWN_CTRL_OFFSET, 0x0008, 0x0008));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_AFE, LAN8770_AFE_AFE_PORT_CFG4_OFFSET, 0x0005, 0x0007));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_POWER_DOWN_CTRL_OFFSET, 0x0008, 0x0008));
     } else { /* Local PHY configuration resolved to Master */
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_MDIO_CTRL2_OFFSET, 0x0, LAN8770_MDIO_CTRL2_EN_DET_MST_MODE));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_MDIO_CTRL2_OFFSET, 0x0, LAN8770_MDIO_CTRL2_EN_DET_MST_MODE));
     }
 
     // DSP configuration
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_MIN_WAIT_CFG, 0));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_MAX_WAIT_CFG, 10));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_CYC_WAIT_CFG, 90));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_PGA_THR, 60));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_MAX_PGA_GAIN, 31));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_MIN_WAIT_CFG, 0));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_MAX_WAIT_CFG, 10));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_CYC_WAIT_CFG, 90));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_PGA_THR, 60));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_MAX_PGA_GAIN, 31));
 
     // clock align for each iteration
-    MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CALIB_CFG, 0x0000, 0x0038));
+    MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CALIB_CFG, 0x0000, 0x0038));
     MEPA_NSLEEP(50000);
     // max cycle wait config
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_MAX_WAIT_CFG, 70));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_MAX_WAIT_CFG, 70));
     // start cable diag
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_STS_CTL, 0x01));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_STS_CTL, 0x01));
 
     data->cdiags_start = TRUE;
 
@@ -384,7 +384,7 @@ static mepa_rc phy_cable_diag_get(mepa_device_t *const dev, mepa_cable_diag_resu
 
             T_I( MEPA_TRACE_GRP_GEN, "cable_diag ctrl 0x%x  \r\n", tmp);
 
-            MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_STS_CTL, &tmp));
+            MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_STS_CTL, &tmp));
             T_D( MEPA_TRACE_GRP_GEN, "cable_diag ctrl 0x%x  \r\n", tmp);
             if ((tmp & 2) == 2) {
                 bDone = TRUE;
@@ -397,19 +397,19 @@ static mepa_rc phy_cable_diag_get(mepa_device_t *const dev, mepa_cable_diag_resu
             goto error;
         } else {
             // stop cable diag (clear start bit)
-            MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_STS_CTL, 0x0));
+            MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_STS_CTL, 0x0));
         }
         if (diagTimeout == FALSE) {
             // read non-hybrid results
-            MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_GAIN_IDX, &gainIdx));
+            MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_GAIN_IDX, &gainIdx));
 
-            MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_PEAK, &posPeak));
+            MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_PEAK, &posPeak));
 
-            MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_NEG_PEAK, &negPeak));
+            MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_NEG_PEAK, &negPeak));
 
-            MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_PEAK_TIME, &posPeakTime));
+            MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_PEAK_TIME, &posPeakTime));
 
-            MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_NEG_PEAK_TIME, &negPeakTime));
+            MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_CABLE_DIAG_NEG_PEAK_TIME, &negPeakTime));
 
             // calculate non-hybrid values
             posPeakCycle = (posPeakTime >> 7) & 0x7F;
@@ -597,14 +597,14 @@ static mepa_rc phy_sqi_read(mepa_device_t *const dev, uint32_t *const value)
     memset(rawTable, 0, sizeof(rawTable));
     memset(linkTable, 1, sizeof(linkTable));
 
-    MEPA_RC(rc, phy_get_link_status_enhanced(dev, &status));
+    MEPA_RC_GOTO(rc, phy_get_link_status_enhanced(dev, &status));
     if (status.link == LAN8770_LINKUP) {
         // method 1 config
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, 0x04, 0x16D6));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, 0x04, 0x16D6));
 
-        MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, 0x2E, 0x9572));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_DSP, 0x2E, 0x9572));
 
-        MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, 0x2E, &temp));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, 0x2E, &temp));
 
         if (temp != 0x9572) {
             T_E( MEPA_TRACE_GRP_GEN, "PHY invalid mode\r\n");
@@ -613,7 +613,7 @@ static mepa_rc phy_sqi_read(mepa_device_t *const dev, uint32_t *const value)
         }
 
         // update DSP d130/131
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_DSP,
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_DSP,
                                                 LAN8770_DSP_COEF_RW_CTL_CFG_OFFSET,
                                                 LAN8770_DSP_COEF_RW_CTL_CFG_POKE_DIS,
                                                 LAN8770_DSP_COEF_RW_CTL_CFG_POKE_DIS ));
@@ -622,14 +622,14 @@ static mepa_rc phy_sqi_read(mepa_device_t *const dev, uint32_t *const value)
 
         // get 200 raw readings
         for (i = 0; i < 200; i++) {
-            MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_DSP,
+            MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_DSP,
                                                     LAN8770_DSP_COEF_RW_CTL_CFG_OFFSET,
                                                     LAN8770_DSP_COEF_RW_CTL_CFG_POKE_DIS,
                                                     LAN8770_DSP_COEF_RW_CTL_CFG_POKE_DIS));
 
-            MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_SQI_SQU_MEAN_MSB_OFFSET, &temp));
+            MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_DSP, LAN8770_DSP_SQI_SQU_MEAN_MSB_OFFSET, &temp));
             rawTable[i] = temp;
-            MEPA_RC(rc, phy_get_link_status_enhanced(dev, &status));
+            MEPA_RC_GOTO(rc, phy_get_link_status_enhanced(dev, &status));
             linkTable[i] = status.link;
         }
 
@@ -716,11 +716,11 @@ static mepa_rc lan8770_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_c
 
     T_I(MEPA_TRACE_GRP_GEN, "Reseting and Configuring PHY\r\n");
 
-    MEPA_RC(rc, phy_init_conf(dev, (data->conf.man_neg == MEPA_MANUAL_NEG_REF)));
+    MEPA_RC_GOTO(rc, phy_init_conf(dev, (data->conf.man_neg == MEPA_MANUAL_NEG_REF)));
     data->init_done = TRUE;
-    MEPA_RC(rc, phy_get_device_info(dev));
-    MEPA_RC(rc, phy_conf_set(dev, &data->conf));
-    MEPA_RC(rc, phy_tc10_set_config(dev, &data->tc10));
+    MEPA_RC_GOTO(rc, phy_get_device_info(dev));
+    MEPA_RC_GOTO(rc, phy_conf_set(dev, &data->conf));
+    MEPA_RC_GOTO(rc, phy_tc10_set_config(dev, &data->tc10));
 
 error:
     MEPA_EXIT(dev);
@@ -974,40 +974,40 @@ static mepa_rc lan8770_loopback_set(mepa_device_t *dev, const mepa_loopback_t *l
     // En(Dis)able MAC Loopback: Digital loopback at PCS
     if (loopback->near_end_ena == TRUE) {
         uint16_t val = 0;
-        MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_BASIC_CONTROL_OFFSET, &val));
+        MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_BASIC_CONTROL_OFFSET, &val));
         val |= LAN8770_BASIC_CTRL_PCS_LOOPBACK;
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_BASIC_CONTROL_OFFSET, val, val));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_BASIC_CONTROL_OFFSET, val, val));
     } else if (data->loopback.near_end_ena == TRUE) {
         uint16_t val = 0;
-        MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_BASIC_CONTROL_OFFSET, &val));
+        MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_BASIC_CONTROL_OFFSET, &val));
         val &= ~LAN8770_BASIC_CTRL_PCS_LOOPBACK;
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_BASIC_CONTROL_OFFSET, val, val));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_BASIC_CONTROL_OFFSET, val, val));
     }
 
     // En(Dis)able Far End Loopback: Loopback from wire to PCS and back to wire.
     if (loopback->far_end_ena == TRUE) {
         uint16_t val = 0;
-        MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, &val));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, &val));
         val |= LAN8770_LPBK_CTRL_FAR;
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, val, val));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, val, val));
     } else if (data->loopback.far_end_ena == TRUE) {
         uint16_t val = 0;
-        MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, &val));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, &val));
         val &= ~LAN8770_LPBK_CTRL_FAR;
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, val, val));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, val, val));
     }
 
     // En(Dis)able PMA Loopback: Analog loopback inside AFE.
     if (loopback->connector_ena == TRUE) {
         uint16_t val = 0;
-        MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, &val));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, &val));
         val |= LAN8770_LPBK_CTRL_PMA;
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, val, val));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, val, val));
     } else if (data->loopback.connector_ena == TRUE) {
         uint16_t val = 0;
-        MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, &val));
+        MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, &val));
         val &= ~LAN8770_LPBK_CTRL_PMA;
-        MEPA_RC(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, val, val));
+        MEPA_RC_GOTO(rc, phy_read_mod_write_register(dev, LAN8770_PHY_BANK_SMI, LAN8770_LOOPBACK_CTRL_OFFSET, val, val));
     }
 
     memcpy(&data->loopback, loopback, sizeof(data->loopback));
@@ -1077,7 +1077,7 @@ static mepa_rc lan8770_isolate_mode_set(struct mepa_device *dev, mepa_bool_t con
 
     MEPA_ENTER(dev);
 
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_BASIC_CONTROL_OFFSET, &reg_val));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_BASIC_CONTROL_OFFSET, &reg_val));
     //Enabled so set the bit
     if (val == TRUE) {
         reg_val |= LAN8770_BASIC_CTRL_ISOLATE;

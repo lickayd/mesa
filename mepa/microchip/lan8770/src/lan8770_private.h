@@ -6,36 +6,12 @@
 
 #include <mepa_trace.h>
 
-#define MEPA_RC(rc, expr) { rc = (expr); if (rc) goto error; }
-
 #define TRUE  1
 #define FALSE 0
 #define EXT_PAGE 1 // extended page access
 #define MMD_DEV  2 // MMD device access
 
 #define INTR_BIT_LEN    (8)
-
-// Locking Macros
-// The variable 'dev' is passed as macro argument to obtain callback pointers and call actual lock functions. It does not indicate locks per port.
-#define MEPA_ENTER(dev) {                               \
-    mepa_lock_t lock;                                \
-    lock.function = __FUNCTION__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if (dev->callout->lock_enter) {              \
-        dev->callout->lock_enter(&lock);         \
-    }                                                \
-}
-
-#define MEPA_EXIT(dev) {          \
-    mepa_lock_t lock;                                \
-    lock.function = __FUNCTION__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if (dev->callout->lock_exit) {               \
-        dev->callout->lock_exit(&lock);          \
-    }                                                \
-}
 
 #define MAX_LAN8770_PHY                 9U
 #define LAN8770_PHY_ID_MAX              4U

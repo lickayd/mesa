@@ -16,7 +16,7 @@ static mepa_rc lan867x_t1s_set_plca_config(struct mepa_device *dev,
     
     MEPA_ENTER(dev);
 
-    MEPA_RC(rc, lan867x_init_conf(dev, cfg));
+    MEPA_RC_GOTO(rc, lan867x_init_conf(dev, cfg));
     (void)memcpy(&pdata->t1s_cfg.plca_cfg, &cfg, sizeof(mepa_t1s_plca_cfg_t));
 
 error:

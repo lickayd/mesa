@@ -8,9 +8,6 @@
 #include <microchip/ethernet/phy/api/types.h>
 #include <microchip/ethernet/phy/api/phy_ts.h>
 
-#define MEPA_RC(expr) { mesa_rc __rc__ = (expr); if (__rc__ < MESA_RC_OK) { return __rc__; } }
-#define MEPA_ASSERT(x) if((x)) { return MESA_RC_ERROR;}
-
 #define TRUE  1U
 #define FALSE 0U
 #define EXT_PAGE 1 // extended page access
@@ -39,28 +36,6 @@ typedef enum {
 
 #define LAN8840_OPERATION_MODE_STRAP_LOW_REGISTER 3
 #define LAN8840_OPERATION_MODE_STRAP_LOW_REGISTER_STRAP_RGMII_EN 1U
-
-// Locking Macros
-// The variable 'dev' is passed as macro argument to obtain callback pointers and call actual lock functions. It does not indicate locks per port.
-#define MEPA_ENTER(dev) {                            \
-    mepa_lock_t lock;                                \
-    lock.function = __FUNCTION__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if ((dev)->callout->lock_enter != NULL) {        \
-        (dev)->callout->lock_enter(&lock);           \
-    }                                                \
-}
-
-#define MEPA_EXIT(dev) {                             \
-    mepa_lock_t lock;                                \
-    lock.function = __FUNCTION__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if ((dev)->callout->lock_exit != NULL) {         \
-        (dev)->callout->lock_exit(&lock);            \
-    }                                                \
-}
 
 typedef struct {
     uint8_t  model;

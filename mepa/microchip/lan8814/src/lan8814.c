@@ -113,10 +113,10 @@ mepa_rc lan8814_direct_reg_wr(mepa_device_t *dev, uint16_t addr, uint16_t value,
 mepa_rc lan8814_ext_reg_rd(mepa_device_t *dev, uint16_t page, uint16_t addr, uint16_t *value)
 {
     // Set-up to access extended page register.
-    MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL, page), " PHY MIIM write error");
-    MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, addr), " PHY MIIM write error");
-    MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL,
-                                         LAN8814_F_EXT_PAGE_ACCESS_CTRL_EP_FUNC | page), "PHY MIIM write error");
+    MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL, page));
+    MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, addr));
+    MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL,
+                                     LAN8814_F_EXT_PAGE_ACCESS_CTRL_EP_FUNC | page));
 
     // Read the value
     MEPA_RC(lan8814_direct_reg_rd(dev, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, value));
@@ -125,10 +125,10 @@ mepa_rc lan8814_ext_reg_rd(mepa_device_t *dev, uint16_t page, uint16_t addr, uin
 mepa_rc lan8814_ext_reg_wr(mepa_device_t *dev, uint16_t page, uint16_t addr, uint16_t value, uint16_t mask)
 {
     // Set-up to access extended page register.
-    MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL, page), " PHY MIIM write error");
-    MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, addr), " PHY MIIM write error");
-    MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL,
-                                         LAN8814_F_EXT_PAGE_ACCESS_CTRL_EP_FUNC | page), "PHY MIIM write error");
+    MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL, page));
+    MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, addr));
+    MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL,
+                                     LAN8814_F_EXT_PAGE_ACCESS_CTRL_EP_FUNC | page));
 
     // write the value
     MEPA_RC(lan8814_direct_reg_wr(dev, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, value, mask));
@@ -141,10 +141,10 @@ mepa_rc lan8814_ext_incr_reg_rd(mepa_device_t *dev, uint16_t page, uint16_t addr
 {
     if (start_addr) {
         // Set-up to access extended page register.
-        MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL, page), " PHY MIIM write error");
-        MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, addr), " PHY MIIM write error");
-        MEPA_RC_ERR(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL,
-                                             LAN8814_F_EXT_PAGE_ACCESS_CTRL_INCR_RD_WR | page), " PHY MIIM write error");
+        MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL, page));
+        MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, addr));
+        MEPA_RC(dev->callout->miim_write(dev->callout_ctx, LAN8814_EXT_PAGE_ACCESS_CTRL,
+                                         LAN8814_F_EXT_PAGE_ACCESS_CTRL_INCR_RD_WR | page));
     }
     // Read the value
     MEPA_RC(lan8814_direct_reg_rd(dev, LAN8814_EXT_PAGE_ACCESS_ADDR_DATA, value));

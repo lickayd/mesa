@@ -241,4 +241,28 @@ MEPA_TRACE_TYPES
     LMU_PP_VA_ARGS_OVERLOAD_ONE_OR_MORE(LMU_SS_FMT, ##__VA_ARGS__)                                 \
     ((ss), (fmt_str), ##__VA_ARGS__)
 
+#define MEPA_RC(expr) { mepa_rc __rc__ = (expr); if (__rc__ < MEPA_RC_OK) { return __rc__; } }
+#define MEPA_RC_GOTO(rc, expr) { { (rc) = (expr); }  if ((rc) != 0) { goto error; } }
+#define MEPA_ASSERT(x) if((x)) { return MEPA_RC_ERROR;}
+
+#define MEPA_ENTER(dev) {                            \
+    mepa_lock_t lock;                                \
+    lock.function = __FUNCTION__;                    \
+    lock.file = __FILE__;                            \
+    lock.line = __LINE__;                            \
+    if ((dev)->callout->lock_enter != NULL) {        \
+        (dev)->callout->lock_enter(&lock);           \
+    }                                                \
+}
+
+#define MEPA_EXIT(dev) {                             \
+    mepa_lock_t lock;                                \
+    lock.function = __FUNCTION__;                    \
+    lock.file = __FILE__;                            \
+    lock.line = __LINE__;                            \
+    if ((dev)->callout->lock_exit != NULL) {           \
+        (dev)->callout->lock_exit(&lock);              \
+    }                                                \
+}
+
 #endif /**< MICROCHIP_ETHERNET_PHY_API_TRACE_H */

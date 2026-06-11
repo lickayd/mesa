@@ -8,34 +8,6 @@
 
 #include <mepa_trace.h>
 
-#define MEPA_RC(rc, expr)   do { (rc) = (expr);     \
-                                if ((rc) != 0) {    \
-                                     goto error;    \
-                                }                   \
-                            } while(false)          \
-
-// Locking Macros
-// The variable 'dev' is passed as macro argument to obtain callback pointers and call actual lock functions. It does not indicate locks per port.
-#define MEPA_ENTER(dev) do {                                            \
-                            mepa_lock_t lock;                           \
-                            lock.function = __FUNCTION__;               \
-                            lock.file = __FILE__;                       \
-                            lock.line = __LINE__;                       \
-                            if ((dev)->callout->lock_enter != NULL) {   \
-                                (dev)->callout->lock_enter(&lock);      \
-                            }                                           \
-                        } while(false)
-
-#define MEPA_EXIT(dev) do {                                             \
-                            mepa_lock_t lock;                           \
-                            lock.function = __FUNCTION__;               \
-                            lock.file = __FILE__;                       \
-                            lock.line = __LINE__;                       \
-                            if ((dev)->callout->lock_exit != NULL) {    \
-                                (dev)->callout->lock_exit(&lock);       \
-                            }                                           \
-                        } while(false)
-
 #define LAN867X_PHY_ID      0x0007c160U
 #define LAN867X_PHY_ID_MASK 0xFFFFFFF0U
 

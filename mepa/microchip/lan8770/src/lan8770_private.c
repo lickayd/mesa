@@ -40,9 +40,9 @@ mepa_rc phy_direct_read_mod_write_register(mepa_device_t *const dev,
     uint16_t val = 0x0;
     mepa_rc rc = MEPA_RC_ERROR;
 
-    MEPA_RC(rc, phy_direct_reg_rd(dev, offset, &val));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, offset, &val));
     val = (val & (mask ^ 0xFFFF)) | value;
-    MEPA_RC(rc, phy_direct_reg_wr(dev, offset, val));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, offset, val));
     T_D( MEPA_TRACE_GRP_GEN, "modify_register addr=0x%x, set=0x%x,"
          "clr=0x%x, reg_val=0x%x, ret_code=%d \r\n",
          offset, value, mask, val, rc);
@@ -56,17 +56,17 @@ mepa_rc phy_ext_bank_reg_rd(mepa_device_t *const dev, uint16_t const bank,
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (bank == LAN8770_PHY_BANK_SMI) {
-        MEPA_RC(rc, phy_direct_reg_rd(dev, offset, value));
+        MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, offset, value));
     } else if (bank <= LAN8770_PHY_BANK_INSTRUMENT) {
         uint16_t regdata = 0, timeout = 200;
 
         regdata = offset;
         regdata |= LAN8770_EXT_REG_CTRL_REG_BANK_SET(bank);
         regdata |= LAN8770_EXT_REG_CTRL_WRT_CTRL;
-        MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_EXT_REG_CTRL_OFFSET, regdata));
-        MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_CTRL_OFFSET, &regdata));
+        MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_EXT_REG_CTRL_OFFSET, regdata));
+        MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_CTRL_OFFSET, &regdata));
         while (regdata & LAN8770_EXT_REG_CTRL_READ_CTRL) {
-            MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_CTRL_OFFSET, &regdata));
+            MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_CTRL_OFFSET, &regdata));
             timeout--;
             if (timeout) {
                 MEPA_NSLEEP(10);
@@ -79,7 +79,7 @@ mepa_rc phy_ext_bank_reg_rd(mepa_device_t *const dev, uint16_t const bank,
             goto error;
         }
 
-        MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_RD_DATA, value));
+        MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_RD_DATA, value));
     } else {
         rc = MEPA_RC_ERR_PARM;
     }
@@ -94,19 +94,19 @@ mepa_rc phy_ext_bank_reg_wr(mepa_device_t *const dev, uint16_t const bank,
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (bank == LAN8770_PHY_BANK_SMI) {
-        MEPA_RC(rc, phy_direct_reg_wr(dev, offset, value));
+        MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, offset, value));
     } else if (bank <= LAN8770_PHY_BANK_INSTRUMENT) {
         uint16_t regdata = 0, timeout = 200;
 
         regdata = offset;
         regdata |= LAN8770_EXT_REG_CTRL_REG_BANK_SET(bank);
         regdata |= LAN8770_EXT_REG_CTRL_WRT_CTRL;
-        MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_EXT_REG_WR_DATA, value));
-        MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_EXT_REG_CTRL_OFFSET, regdata));
+        MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_EXT_REG_WR_DATA, value));
+        MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_EXT_REG_CTRL_OFFSET, regdata));
 
-        MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_CTRL_OFFSET, &regdata));
+        MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_CTRL_OFFSET, &regdata));
         while (regdata & LAN8770_EXT_REG_CTRL_WRT_CTRL) {
-            MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_CTRL_OFFSET, &regdata));
+            MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_EXT_REG_CTRL_OFFSET, &regdata));
             timeout--;
             if (timeout) {
                 MEPA_NSLEEP(10);
@@ -136,9 +136,9 @@ mepa_rc phy_read_mod_write_register(mepa_device_t *const dev,
     uint16_t val = 0x0;
     mepa_rc rc = MEPA_RC_ERROR;
 
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, phy_bank, offset, &val));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, phy_bank, offset, &val));
     val = (val & (mask ^ 0xFFFF)) | value;
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, phy_bank, offset, val));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, phy_bank, offset, val));
 
 error:
     return rc;
@@ -153,7 +153,7 @@ mepa_rc phy_tc10_set_sleep_support(struct mepa_device          *dev,
     mepa_rc rc = MEPA_RC_ERROR;
     phy_data_t *data = (phy_data_t *) dev->data;
 
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_SLEEP_WAKE_CTL_OFFSET, &reg_data));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_SLEEP_WAKE_CTL_OFFSET, &reg_data));
 
     if (enable) {
         reg_data &= ~(LAN8770_PCS_SLEEP_WAKE_CTL_SLEEP_REJECT_EN);
@@ -161,7 +161,7 @@ mepa_rc phy_tc10_set_sleep_support(struct mepa_device          *dev,
         reg_data |= LAN8770_PCS_SLEEP_WAKE_CTL_SLEEP_REJECT_EN;
     }
 
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_SLEEP_WAKE_CTL_OFFSET, reg_data));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_SLEEP_WAKE_CTL_OFFSET, reg_data));
 
     data->tc10.sleep_enable = enable;
 
@@ -186,8 +186,8 @@ mepa_rc phy_tc10_set_wakeup_support(struct mepa_device                  *dev,
     uint16_t reg_data1 = 0, reg_data2 = 0;
     phy_data_t *data = (phy_data_t *) dev->data;
 
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, &reg_data1));
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data2));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, &reg_data1));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data2));
 
     switch (mode) {
     case MEPA_TC10_WAKEUP_DISABLE:
@@ -213,8 +213,8 @@ mepa_rc phy_tc10_set_wakeup_support(struct mepa_device                  *dev,
     reg_data1 |= (LAN8770_MISC_WKP_PRT_CTL1_VBAT_PORT_WR);
     reg_data2 |= (LAN8770_MISC_WKP_COM_CTL0_VBAT_COMM_WR);
 
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, reg_data1));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, reg_data2));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, reg_data1));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, reg_data2));
 
     data->tc10.wakeup_mode = mode;
 
@@ -239,8 +239,8 @@ mepa_rc phy_tc10_set_wakeup_fwd_support(struct mepa_device                      
     uint16_t reg_data1 = 0, reg_data2 = 0;
     phy_data_t *data = (phy_data_t *) dev->data;
 
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, &reg_data1));
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data2));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, &reg_data1));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data2));
 
     switch (mode) {
     case MEPA_TC10_WAKEUP_FWD_DISABLE:
@@ -266,8 +266,8 @@ mepa_rc phy_tc10_set_wakeup_fwd_support(struct mepa_device                      
     reg_data1 |= (LAN8770_MISC_WKP_PRT_CTL1_VBAT_PORT_WR);
     reg_data2 |= (LAN8770_MISC_WKP_COM_CTL0_VBAT_COMM_WR);
 
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, reg_data1));
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, reg_data2));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, reg_data1));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, reg_data2));
 
     data->tc10.wakeup_fwd_mode = mode;
 
@@ -293,7 +293,7 @@ mepa_rc phy_tc10_set_wake_pin_polarity(struct mepa_device               *dev,
     mepa_rc rc = MEPA_RC_ERROR;
     phy_data_t *data = (phy_data_t *) dev->data;
 
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data));
 
     switch (pin) {
     case MEPA_TC10_WAKE_IN:
@@ -318,7 +318,7 @@ mepa_rc phy_tc10_set_wake_pin_polarity(struct mepa_device               *dev,
         return MEPA_RC_ERR_PARM;
     }
 
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, reg_data));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, reg_data));
 
     if (pin == MEPA_TC10_WAKE_IN) {
         data->tc10.wake_in_pol = polarity;
@@ -355,7 +355,7 @@ mepa_rc phy_tc10_set_pin_mode(struct mepa_device            *dev,
     mepa_rc rc = MEPA_RC_ERROR;
     phy_data_t *data = (phy_data_t *) dev->data;
 
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data));
 
     switch (pin) {
     case MEPA_TC10_WAKE_OUT:
@@ -382,7 +382,7 @@ mepa_rc phy_tc10_set_pin_mode(struct mepa_device            *dev,
         return MEPA_RC_ERR_PARM;
     }
 
-    MEPA_RC(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, reg_data));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_wr(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, reg_data));
 
     if (pin == MEPA_TC10_INH) {
         data->tc10.inh_mode = mode;
@@ -418,9 +418,9 @@ mepa_rc phy_tc10_send_sleep_request(struct mepa_device                  *dev,
     mepa_rc rc = MEPA_RC_ERR_PARM;
 
     if (req == MEPA_TC10_LPS) {
-        MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MDIO_CTRL2_OFFSET, &reg_data));
+        MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MDIO_CTRL2_OFFSET, &reg_data));
         reg_data |=  LAN8770_MDIO_CTRL2_SLEEP_REQ;
-        MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_MDIO_CTRL2_OFFSET, reg_data));
+        MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_MDIO_CTRL2_OFFSET, reg_data));
     }
 
 error:
@@ -433,7 +433,7 @@ mepa_rc phy_tc10_get_state(struct mepa_device       *dev,
     uint16_t reg_data = 0;
     mepa_rc rc = MEPA_RC_ERROR;
 
-    MEPA_RC(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_DBG_STS_OFFSET, &reg_data));
+    MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_DBG_STS_OFFSET, &reg_data));
 
     switch (LAN8770_MISC_WKP_DBG_STS_TC10_STATE_GET(reg_data)) {
     case LAN8770_MISC_WKP_DBG_STS_TC10_STATE_START:
@@ -470,9 +470,9 @@ mepa_rc phy_tc10_send_wake_request(struct mepa_device *dev)
     uint16_t reg_data = 0;
     mepa_rc rc = MEPA_RC_ERROR;
 
-    MEPA_RC(rc, phy_direct_reg_rd(dev, LAN8770_MDIO_CTRL2_OFFSET, &reg_data));
+    MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_MDIO_CTRL2_OFFSET, &reg_data));
     reg_data |=  LAN8770_MDIO_CTRL2_WAKE_REQ;
-    MEPA_RC(rc, phy_direct_reg_wr(dev, LAN8770_MDIO_CTRL2_OFFSET, reg_data));
+    MEPA_RC_GOTO(rc, phy_direct_reg_wr(dev, LAN8770_MDIO_CTRL2_OFFSET, reg_data));
 
 error:
     return rc;
@@ -482,13 +482,13 @@ mepa_rc phy_tc10_set_config(struct mepa_device *dev, phy_tc10_data_t *cfg)
 {
     mepa_rc rc = MEPA_RC_ERROR;
 
-    MEPA_RC(rc, phy_tc10_set_sleep_support(dev, cfg->sleep_enable));
-    MEPA_RC(rc, phy_tc10_set_wakeup_support(dev, cfg->wakeup_mode));
-    MEPA_RC(rc, phy_tc10_set_wakeup_fwd_support(dev, cfg->wakeup_fwd_mode));
-    MEPA_RC(rc, phy_tc10_set_wake_pin_polarity(dev, MEPA_TC10_WAKE_IN, cfg->wake_in_pol));
-    MEPA_RC(rc, phy_tc10_set_wake_pin_polarity(dev, MEPA_TC10_WAKE_OUT, cfg->wake_out_pol));
-    MEPA_RC(rc, phy_tc10_set_pin_mode(dev, MEPA_TC10_WAKE_OUT, cfg->wake_out_mode));
-    MEPA_RC(rc, phy_tc10_set_pin_mode(dev, MEPA_TC10_INH, cfg->inh_mode));
+    MEPA_RC_GOTO(rc, phy_tc10_set_sleep_support(dev, cfg->sleep_enable));
+    MEPA_RC_GOTO(rc, phy_tc10_set_wakeup_support(dev, cfg->wakeup_mode));
+    MEPA_RC_GOTO(rc, phy_tc10_set_wakeup_fwd_support(dev, cfg->wakeup_fwd_mode));
+    MEPA_RC_GOTO(rc, phy_tc10_set_wake_pin_polarity(dev, MEPA_TC10_WAKE_IN, cfg->wake_in_pol));
+    MEPA_RC_GOTO(rc, phy_tc10_set_wake_pin_polarity(dev, MEPA_TC10_WAKE_OUT, cfg->wake_out_pol));
+    MEPA_RC_GOTO(rc, phy_tc10_set_pin_mode(dev, MEPA_TC10_WAKE_OUT, cfg->wake_out_mode));
+    MEPA_RC_GOTO(rc, phy_tc10_set_pin_mode(dev, MEPA_TC10_INH, cfg->inh_mode));
 
 error:
     return rc;

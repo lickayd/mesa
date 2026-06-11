@@ -12,28 +12,6 @@ static inline void LAN8X8X_NSLEEP(uint32_t ns)
     MEPA_NSLEEP((ns));
 }
 
-// Locking Macros
-// The variable 'dev' is passed as macro argument to obtain callback pointers and call actual lock functions. It does not indicate locks per port.
-#define MEPA_ENTER(dev) {                               \
-    mepa_lock_t lock;                                \
-    lock.function = __func__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if ((dev)->callout->lock_enter != NULL) {        \
-        (dev)->callout->lock_enter(&lock);         \
-    }                                                \
-}
-
-#define MEPA_EXIT(dev) {          \
-    mepa_lock_t lock;                                \
-    lock.function = __func__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if ((dev)->callout->lock_exit != NULL) {         \
-        (dev)->callout->lock_exit(&lock);          \
-    }                                                \
-}
-
 #ifdef MEPA_lan8x8x_static_mem
 #ifdef MAX_LAN8X8X_PHY
 #define LAN8X8X_PHY_MAX                        MAX_LAN8X8X_PHY

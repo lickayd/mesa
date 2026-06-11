@@ -9,10 +9,6 @@
 #include <microchip/ethernet/phy/api/phy_ts.h>
 #include <microchip/lan8814_cs.h>
 
-#define MEPA_RC(expr) { mesa_rc __rc__ = (expr); if (__rc__ < MESA_RC_OK) { return __rc__; } }
-#define MEPA_RC_ERR(expr, str) { mesa_rc __rc__ = (expr); if (__rc__ < MESA_RC_OK) {T_E(MEPA_TRACE_GRP_GEN, str); return __rc__; }}
-#define MEPA_ASSERT(x) if((x)) { return MESA_RC_ERROR;}
-
 #define TRUE  1
 #define FALSE 0
 #define EXT_PAGE 1 // extended page access
@@ -70,28 +66,6 @@ mepa_rc lan8814_ts_debug_info_dump(struct mepa_device *dev,
 #define MMD_RD(dev, mmd_addr, value) lan8814_mmd_reg_rd(dev, mmd_addr, value)
 #define MMD_WR(dev, mmd_addr, value) lan8814_mmd_reg_wr(dev, mmd_addr, value, 0xffff)
 #define MMD_WRM(dev, mmd_addr, val, mask) lan8814_mmd_reg_wr(dev, mmd_addr, val, mask)
-
-// Locking Macros
-// The variable 'dev' is passed as macro argument to obtain callback pointers and call actual lock functions. It does not indicate locks per port.
-#define MEPA_ENTER(dev) {                            \
-    mepa_lock_t lock;                                \
-    lock.function = __FUNCTION__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if ((dev)->callout->lock_enter != NULL) {        \
-        (dev)->callout->lock_enter(&lock);           \
-    }                                                \
-}
-
-#define MEPA_EXIT(dev) {                             \
-    mepa_lock_t lock;                                \
-    lock.function = __FUNCTION__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if ((dev)->callout->lock_exit != NULL) {         \
-        (dev)->callout->lock_exit(&lock);            \
-    }                                                \
-}
 
 typedef struct {
     uint8_t  model;

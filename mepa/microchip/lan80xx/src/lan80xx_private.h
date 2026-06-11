@@ -10,9 +10,6 @@
 #include <mepa_trace.h>
 #include "lan80xx_types.h"
 
-#define MEPA_RC(expr) { mesa_rc __rc__ = (expr); if (__rc__ < MESA_RC_OK) return __rc__; }
-#define MEPA_ASSERT(x) if((x)) { return MESA_RC_ERROR;}
-
 #define T_DM(port_no, format, ...) \
     do { \
         uint32_t val = 0; \
