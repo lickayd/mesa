@@ -245,6 +245,10 @@ MEPA_TRACE_TYPES
 #define MEPA_RC_GOTO(rc, expr) { { (rc) = (expr); }  if ((rc) != 0) { goto error; } }
 #define MEPA_ASSERT(x) if((x)) { return MEPA_RC_ERROR;}
 
+#if defined(MEPA_OPSYS_VELOCITYSP)
+#define MEPA_ENTER(dev)
+#define MEPA_EXIT(dev)
+#else
 #define MEPA_ENTER(dev) {                            \
     mepa_lock_t lock;                                \
     lock.function = __FUNCTION__;                    \
@@ -264,5 +268,6 @@ MEPA_TRACE_TYPES
         (dev)->callout->lock_exit(&lock);              \
     }                                                \
 }
+#endif
 
 #endif /**< MICROCHIP_ETHERNET_PHY_API_TRACE_H */
