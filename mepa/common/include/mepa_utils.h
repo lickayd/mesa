@@ -234,7 +234,7 @@ MEPA_TRACE_TYPES
 #define T_I(grp, format, ...) MEPA_trace((grp), MEPA_TRACE_LVL_INFO, __FUNCTION__, __LINE__, __FILE__, format, ##__VA_ARGS__);
 #define T_W(grp, format, ...) MEPA_trace((grp), MEPA_TRACE_LVL_WARNING, __FUNCTION__, __LINE__, __FILE__, format, ##__VA_ARGS__);
 #define T_E(grp, format, ...) MEPA_trace((grp), MEPA_TRACE_LVL_ERROR, __FUNCTION__, __LINE__, __FILE__, format, ##__VA_ARGS__);
-#endif
+#endif // MEPA_OPSYS_VELOCITYSP
 
 // Debug print
 #define pr(fmt_str, ...)                                                                           \
