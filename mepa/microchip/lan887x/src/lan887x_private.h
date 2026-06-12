@@ -12,30 +12,6 @@
 #define LAN887X_NSLEEP(ns)           MEPA_NSLEEP((ns))
 #define LAN887X_MTIMER_START(t, ms) MEPA_MTIMER_START((t), (ms))
 
-#define MEPA_RC_GOTO(rc, expr) { { (rc) = (expr); }  if ((rc) != 0) { goto error; } }
-
-// Locking Macros
-// The variable 'dev' is passed as macro argument to obtain callback pointers and call actual lock functions. It does not indicate locks per port.
-#define MEPA_ENTER(dev) {                               \
-    mepa_lock_t lock;                                \
-    lock.function = __FUNCTION__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if ((dev)->callout->lock_enter != NULL) {        \
-        (dev)->callout->lock_enter(&lock);         \
-    }                                                \
-}
-
-#define MEPA_EXIT(dev) {          \
-    mepa_lock_t lock;                                \
-    lock.function = __FUNCTION__;                    \
-    lock.file = __FILE__;                            \
-    lock.line = __LINE__;                            \
-    if ((dev)->callout->lock_exit != NULL) {         \
-        (dev)->callout->lock_exit(&lock);          \
-    }                                                \
-}
-
 #ifdef MEPA_lan887x_static_mem
 #ifdef MAX_LAN887X_PHY
 #define LAN887X_PHY_MAX                        MAX_LAN887X_PHY
