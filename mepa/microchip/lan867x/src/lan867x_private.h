@@ -6,7 +6,7 @@
 
 #include <stdbool.h>
 
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 
 #define LAN867X_PHY_ID      0x0007c160U
 #define LAN867X_PHY_ID_MASK 0xFFFFFFF0U

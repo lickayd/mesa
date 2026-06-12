@@ -3,7 +3,7 @@
 
 #include <microchip/ethernet/phy/api.h>
 #include <mepa_driver.h>
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 #include <mepa_ts_driver.h>
 #include <vtss_phy_api.h>
 #include "vtss_private.h"

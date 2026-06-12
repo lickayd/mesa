@@ -3,7 +3,7 @@
 
 #include <microchip/ethernet/phy/api.h>
 #include <mepa_driver.h>
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 #include <phy_defines_macsec.h>
 #include <string.h>
 #include "lan8x8x_private.h"

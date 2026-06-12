@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <mepa_driver.h>
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 #include <microchip/ethernet/phy/api.h>
 
 #define PHY_FAMILIES 16U

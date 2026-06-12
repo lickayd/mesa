@@ -5,7 +5,7 @@
 #include <mepa_driver.h>
 #include <mepa_macsec_driver.h>
 #include <mepa_ts_driver.h>
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <vtss_phy_api.h>

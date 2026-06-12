@@ -4,7 +4,7 @@
 #ifndef LAN8770_PRIVATE_H
 #define LAN8770_PRIVATE_H
 
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 
 #define TRUE  1
 #define FALSE 0

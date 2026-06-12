@@ -5,7 +5,7 @@
 
 #include <microchip/ethernet/phy/api.h>
 #include <mepa_driver.h>
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 #include <phy_lib.h>
 
 #include "../../common/include/lan8814_registers.h" // Re-use LAN8814 register defines

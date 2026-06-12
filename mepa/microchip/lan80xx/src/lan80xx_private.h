@@ -7,7 +7,7 @@
 #include <microchip/ethernet/phy/api/types.h>
 #include <microchip/ethernet/phy/api.h>
 #include <mepa_driver.h>
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 #include "lan80xx_types.h"
 
 #define T_DM(port_no, format, ...) \

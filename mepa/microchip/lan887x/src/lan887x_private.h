@@ -4,7 +4,7 @@
 #ifndef LAN887X_PRIVATE_H
 #define LAN887X_PRIVATE_H
 
-#include <mepa_trace.h>
+#include <mepa_utils.h>
 
 #include <phy_lib.h>
 #include "lan887x_registers.h"
