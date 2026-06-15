@@ -12774,16 +12774,19 @@ static vtss_rc malibu_phy_10g_loopback_set(struct vtss_state_s *vtss_state,
 
     switch (loopback->lb_type) {
         case VTSS_LB_NETWORK_XS_DEEP:
-        case VTSS_LB_L1:    /* Line Loopback , 64-bit PCS after the gearbox FF00 repeating IEEE PCS system loopback */
-            /* = mode only 10G, Malibu name: H3  */
+        case VTSS_LB_L1:    /* Line Loopback , host-side PCS after the gearbox */
             if(vtss_state->phy_10g_state[port_no].mode.oper_mode != VTSS_PHY_1G_MODE) {
+                /* 10G: host PCS10G system loopback */
                 CSR_WARM_WRM(port_no, VTSS_HOST_PCS10G_PCS_Control_1_PCS_Control_1,
                              loopback->enable ? VTSS_F_HOST_PCS10G_PCS_Control_1_PCS_Control_1_PCS_System_loopback : 0,
                              VTSS_F_HOST_PCS10G_PCS_Control_1_PCS_Control_1_PCS_System_loopback);
-                VTSS_I("Loopback type L1, enable = %d port_no: %u", loopback->enable, port_no);
+                VTSS_I("Loopback type L1 (10G/host PCS), enable = %d port_no: %u", loopback->enable, port_no);
             } else {
-                VTSS_I("Loopback L1 is not supported in 1G mode port_no: %u", port_no);
-                return VTSS_RC_ERROR;
+                /* 1G: the 10G PCS is inactive; loop at the host PCS1G (TBI) instead */
+                CSR_WARM_WRM(port_no, VTSS_HOST_PCS1G_PCS1G_CFG_STATUS_PCS1G_LB_CFG,
+                             loopback->enable ? VTSS_F_HOST_PCS1G_PCS1G_CFG_STATUS_PCS1G_LB_CFG_TBI_HOST_LB_ENA : 0,
+                             VTSS_F_HOST_PCS1G_PCS1G_CFG_STATUS_PCS1G_LB_CFG_TBI_HOST_LB_ENA);
+                VTSS_I("Loopback type L1 (1G/host PCS1G TBI), enable = %d port_no: %u", loopback->enable, port_no);
             }
             break;
         case VTSS_LB_SYSTEM_PMA:
@@ -12795,7 +12798,8 @@ static vtss_rc malibu_phy_10g_loopback_set(struct vtss_state_s *vtss_state,
                         VTSS_F_WIS_WIS_Control_1_WIS_CTRL1_LPBK_H4); /* Loopback J (resides on the WIS block) */
                 VTSS_I("Loopback type H4, enable = %d port_no: %u", loopback->enable, port_no);
             } else {
-                VTSS_I("Loopback H4 is not supported in 1G mode port_no: %u", port_no);
+                VTSS_E("Loopback H4 is a 10G-only loopback (WIS); not supported in 1G "
+                       "mode on port %u", port_no);
                 return VTSS_RC_ERROR;
             }
             break;
@@ -12808,15 +12812,19 @@ static vtss_rc malibu_phy_10g_loopback_set(struct vtss_state_s *vtss_state,
             VTSS_I("Loopback type L2, enable = %d port_no: %u", loopback->enable, port_no);
             break;
         case VTSS_LB_SYSTEM_PCS_DEEP:
-        case VTSS_LB_H3:                  /* Host Loopback,Host PCS after the gearbox */
+        case VTSS_LB_H3:                  /* Host Loopback, line-side PCS after the gearbox */
             if(vtss_state->phy_10g_state[port_no].mode.oper_mode != VTSS_PHY_1G_MODE) {
+                /* 10G: line PCS10G system loopback */
                 CSR_WARM_WRM(port_no,VTSS_LINE_PCS10G_PCS_Control_1_PCS_Control_1,
                         loopback->enable ? VTSS_F_LINE_PCS10G_PCS_Control_1_PCS_Control_1_PCS_System_loopback : 0,
                         VTSS_F_LINE_PCS10G_PCS_Control_1_PCS_Control_1_PCS_System_loopback);
-                VTSS_I("Loopback type H3, enable = %d port_no: %u", loopback->enable, port_no);
+                VTSS_I("Loopback type H3 (10G/line PCS), enable = %d port_no: %u", loopback->enable, port_no);
             } else {
-                VTSS_I("Loopback H3 is not supported in 1G mode port_no: %u", port_no);
-                return VTSS_RC_ERROR;
+                /* 1G: the 10G PCS is inactive; loop at the line PCS1G (TBI) instead */
+                CSR_WARM_WRM(port_no, VTSS_LINE_PCS1G_PCS1G_CFG_STATUS_PCS1G_LB_CFG,
+                        loopback->enable ? VTSS_F_LINE_PCS1G_PCS1G_CFG_STATUS_PCS1G_LB_CFG_TBI_HOST_LB_ENA : 0,
+                        VTSS_F_LINE_PCS1G_PCS1G_CFG_STATUS_PCS1G_LB_CFG_TBI_HOST_LB_ENA);
+                VTSS_I("Loopback type H3 (1G/line PCS1G TBI), enable = %d port_no: %u", loopback->enable, port_no);
             }
             break;
         case VTSS_LB_L2C: /* Line loopback L2C XGMII after cross-connect */
