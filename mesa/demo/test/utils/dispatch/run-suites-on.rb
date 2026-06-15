@@ -16,7 +16,8 @@ require_relative 'test_session'
 # ---------------------------------------------------------------------------------------------------------------------
 
 ## Timeout
-DEFAULT_TIMEOUT = 3600
+DEFAULT_TOTAL_TIMEOUT_SECS = 18000 # Default -t: whole-batch budget (5h). Used for
+                                   # ad-hoc runs; Jenkins passes -t explicitly.
 EXTRACT_TAR_TIMEOUT_SECS = 600  # 10 minutes — generous; nightlies have seen
                                 # rare extract_tar hangs that block forever
                                 # without one. Bound the loss to one suite.
@@ -33,9 +34,8 @@ UPLOAD_TIMEOUT_SECS      = 1800 # 30 minutes — `et upload` of a multi-MB
 HTTP_BUSY_MAX_RETRIES    = 30   # 5 min total at 10s/retry — long enough for
                                 # transient easytest server overload, short
                                 # enough to bail on stuck queues.
-RELEASE_MAX_ATTEMPTS     = 3    # `et release` itself can hit lab HTTP
-                                # timeouts.Retry so one hiccup does not leak 
-                                # the reservation.
+RELEASE_MAX_ATTEMPTS     = 3    # `et release` itself can hit lab HTTP timeouts.
+                                # Retry so one hiccup does not leak the reservation.
 RELEASE_TIMEOUT_SECS     = 120  # Per-attempt cap.  With 3 attempts +
                                 # backoff: ~6.5 min worst case.
 
@@ -56,13 +56,6 @@ HTTP_TOO_MANY_REQUESTS = 429
 # ---------------------------------------------------------------------------------------------------------------------
 # Formatters
 # ---------------------------------------------------------------------------------------------------------------------
-
-def strip_html(body)
-    body.gsub(/<[^>]+>/, '')
-        .gsub('&amp;', '&').gsub('&lt;', '<').gsub('&gt;', '>').gsub('&quot;', '"')
-        .gsub(/\n{3,}/, "\n\n")
-        .each_line.map(&:rstrip).reject { |l| l.strip.empty? }.join("\n")
-end
 
 def format_html_error(res)
     title   = res.body[/<title[^>]*>(.*?)<\/title>/im,   1]&.strip
@@ -285,7 +278,7 @@ end
 $options = {
     :tests_to_run => [],
     :out          => ".",
-    :timeout      => DEFAULT_TIMEOUT
+    :timeout      => DEFAULT_TOTAL_TIMEOUT_SECS
 }
 
 OptionParser.new do |opts|
@@ -296,7 +289,7 @@ OptionParser.new do |opts|
 
     opts.on("-t", "--timeout secs",
             "Total timeout (seconds) for the whole batch of suites " \
-            "(default: #{DEFAULT_TIMEOUT})") do |v|
+            "(default: #{DEFAULT_TOTAL_TIMEOUT_SECS})") do |v|
         $options[:timeout] = v.to_i
     end
 
