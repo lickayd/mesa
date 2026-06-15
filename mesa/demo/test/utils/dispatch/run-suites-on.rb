@@ -6,7 +6,6 @@
 require 'optparse'
 require 'fileutils'
 require 'net/http'
-require 'timeout'
 require 'yaml'
 require 'json'
 require 'pathname'
@@ -145,9 +144,8 @@ def extract_tar(body, out)
     in_r, in_w = IO.pipe
     pid = Process.spawn("tar -xzf -", :in => in_r, [:out, :err] => "/dev/null")
 
-    # Write the body in a separate thread so the main thread never blocks
-    # in pipe write — keeps the timeout poll responsive even when the body
-    # is larger than the pipe buffer (~64KB) and tar is slow or stuck.
+    # Write the body in a separate thread: it can exceed the ~64KB pipe buffer,
+    # so writing inline could block and stall the timeout poll on a stuck tar.
     writer = Thread.new {
         begin
             in_w.write(body)
@@ -158,10 +156,9 @@ def extract_tar(body, out)
         end
     }
 
-    # Polling-based timeout: Timeout.timeout cannot interrupt threads blocked
-    # in Process.wait/waitpid (Ruby delivers the exception only when the
-    # syscall returns, which is never if the child is hung). WNOHANG + sleep
-    # keeps the main thread fully under our control.
+    # Poll with WNOHANG rather than Timeout.timeout, which can't interrupt a
+    # thread blocked in waitpid (the exception only fires when the syscall
+    # returns — never, if tar is hung).
     deadline = Time.now + EXTRACT_TAR_TIMEOUT_SECS
     timed_out = false
     loop do
@@ -169,26 +166,7 @@ def extract_tar(body, out)
         break if done_pid
         if Time.now >= deadline
             timed_out = true
-            # Capture forensic state before killing tar.  We don't yet know
-            # the root cause of these hangs — disk latency, memory pressure,
-            # pipe deadlock, etc.  Dumping kernel wait-state, disk usage,
-            # and load average gives the next investigation actual data
-            # instead of speculation.
-            stack    = (File.read("/proc/#{pid}/stack") rescue "    (unreadable)")
-            wchan    = (File.read("/proc/#{pid}/wchan").strip rescue "?")
-            loadavg  = (File.read("/proc/loadavg").strip rescue "?")
-            log_local("=== extract_tar HANG diagnostic (pid #{pid}) ===")
-            log_local("  /proc/#{pid}/stack:")
-            log_local(stack)
-            log_local("  /proc/#{pid}/status (head):")
-            log_local(%x{head -20 /proc/#{pid}/status 2>&1})
-            log_local("  /proc/#{pid}/wchan: #{wchan}")
-            log_local("  loadavg: #{loadavg}")
-            log_local("  meminfo (head):")
-            log_local(%x{head -5 /proc/meminfo 2>&1})
-            log_local("  df -h /:")
-            log_local(%x{df -h / 2>&1})
-            log_local("=== end diagnostic ===")
+            log_local("extract_tar timed out after #{EXTRACT_TAR_TIMEOUT_SECS}s (pid #{pid}), killing tar")
             Process.kill("KILL", pid) rescue nil
             Process.waitpid(pid) rescue nil
             break
@@ -337,9 +315,6 @@ if $options[:system]
     Dir.chdir(top)
     $options[:out] = Pathname.new($options[:out]).relative_path_from(Dir.pwd).to_s
     log_local("Output folder: #{$options[:out]}")
-    # Version stamp — disambiguates which copy of run-suites-on.rb is running
-    # when investigating nightly hangs (e.g. when stale branches and fresh
-    # checkouts are in play, or when timeouts unexpectedly don't fire).
     log_local("Script: #{__FILE__}")
     log_local("Script SHA: #{%x{git log -1 --format=%H -- #{__FILE__} 2>/dev/null}.strip}")
     log_local("extract_tar at: #{method(:extract_tar).source_location.join(':')}")
