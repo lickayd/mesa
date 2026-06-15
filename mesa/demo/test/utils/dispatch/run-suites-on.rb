@@ -137,11 +137,18 @@ def post_suite(uri, img, out, system, suite, index, timeout, sha)
     end
 end
 
-def http_get(uri)
+def http_get(uri, attempts = 3)
     http = Net::HTTP.new(uri.host, uri.port)
     http.read_timeout = 30
     http.open_timeout = 30
     http.get(uri.request_uri)
+rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, Errno::ECONNRESET, SocketError => e
+    # A transient blip on one poll shouldn't abort the whole suite run.
+    attempts -= 1
+    raise if attempts <= 0
+    log_local("http_get transient error (#{e.class}), retrying in 5s (#{attempts} left)")
+    sleep(5)
+    retry
 end
 
 def extract_tar(body, out)
