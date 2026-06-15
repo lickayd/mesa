@@ -21,11 +21,8 @@ DEFAULT_TIMEOUT = 3600
 EXTRACT_TAR_TIMEOUT_SECS = 600  # 10 minutes — generous; nightlies have seen
                                 # rare extract_tar hangs that block forever
                                 # without one. Bound the loss to one suite.
-SUITE_IDLE_TIMEOUT_SECS  = 7200 # 120 minutes — abort a suite if its remote
-                                # stream produces zero output for this long.
-                                # Healthy suites stream regularly; persistent
-                                # silence indicates a stuck remote that will
-                                # otherwise hold the DUT until Jenkins kills.
+PER_SUITE_TIMEOUT_SECS   = 7200 # Default per-suite wall-clock cap (2h), used when
+                                # a `-T suite:secs` entry gives no explicit secs.
 UPLOAD_TIMEOUT_SECS      = 1800 # 30 minutes — `et upload` of a multi-MB
                                 # firmware image. Bounds upload-image hangs
                                 # so the reservation can release cleanly.
@@ -209,51 +206,45 @@ def extract_tar(body, out)
     log_local("Extraction complete, output at: #{out}")
 end
 
-def run_suites(system, image, out, tests_to_run, timeout)
+# One poll of the remote server while a suite runs
+def poll_server(uri, out)
+    res = http_get(uri)
+    case res.code.to_i
+    when HTTP_RUNNING
+        # Suite is still executing on the remote server
+        body = res.body.to_s
+        log_remote(body) unless body.empty?
+        false
+    when HTTP_OK
+        # Suite finished — response body is the result tar
+        log_subsection_header("Success - Extracting tar")
+        extract_tar(res.body, out)
+        true
+    else
+        raise "Unexpected response:\n#{format_html_error(res)}"
+    end
+end
+
+def run_suites(system, image, out, tests_to_run, total_timeout)
     topo = YAML.load_file(".mscc-libeasy-topology#{system}.yaml")
     uri  = URI("http://#{topo["easytest_server"]}/run")
-    # Caller (typically Jenkins) is responsible for resolving the branch they
-    # want to test into a concrete SHA and passing it via --sha. Falls back to
-    # the working tree's HEAD for ad-hoc/manual use.
     sha = $options[:sha] || %x{git rev-parse HEAD}.strip
     log_local("Test SHA: #{sha} (#{$options[:sha] ? 'explicit' : 'from HEAD'})")
 
-    tests_to_run.each_with_index do |suite, index|
-        post_suite(uri, image, out, system, suite, index, timeout, sha)
+    total_deadline = Time.now + total_timeout
+
+    tests_to_run.each_with_index do |(suite, suite_secs), index|
+        per_suite_timeout = suite_secs || PER_SUITE_TIMEOUT_SECS
+        if suite_secs.nil?
+            log_local("No timeout given for '#{suite}', using default #{PER_SUITE_TIMEOUT_SECS}s")
+        end
+        post_suite(uri, image, out, system, suite, index, per_suite_timeout, sha)
         log_subsection_header("Streaming log from remote server")
 
-        t_end       = Time.now + timeout
-        last_output = Time.now
         loop do
-            raise "Timed out waiting for suite '#{suite}'" if Time.now >= t_end
-
-            # Idle timeout: if the remote stream produces no output for
-            # SUITE_IDLE_TIMEOUT_SECS, treat the suite as stuck.  Healthy
-            # suites stream regularly; persistent silence is a remote-side
-            # hang that would otherwise hold the DUT for the full t_end
-            # budget (5h) before Jenkins SIGKILLs the stage.
-            if Time.now - last_output > SUITE_IDLE_TIMEOUT_SECS
-                raise "Suite '#{suite}' idle for >#{SUITE_IDLE_TIMEOUT_SECS}s — aborting"
-            end
-
-            res = http_get(uri)
-            case res.code.to_i
-            when HTTP_RUNNING
-                # Suite is still executing on the remote server
-                body = res.body.to_s
-                unless body.empty?
-                    log_remote(body)
-                    last_output = Time.now
-                end
-                sleep(1) # Avoid hammering the server with back-to-back requests
-            when HTTP_OK
-                # Suite finished successfully — response body is the result tar
-                log_subsection_header("Success - Extracting tar")
-                extract_tar(res.body, out)
-                break
-            else
-                raise "Unexpected response:\n#{format_html_error(res)}"
-            end
+            raise "Total timeout (#{total_timeout}s) for all suites exceeded" if Time.now >= total_deadline
+            break if poll_server(uri, out)  # true once the suite finished and its tar was extracted
+            sleep(1)                        # still running — avoid hammering the server
         end
     end
 end
@@ -306,12 +297,33 @@ $options = {
 OptionParser.new do |opts|
     opts.banner = "Usage: run-suites-on.rb [options]"
     opts.on("-h", "--help", "This message") { puts opts; exit }
-    opts.on("-i", "--image image",   "Image path")                                                              { |v| $options[:image]        = v }
-    opts.on("-s", "--system system", "System to reserve")                                                       { |v| $options[:system]       = v }
-    opts.on("-t", "--timeout secs",  "Timeout in seconds (default: #{DEFAULT_TIMEOUT})")                        { |v| $options[:timeout]      = v.to_i }
-    opts.on("-T", "--test path",     "Test suite to run (repeatable)")                                          { |v| $options[:tests_to_run] << v }
-    opts.on("-o", "--output folder", "Session output folder (created by caller, suites written to <out>/suites/)") { |v| $options[:out] = File.expand_path(v); FileUtils.mkdir_p($options[:out]) }
-    opts.on("-S", "--sha sha",      "Exact commit SHA the remote server should check out (default: working tree HEAD)") { |v| $options[:sha] = v }
+    opts.on("-i", "--image image",   "Image path")        { |v| $options[:image]  = v }
+    opts.on("-s", "--system system", "System to reserve") { |v| $options[:system] = v }
+
+    opts.on("-t", "--timeout secs",
+            "Total timeout (seconds) for the whole batch of suites " \
+            "(default: #{DEFAULT_TIMEOUT})") do |v|
+        $options[:timeout] = v.to_i
+    end
+
+    opts.on("-T", "--test path",
+            "Suite to run as 'name', or 'name:secs' to cap that suite " \
+            "(default per suite: #{PER_SUITE_TIMEOUT_SECS}s). Repeatable.") do |v|
+        name, secs = v.split(":", 2)
+        $options[:tests_to_run] << [name, (secs && !secs.empty? ? secs.to_i : nil)]
+    end
+
+    opts.on("-o", "--output folder",
+            "Session output folder (created by caller; suites written to <out>/suites/)") do |v|
+        $options[:out] = File.expand_path(v)
+        FileUtils.mkdir_p($options[:out])
+    end
+
+    opts.on("-S", "--sha sha",
+            "Exact commit SHA the remote server should check out " \
+            "(default: working tree HEAD)") do |v|
+        $options[:sha] = v
+    end
 end.parse!
 
 # ---------------------------------------------------------------------------------------------------------------------
