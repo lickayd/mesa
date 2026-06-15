@@ -635,13 +635,13 @@ def check_rate(cfg)
         t_i("Kill the tcpdump process")
         $ts.pc.try_ignore("kill -s SIGHUP #{pid_tcp}")
 
-        # Wait (bounded) for tcpdump to actually exit. pid_tcp is a remote
-        # process on the PC managed by `er`, so a local Process.wait isn't
-        # possible. Poll `kill -0` on the PC until the process is gone — up to
-        # 10s — so the next run's tcpdump can't race a not-yet-dead one.
-        # try_ignore so it never raises; the loop is bounded so it can't hang.
+        # Wait (bounded) for tcpdump to actually exit, polling from Ruby with a
+        # single `kill -0` per iteration. 
         t_i("Wait for tcpdump process to terminate")
-        $ts.pc.try_ignore("for i in $(seq 1 50); do kill -0 #{pid_tcp} 2>/dev/null || exit 0; sleep 0.2; done")
+        50.times do
+            break unless $ts.pc.try_ignore("kill -0 #{pid_tcp}")[:res] == 0
+            sleep(0.2)
+        end
     end
 
     t_i("Kill Easy Frame transmitters")
