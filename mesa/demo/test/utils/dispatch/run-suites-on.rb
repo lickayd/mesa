@@ -217,6 +217,10 @@ def run_suites(system, image, out, tests_to_run, total_timeout)
     total_deadline = Time.now + total_timeout
 
     tests_to_run.each_with_index do |(suite, suite_secs), index|
+        # Check the batch budget BEFORE posting, so we never start a suite on the
+        # server only to bail in the first poll and leave it running (orphaned).
+        raise "Total timeout (#{total_timeout}s) for all suites exceeded" if Time.now >= total_deadline
+
         per_suite_timeout = suite_secs || PER_SUITE_TIMEOUT_SECS
         if suite_secs.nil?
             log_local("No timeout given for '#{suite}', using default #{PER_SUITE_TIMEOUT_SECS}s")
