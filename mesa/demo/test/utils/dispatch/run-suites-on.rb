@@ -22,6 +22,11 @@ EXTRACT_TAR_TIMEOUT_SECS = 600  # 10 minutes — generous; nightlies have seen
                                 # without one. Bound the loss to one suite.
 PER_SUITE_TIMEOUT_SECS   = 7200 # Default per-suite wall-clock cap (2h), used when
                                 # a `-T suite:secs` entry gives no explicit secs.
+RESERVE_TIMEOUT_SECS     = 3600 # 1h — how long to keep retrying `et reserve`.
+                                # These machines are shared with other (non-nightly)
+                                # runs, so a DUT can be legitimately busy for a
+                                # while; wait up to an hour, but don't burn the
+                                # whole test budget waiting.
 UPLOAD_TIMEOUT_SECS      = 1800 # 30 minutes — `et upload` of a multi-MB
                                 # firmware image. Bounds upload-image hangs
                                 # so the reservation can release cleanly.
@@ -322,7 +327,7 @@ if $options[:system]
     reserved = false
     begin
         log_section_header("Reserve")
-        if !reserve($options[:system], $options[:timeout])
+        if !reserve($options[:system], RESERVE_TIMEOUT_SECS)
             log_local("Reserve timed out")
             exit 7
         end
