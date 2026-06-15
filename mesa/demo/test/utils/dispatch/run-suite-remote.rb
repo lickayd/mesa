@@ -7,7 +7,7 @@ require 'open3'
 require 'optparse'
 require 'pathname'
 
-# Unbuffer stdout
+# Unbuffer stdout so the live log streams to the controller in real time.
 $stdout.sync = true
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ OptionParser.new do |opts|
     opts.on("-s", "--system system", "System (DUT) name, used as a label in output file names and JUnit properties") do |s|
         $options[:system] = s
     end
-    opts.on("-t", "--timeout seconds", "Timeout in seconds for the test suite execution") do |t|
+    opts.on("-t", "--timeout seconds", "Per-suite wall-clock cap in seconds (enforced via `timeout`)") do |t|
         $options[:timeout] = t.to_i
     end
     opts.on("-T", "--test path", "Test suite file to run") do |t|
