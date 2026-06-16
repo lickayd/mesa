@@ -20,17 +20,18 @@ TIMEOUT_EXIT_KILL = 137
 # Run command
 # ---------------------------------------------------------------------------------------------------------------------
 
+# Runs the command, streams its output, and returns its exit status.  Callers
+# decide what a non-zero status means (most treat it as fatal; the suite run
+# inspects it, since a timeout is an expected non-zero outcome).
 def run_cmd(cmd, system)
     puts("running cmd: '#{cmd}'")
-    begin
-        Open3.popen2e(cmd) do |stdin, output, wait_thr|
-            stdin.close
-            output.each_line { |line| puts(line.chomp) }
-            raise "#{system}: '#{cmd}' failed" unless wait_thr.value.success?
-        end
-    rescue Errno::ENOENT => e
-        raise "#{system}: command not found: #{e.message}"
+    Open3.popen2e(cmd) do |stdin, output, wait_thr|
+        stdin.close
+        output.each_line { |line| puts(line.chomp) }
+        wait_thr.value.exitstatus
     end
+rescue Errno::ENOENT => e
+    raise "#{system}: command not found: #{e.message}"
 end
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -93,24 +94,29 @@ puts("  out_junit_xml    : #{out_junit_xml}")
 puts("  junit_suite_name : #{junit_suite_name}")
 puts("  junit_props      : #{junit_props}")
 
-run_cmd("mkdir -p #{out_dir}", $options[:system])
+raise "#{$options[:system]}: mkdir -p #{out_dir} failed" unless run_cmd("mkdir -p #{out_dir}", $options[:system]).zero?
 # Change to the test directory so the suite script can be invoked as ./suite.rb
 # and require_relative paths inside the suite resolve correctly
 Dir.chdir("#{$repo_root}/mesa/demo/test/")
+# `exit ${PIPESTATUS[0]}` propagates the `timeout` exit code (not tee's, which
+# is always 0) so we can tell here whether the suite hit its cap.
 suite_cmd = "timeout -k 10 -s TERM #{$options[:timeout]}s ./#{$options[:test_to_run]}" \
             " --test-suite-name #{suite_name}" \
             " | tee #{out_et_xml}" \
-            " | libeasy/xml2console.rb --brief -O #{out_dir} -o #{out_dir} -j #{out_junit_xml} -n #{junit_suite_name} #{junit_props}"
+            " | libeasy/xml2console.rb --brief -O #{out_dir} -o #{out_dir} -j #{out_junit_xml} -n #{junit_suite_name} #{junit_props}" \
+            "; exit ${PIPESTATUS[0]}"
 
-run_cmd("bash -c '#{suite_cmd}; " \
-        "rc=${PIPESTATUS[0]}; " \
-        "if [ $rc = #{TIMEOUT_EXIT_TERM} ] || [ $rc = #{TIMEOUT_EXIT_KILL} ]; then " \
-        "echo \"### SUITE TIMED OUT after #{$options[:timeout]}s (rc=$rc) ###\"; fi; " \
-        "exit 0'", $options[:system])
+rc = run_cmd("bash -c '#{suite_cmd}'", $options[:system])
 
-puts("Suite '#{suite_name}' completed")
+# The suite itself records the verdict (the framework reports a timed-out run as
+# failed); this is just a clear human line in the log saying which way it went.
+if [TIMEOUT_EXIT_TERM, TIMEOUT_EXIT_KILL].include?(rc)
+    puts("Suite '#{suite_name}' TIMED OUT after #{$options[:timeout]}s (rc=#{rc})")
+else
+    puts("Suite '#{suite_name}' run finished (exit #{rc})")
+end
 
 # Run tar from repo root with relative path so archive entries are portable
 Dir.chdir($repo_root)
-run_cmd("tar -czv #{out_dir_rel} -f out.tar", $options[:system])
+raise "#{$options[:system]}: tar of #{out_dir_rel} failed" unless run_cmd("tar -czv #{out_dir_rel} -f out.tar", $options[:system]).zero?
 
