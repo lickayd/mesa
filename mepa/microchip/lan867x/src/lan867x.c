@@ -12,7 +12,7 @@
 
 #ifdef MEPA_LAN867X_STATIC_MEM
 static mepa_device_t lan867x_device[MAX_LAN867X_PHY];
-static phy_data_t lan867x_data[MAX_LAN867X_PHY];
+static lan867x_data_t lan867x_data[MAX_LAN867X_PHY];
 #endif
 
 // MEPA APIs
@@ -78,7 +78,7 @@ static mepa_rc lan867x_delete(mepa_device_t *dev)
     }
 #ifdef MEPA_LAN867X_STATIC_MEM
     memset(dev, 0, sizeof(mepa_device_t));
-    memset(&dev->data, 0, sizeof(phy_data_t));
+    memset(&dev->data, 0, sizeof(lan867x_data_t));
 #else
     rc = mepa_delete_int(dev);
 #endif
@@ -92,7 +92,7 @@ static mepa_device_t *lan867x_probe(mepa_driver_t *drv,
                                     struct mepa_board_conf                  *conf)
 {
     mepa_rc rc = MESA_RC_OK;
-    phy_data_t *pdata = NULL;
+    lan867x_data_t *pdata = NULL;
     mepa_device_t *pdev = NULL;
     uint16_t val1 = 0, val2 = 0;
 
@@ -112,7 +112,7 @@ static mepa_device_t *lan867x_probe(mepa_driver_t *drv,
     }
     goto error;
 #else
-    pdev = mepa_create_int(drv, callout, callout_ctx, conf, (int32_t)(sizeof(phy_data_t)));
+    pdev = mepa_create_int(drv, callout, callout_ctx, conf, (int32_t)(sizeof(lan867x_data_t)));
     if (pdev == NULL) {
         goto error;
     }
@@ -161,7 +161,7 @@ error:
 
 static mepa_rc lan867x_conf_get(mepa_device_t *dev, mepa_conf_t *const config)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan867x_data_t *data = (lan867x_data_t *)dev->data;
 
     MEPA_ENTER(dev);
 
@@ -174,7 +174,7 @@ static mepa_rc lan867x_conf_get(mepa_device_t *dev, mepa_conf_t *const config)
 
 static mepa_rc lan867x_media_get(struct mepa_device *dev, mepa_media_interface_t *media_if)
 {
-   phy_data_t *data = (phy_data_t *)dev->data;
+   lan867x_data_t *data = (lan867x_data_t *)dev->data;
 
    MEPA_ENTER(dev);
 
@@ -188,7 +188,7 @@ static mepa_rc lan867x_media_get(struct mepa_device *dev, mepa_media_interface_t
 static mepa_rc lan867x_if_get(struct mepa_device *dev, mepa_port_speed_t speed,
                                     mepa_port_interface_t *mac_if)
 {
-   phy_data_t *data = (phy_data_t *)dev->data;
+   lan867x_data_t *data = (lan867x_data_t *)dev->data;
 
    MEPA_ENTER(dev);
 
@@ -214,7 +214,7 @@ static mepa_rc lan867x_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
 static mepa_rc lan867x_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf)
 {
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan867x_data_t *data = (lan867x_data_t *) dev->data;
 
     MEPA_ENTER(dev);
 
@@ -245,13 +245,10 @@ static uint32_t lan867x_capability(mepa_device_t *dev, uint32_t capability)
 {
     uint32_t c;
 
-    switch (capability) {
-    case MEPA_CAP_TS_NONE:
-        c = 1;
-        break;
-    default:
-        c = 0;
-        break;
+    if (capability == (uint32_t)MEPA_CAP_TS_NONE) {
+        c = 1U;
+    } else {
+        c = 0U;
     }
 
     return c;
@@ -261,7 +258,7 @@ static mepa_rc lan867x_info_get(mepa_device_t *dev, mepa_phy_info_t *const phy_i
 {
     mepa_rc rc = MEPA_RC_ERROR;
 
-    phy_data_t *data = (phy_data_t *)(dev->data);
+    lan867x_data_t *data = (lan867x_data_t *)(dev->data);
 
     if(data->init_done)
     {
@@ -271,7 +268,7 @@ static mepa_rc lan867x_info_get(mepa_device_t *dev, mepa_phy_info_t *const phy_i
         phy_info->manufactor_name = "Microchip";
         phy_info->model_name = "LAN867x";
         /* This is just to support backwards compatibility */
-        if (lan867x_capability(dev, MEPA_CAP_TS_NONE)) {
+        if (lan867x_capability(dev, (uint32_t)MEPA_CAP_TS_NONE) != 0U) {
             phy_info->cap = MEPA_CAP_TS_MASK_NONE;
         }
 
@@ -289,7 +286,7 @@ static mepa_rc lan867x_debug_info(struct mepa_device *dev,
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (dev != NULL && ss != NULL && info != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan867x_data_t *data = (lan867x_data_t *)dev->data;
         mepa_t1s_plca_cfg_t *p;
 
         if (data == NULL) {
@@ -301,7 +298,7 @@ static mepa_rc lan867x_debug_info(struct mepa_device *dev,
         case MEPA_DEBUG_GROUP_ALL:
         case MEPA_DEBUG_GROUP_PHY:
             MEPA_ENTER(dev);
-            data = (phy_data_t *)dev->data;
+            data = (lan867x_data_t *)dev->data;
             p = &data->t1s_cfg.plca_cfg;
             pr("PLCA mode  : %s\n", p->plca_enable ? "Enabled" : "Disabled");
             pr("Node count : %u\n", p->node_count);

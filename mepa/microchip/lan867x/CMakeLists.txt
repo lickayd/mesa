@@ -13,7 +13,7 @@ endif()
 
 MEPA_DRV(LIB_NAME mepa_drv_lan867x
          SRCS     src/lan867x.c src/lan867x_private.c src/lan867x_t1s.c
-		 DEFS	  ${MEPA_LAN867X_ADD_DEFS}
+		 DEFS	  ${MEPA_LAN867X_ADD_DEFS} -DMEPA_HAS_LAN867X
          INCL_PUB ../../../me/include ../../include
          INCL_PRI ./src)
 

@@ -12,7 +12,7 @@ static mepa_rc lan867x_t1s_set_plca_config(struct mepa_device *dev,
                                                  const mepa_t1s_plca_cfg_t cfg)
 {
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *pdata = dev->data;
+    lan867x_data_t *pdata = dev->data;
     
     MEPA_ENTER(dev);
 
@@ -28,7 +28,7 @@ error:
 static mepa_rc lan867x_t1s_get_plca_config(struct mepa_device *dev,
                                                  mepa_t1s_plca_cfg_t *const cfg)
 {
-    phy_data_t *pdata = dev->data;
+    lan867x_data_t *pdata = dev->data;
 
     MEPA_ENTER(dev);
 

@@ -24,7 +24,7 @@ typedef struct {
     uint32_t id;
     uint8_t  model;
     uint8_t  rev;
-} phy_dev_info_t;
+} lan867x_dev_info_t;
 
 typedef struct phy_t1s_config_t {
     mepa_t1s_plca_cfg_t plca_cfg;
@@ -40,11 +40,11 @@ typedef struct {
     mepa_conf_t             conf;
     mepa_event_t            events;
     mepa_loopback_t         loopback;
-    phy_dev_info_t          dev;
+    lan867x_dev_info_t      dev;
     mepa_bool_t             ctx_status;
     mepa_bool_t             cdiags_start;
     phy_t1s_cfg_t           t1s_cfg;
-} phy_data_t;
+} lan867x_data_t;
 
 extern mepa_t1s_driver_t lan867x_t1s_driver;
 

@@ -103,7 +103,7 @@ mepa_rc lan867x_init_conf(mepa_device_t *const dev, const mepa_t1s_plca_cfg_t cf
     int itemp1 = 0, itemp2 = 0;
     int offset1 = 0, offset2 = 0;
     uint16_t temp1 = 0, temp2 = 0;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan867x_data_t *data = (lan867x_data_t *) dev->data;
     uint16_t val1 = 0, val2 = 0, cfgparam1 = 0, cfgparam2 = 0;
 
     if (data->dev.rev == LAN867X_REVB) {
@@ -223,7 +223,7 @@ mepa_rc lan867x_phy_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
 {
     uint16_t bmcr = 0;
     mepa_rc rc=MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan867x_data_t *data = (lan867x_data_t *) dev->data;
 
     /**
      *  NOTE: return an error if config is wrong.
@@ -256,7 +256,7 @@ mepa_rc lan867x_get_link_status(mepa_device_t *const dev, mepa_status_t *const s
 {
     uint16_t plca = 0;
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan867x_data_t *data = (lan867x_data_t *) dev->data;
 
     MEPA_RC_GOTO(rc, lan867x_mmd_reg_rd(dev, MMD_MISC, PLCA_CTRL_0, &plca));
 #ifdef LINK_STATUS_ENHANCED
