@@ -113,4 +113,5 @@ sys ".cmake/chenv -l support/scripts -p lm -- pwd"
 sys ".cmake/chenv -l support/scripts -p lm -- bc2cbor --help"
 sys ".cmake/chenv -l support/scripts -p lm -- cmake --workflow --preset lan969x"
 sys ".cmake/chenv -l support/scripts -p lm -- lm-cov-runner -b build-lan969x -t VDSP_BIN_LAN969x_AUTO_elf"
+sys ".cmake/chenv -l support/scripts -p lm -- lm-cov-runner -b build-lan969x -t VDSP_BIN_LAN969x_elf"
 
