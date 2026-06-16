@@ -53,7 +53,7 @@ typedef struct {
     uint16_t  rev;
     mepa_bool_t is_master;
     mepa_bool_t is_master_fault;
-} phy_dev_info_t;
+} lan887x_dev_info_t;
 
 typedef struct {
     mepa_bool_t                     sleep_enable;
@@ -74,14 +74,14 @@ typedef struct {
     mepa_conf_t             conf;
     mepa_event_t            events;
     mepa_loopback_t         loopback;
-    phy_dev_info_t          dev;
+    lan887x_dev_info_t          dev;
     mepa_bool_t             ctx_status;
     mepa_cable_diag_result_t cd_res;
     lan887x_tc10_data_t         tc10_cfg;
     mepa_gpio_conf_t        led_conf[4];
     /* Pointer to the device of base port on the phy chip */
     //mepa_device_t           *base_dev;
-} phy_data_t;
+} lan887x_data_t;
 
 struct phy_reg_map {
     uint8_t  mmd;

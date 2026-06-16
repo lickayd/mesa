@@ -160,7 +160,7 @@ static const struct phy_reg_dbg lan887x_regs[] = {
 
 #ifdef MEPA_lan887x_static_mem
 static mepa_device_t lan887x_device[LAN887X_PHY_MAX];
-static phy_data_t lan887x_data[LAN887X_PHY_MAX];
+static lan887x_data_t lan887x_data[LAN887X_PHY_MAX];
 #endif
 
 static mepa_rc lan887x_phy_cable_diag_start(mepa_device_t *dev, mepa_bool_t is_hybrid, mepa_bool_t ms_mode);
@@ -175,7 +175,7 @@ static mepa_rc lan887x_isolate_mode_int(struct mepa_device *dev, mepa_bool_t con
 //Retrieve PHY information
 static mepa_rc phy_get_device_info(mepa_device_t *const dev)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     uint32_t id1 = 0, id2 = 0;
     uint16_t val = 0;
 
@@ -228,7 +228,7 @@ static mepa_rc phy_c45_get_link_status(mepa_device_t *const dev, mepa_status_t *
 {
     mepa_rc rc = MEPA_RC_ERROR;
     uint16_t reg_val = 0;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan887x_data_t *data = (lan887x_data_t *) dev->data;
 
     //LATCH-LOW BIT
     rc = phy_mmd_reg_rd(dev, MDIO_MMD_PMAPMD, MDIO_STAT1, &reg_val);
@@ -323,7 +323,7 @@ static mepa_rc lan887x_setup_lpbk(mepa_device_t *const dev, const mepa_loopback_
 {
     mepa_rc rc = MEPA_RC_OK;
     uint16_t val = 0;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     uint16_t mask = (LAN887X_MIS_CFG_REG2_FE_LPBK_EN |
                      LAN887X_MIS_CFG_REG2_NE_LPBK_EN |
                      LAN887X_MIS_CFG_REG2_IO_LPBK_EN);
@@ -434,7 +434,7 @@ error:
 static mepa_rc lan887x_sgmii_setup(mepa_device_t *const dev)
 {
     mepa_rc rc = MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
     // Enable SGMII_CTL
     MEPA_RC_GOTO(rc, phy_mmd_reg_set_bits(dev, MDIO_MMD_VEND1,
@@ -500,7 +500,7 @@ static mepa_rc lan887x_int_events_set(struct mepa_device *dev, mepa_event_t even
     mepa_rc rc = MEPA_RC_ERROR;
     uint32_t tmp_evt = (event & LAN887X_DEF_MASK);
     uint16_t int_mask = LAN887X_DEF_MASK, i;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
     data->events = enable ? (data->events | tmp_evt) : (data->events & ~tmp_evt);
     for (i = 0; i < INTR_BIT_LEN; i++) {
@@ -521,7 +521,7 @@ static mepa_rc lan887x_int_events_set(struct mepa_device *dev, mepa_event_t even
 static mepa_rc lan887x_config_mac(struct mepa_device *dev)
 {
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
     if (data->mac_if >= MESA_PORT_INTERFACE_RGMII &&
         data->mac_if <= MESA_PORT_INTERFACE_RGMII_TXID) {
@@ -542,17 +542,17 @@ error:
 static mepa_rc lan887x_phy_setup(mepa_device_t *const dev)
 {
     mepa_rc rc = MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan887x_data_t *data = (lan887x_data_t *) dev->data;
 
     MEPA_RC_GOTO(rc, phy_get_device_info(dev));
 
     if (!data->init_done) {
         //LAN887X B0 Protos ONLY!
         if (IS_LAN887X_B0_PROTOS(data->dev.id)) {
-            phy_cfg_regs(dev, lan887x_phy_en, ARRAY_SIZE(lan887x_phy_en), PHY_TRUE);
+            phy_cfg_regs(dev, lan887x_phy_en, (uint8_t)ARRAY_SIZE(lan887x_phy_en), PHY_TRUE);
         }
         //LAN887X B0 PHY Setup
-        phy_cfg_regs(dev, lan887x_onetime_setup, ARRAY_SIZE(lan887x_onetime_setup), PHY_FALSE);
+        phy_cfg_regs(dev, lan887x_onetime_setup, (uint8_t)ARRAY_SIZE(lan887x_onetime_setup), PHY_FALSE);
     }
     data->init_done = PHY_TRUE;
 
@@ -571,7 +571,7 @@ error:
 
 static mepa_rc lan887x_config_leds(mepa_device_t *const dev, mepa_bool_t isolate)
 {
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan887x_data_t *data = (lan887x_data_t *) dev->data;
     mepa_gpio_conf_t conf[4];
     mepa_rc rc = MEPA_RC_OK;
     int i;
@@ -595,7 +595,7 @@ error:
 
 static mepa_rc lan887x_phy_cfg_clr(mepa_device_t *const dev)
 {
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan887x_data_t *data = (lan887x_data_t *) dev->data;
     mepa_rc rc = MEPA_RC_OK;
 
     uint16_t reg_val = 0;
@@ -640,7 +640,7 @@ struct lan887x_regwr_map {
 
 static int lan887x_100m_scripts(mepa_device_t *const dev)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     int ret;
     uint16_t i;
     mepa_rc rc = MEPA_RC_OK;
@@ -695,7 +695,7 @@ error:
 
 static int lan887x_1000m_scripts(mepa_device_t *const dev)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     static const struct lan887x_regwr_map phy_cfg[] = {
         {MDIO_MMD_PMAPMD, 0x80B0, 0x003F},
         {MDIO_MMD_PMAPMD, 0x808B, 0x00B8},
@@ -730,7 +730,7 @@ error:
 static mepa_bool_t lan887x_is_1g(struct mepa_device *dev)
 {
     mepa_bool_t gig_en = PHY_FALSE;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
     if (data->conf.speed == MESA_SPEED_AUTO) {
         if (data->media_intf != MESA_PHY_MEDIA_IF_T1_100FX &&
@@ -764,7 +764,7 @@ error:
 static int lan887x_pma_baset1_setup_forced(mepa_device_t *const dev)
 {
     mepa_rc rc = MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     uint16_t reg_val = 0;
 
     /* mode configuration */
@@ -786,7 +786,7 @@ error:
 static mepa_rc lan887x_init_conf(mepa_device_t *const dev)
 {
     mepa_rc rc = MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     mepa_manual_neg_t mode_ms = data->conf.man_neg;
 
     if (data->conf.admin.enable == PHY_TRUE) {
@@ -899,7 +899,7 @@ static mepa_rc lan887x_phy_reset(mepa_device_t *dev, mepa_bool_t hard_reset)
         while (done == PHY_FALSE && timeout == PHY_FALSE) {
             uint16_t tmp = 0;
 
-            timeout = MEPA_MTIMER_TIMEOUT(&timer);
+            timeout = (MEPA_MTIMER_TIMEOUT(&timer) != 0);
             (void) phy_reg_rd(dev, MII_BMCR, &tmp);
             if (!((tmp & BMCR_RESET) == BMCR_RESET)) {
                 done = PHY_TRUE;
@@ -921,7 +921,7 @@ static mepa_rc lan887x_check_media(struct mepa_device *dev, mepa_media_interface
     int rc = MEPA_RC_ERR_KR_CONF_NOT_SUPPORTED;
 
     if ((media_if == MESA_PHY_MEDIA_IF_T1_100FX) || (media_if == MESA_PHY_MEDIA_IF_T1_1000FX)) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         // speed selection based on media type
         if (media_if == MESA_PHY_MEDIA_IF_T1_100FX) {
@@ -943,7 +943,7 @@ error:
 static mepa_rc lan887x_config_set(mepa_device_t *dev, const mepa_conf_t *config)
 {
     mepa_rc rc = MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     mepa_bool_t re_config = PHY_FALSE;
     lan887x_reset_typ type = LAN887X_RST_SOFT;
 
@@ -1016,7 +1016,7 @@ static uint32_t lan887x_get_sqi_100m(mepa_device_t *dev)
     uint32_t sqinum = 0;
     uint16_t rawtable[200];
     uint8_t linktable[200];
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan887x_data_t *data = (lan887x_data_t *) dev->data;
 
     (void) memset(rawtable, 0, sizeof(rawtable));
     (void) memset(linktable, 1, sizeof(linktable));
@@ -1103,7 +1103,7 @@ static uint32_t lan887x_get_sqi(mepa_device_t *const dev)
 {
     int32_t count = 0;
     uint16_t sqi_value = 0;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan887x_data_t *data = (lan887x_data_t *) dev->data;
     uint16_t val = 0;
     mepa_status_t link_status;
     mesa_port_speed_t speed = data->conf.speed;
@@ -1184,7 +1184,7 @@ error:
 static mepa_rc lan887x_int_reset(mepa_device_t *dev, const lan887x_reset_typ typ)
 {
     mepa_rc rc = MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan887x_data_t *data = (lan887x_data_t *) dev->data;
     T_I( MEPA_TRACE_GRP_GEN, "PHY reset & initialize! \r\n");
 
     //reset PHY
@@ -1248,7 +1248,7 @@ static mepa_rc lan887x_cable_test_report(mepa_device_t *const dev, mepa_bool_t m
     float distance = -1.0F;
     lan887x_cd_status_t detect = LAN87XX_CABLE_TEST_OK;
 
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     mepa_cable_diag_result_t *res = &(data->cd_res);
 
     // read non-hybrid results
@@ -1409,7 +1409,7 @@ error:
 
 static mepa_rc lan887x_phy_cable_diag_start(mepa_device_t *dev, mepa_bool_t is_hybrid, mepa_bool_t ms_mode)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     mepa_rc rc = MEPA_RC_INV_STATE;
 
     if (data->init_done && data->conf.admin.enable) {
@@ -1431,7 +1431,7 @@ static mepa_rc lan887x_phy_cable_diag_start(mepa_device_t *dev, mepa_bool_t is_h
         while (bDone == PHY_FALSE && diagTimeout == PHY_FALSE) {
             uint16_t tmp = 0;
 
-            diagTimeout = MEPA_MTIMER_TIMEOUT(&timer);
+            diagTimeout = (MEPA_MTIMER_TIMEOUT(&timer) != 0);
             (void) phy_mmd_reg_rd(dev, MDIO_MMD_VEND1, LAN887X_DSP_REGS_START_CBL_DIAG_100, &tmp);
             if ((tmp & LAN887X_DSP_REGS_START_CBL_DIAG_DONE) == LAN887X_DSP_REGS_START_CBL_DIAG_DONE) {
                 bDone = PHY_TRUE;
@@ -1484,7 +1484,7 @@ static mepa_rc lan887x_aneg_read_status(mepa_device_t *dev, mepa_status_t *statu
     mepa_rc rc = MEPA_RC_INCOMPLETE;
     //mepa_bool_t lp_sym_pause, lp_asym_pause;
     uint16_t val = 0, lp_l = 0, lp_m = 0;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
     status->aneg.obey_pause = PHY_FALSE;
     status->aneg.generate_pause = PHY_FALSE;
@@ -1552,7 +1552,7 @@ static mepa_rc lan887x_delete(struct mepa_device *dev)
                 lan887x_data[pidx].port_no == dev->numeric_handle &&
                 lan887x_device[pidx].numeric_handle  == dev->numeric_handle) {
                 T_D( MEPA_TRACE_GRP_GEN, "LAN887X port-%d driver delete @ idx=%d!!\n", lan887x_device[pidx].numeric_handle, pidx);
-                (void) memset(&lan887x_data[pidx], 0, sizeof(phy_data_t));
+                (void) memset(&lan887x_data[pidx], 0, sizeof(lan887x_data_t));
                 (void) memset(&lan887x_device[pidx], 0, sizeof(mepa_device_t));
                 break;
             }
@@ -1569,7 +1569,7 @@ static mepa_rc lan887x_delete(struct mepa_device *dev)
 
 static void lan887x_fill_probe_data(mepa_driver_t *drv,
                                     mepa_device_t *dev,
-                                    phy_data_t *data,
+                                    lan887x_data_t *data,
                                     const mepa_callout_t    MEPA_SHARED_PTR *callout,
                                     struct mepa_callout_ctx MEPA_SHARED_PTR *callout_ctx,
                                     struct mepa_board_conf                  *conf)
@@ -1626,7 +1626,7 @@ static mepa_device_t *lan887x_probe(mepa_driver_t *drv,
     mepa_device_t   *dev = NULL;
 
     if (drv != NULL) {
-        phy_data_t      *data = NULL;
+        lan887x_data_t      *data = NULL;
 
 #ifdef MEPA_lan887x_static_mem
         uint8_t pidx = 0;
@@ -1648,7 +1648,7 @@ static mepa_device_t *lan887x_probe(mepa_driver_t *drv,
         }
 #else
         //T_D( MEPA_TRACE_GRP_GEN, "dynamic driver create!!\n");
-        dev = mepa_create_int(drv, callout, callout_ctx, conf, (int32_t)(sizeof(phy_data_t)));
+        dev = mepa_create_int(drv, callout, callout_ctx, conf, (int32_t)(sizeof(lan887x_data_t)));
         if (dev != NULL) {
             data = dev->data;
             data->port_no = conf->numeric_handle;
@@ -1666,7 +1666,7 @@ static mepa_rc lan887x_conf_get(struct mepa_device *dev, mepa_conf_t *const conf
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (dev != NULL && config != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         rc = MEPA_RC_OK;
         MEPA_ENTER(dev);
@@ -1695,7 +1695,7 @@ static mepa_rc lan887x_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_c
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (dev != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         MEPA_ENTER(dev);
         if (rst_conf != NULL) {
@@ -1731,7 +1731,7 @@ static mepa_rc lan887x_aneg_status_get(mepa_device_t *dev, mepa_aneg_status_t *s
     uint8_t master_slave_state;
 
     if (dev != NULL && status != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         rc = MEPA_RC_INV_STATE;
         if (data->conf.speed == MESA_SPEED_AUTO) {
@@ -1757,7 +1757,7 @@ static mepa_rc lan887x_poll(struct mepa_device *dev, mepa_status_t *status)
     uint8_t master_slave_state;
 
     if (dev != NULL && status != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
         mepa_bool_t old_link = data->link_status;
 
         rc = MEPA_RC_OK;
@@ -1809,7 +1809,7 @@ static mepa_rc lan887x_if_set( struct mepa_device *dev, mepa_port_interface_t ma
 
         if ((mac_if >= MESA_PORT_INTERFACE_RGMII && mac_if <= MESA_PORT_INTERFACE_RGMII_TXID) ||
             mac_if == MESA_PORT_INTERFACE_SGMII) {
-            phy_data_t *data = (phy_data_t *)dev->data;
+            lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
             rc = MEPA_RC_OK;
             if (data->mac_if != mac_if) {
@@ -1833,7 +1833,7 @@ static mepa_rc lan887x_if_get( struct mepa_device *dev,
     mepa_rc rc = MESA_RC_ERROR;
 
     if (dev != NULL && mac_if != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         rc = MEPA_RC_OK;
         MEPA_ENTER(dev);
@@ -1853,7 +1853,7 @@ static mepa_rc lan887x_media_set(struct mepa_device *dev, mepa_media_interface_t
     if (dev != NULL) {
         rc = MEPA_RC_ERR_KR_CONF_NOT_SUPPORTED;
         if ((media_if == MESA_PHY_MEDIA_IF_T1_100FX) || (media_if == MESA_PHY_MEDIA_IF_T1_1000FX)) {
-            phy_data_t *data = (phy_data_t *)dev->data;
+            lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
             rc = MEPA_RC_OK;
             MEPA_ENTER(dev);
@@ -1889,7 +1889,7 @@ static mepa_rc lan887x_media_get(struct mepa_device *dev, mepa_media_interface_t
     mepa_rc rc = MESA_RC_ERROR;
 
     if (dev != NULL && media_if != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         rc = MEPA_RC_OK;
         MEPA_ENTER(dev);
@@ -1976,7 +1976,7 @@ static mepa_rc lan887x_event_enable_get(struct mepa_device *dev, mepa_event_t *c
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (dev != NULL && event != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         rc = MEPA_RC_OK;
         MEPA_ENTER(dev);
@@ -1996,7 +1996,7 @@ static mepa_rc lan887x_event_status_poll(struct mepa_device *dev, mepa_event_t *
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (dev != NULL && status != NULL) {
-        phy_data_t *data = (phy_data_t *) dev->data;
+        lan887x_data_t *data = (lan887x_data_t *) dev->data;
 
         *status = 0;
 
@@ -2037,7 +2037,7 @@ static mepa_rc lan887x_gpio_mode_set_private(mepa_device_t *dev, const mepa_gpio
         gpio_en = PHY_TRUE;
         dir = mode == MEPA_GPIO_MODE_OUT ? 1U : 0U;
     } else if (mode >= MEPA_GPIO_MODE_LED_LINK_ACTIVITY && mode <= MEPA_GPIO_MODE_LED_DISABLE_EXTENDED) {
-        phy_data_t *data = (phy_data_t *) dev->data;
+        lan887x_data_t *data = (lan887x_data_t *) dev->data;
         MEPA_RC_GOTO(rc, lan887x_config_led(dev, gpio_conf));
         //updata metadata
         (void) memcpy(&data->led_conf[gpio_conf->led_num], gpio_conf, sizeof(mepa_gpio_conf_t));
@@ -2143,7 +2143,7 @@ static mepa_rc lan887x_loopback_get(mepa_device_t *dev, mepa_loopback_t *const l
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (dev != NULL && loopback != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         rc = MEPA_RC_OK;
         MEPA_ENTER(dev);
@@ -2158,19 +2158,15 @@ static mepa_rc lan887x_loopback_get(mepa_device_t *dev, mepa_loopback_t *const l
 
 static uint32_t lan887x_capability_priv(mepa_device_t *dev, uint32_t capability)
 {
-    phy_data_t *data = (phy_data_t *)(dev->data);
+    lan887x_data_t *data = (lan887x_data_t *)(dev->data);
     uint32_t c;
 
-    switch (capability) {
-    case MEPA_CAP_SPEED_1G:
-        c = data->conf.speed == MESA_SPEED_100M;
-        break;
-    case MEPA_CAP_TS_NONE:
-        c = data->conf.speed != MESA_SPEED_100M;
-        break;
-    default:
-        c = 0;
-        break;
+    if (capability == (uint32_t)MEPA_CAP_SPEED_1G) {
+        c = (data->conf.speed == MESA_SPEED_100M) ? 1U : 0U;
+    } else if (capability == (uint32_t)MEPA_CAP_TS_NONE) {
+        c = (data->conf.speed != MESA_SPEED_100M) ? 1U : 0U;
+    } else {
+        c = 0U;
     }
 
     return c;
@@ -2178,7 +2174,7 @@ static uint32_t lan887x_capability_priv(mepa_device_t *dev, uint32_t capability)
 
 static uint32_t lan887x_capability(mepa_device_t *dev, uint32_t capability)
 {
-    phy_data_t *data = (phy_data_t *)(dev->data);
+    lan887x_data_t *data = (lan887x_data_t *)(dev->data);
     uint32_t c;
 
     /* For some reason the capabilities in the lan887x_info_get they were
@@ -2203,21 +2199,23 @@ static mepa_rc lan887x_info_get(mepa_device_t *dev, mepa_phy_info_t *const phy_i
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (dev != NULL && phy_info != NULL) {
-        phy_data_t *data = (phy_data_t *)(dev->data);
+        lan887x_data_t *data = (lan887x_data_t *)(dev->data);
 
         MEPA_ENTER(dev);
         if (data->init_done == PHY_TRUE) {
+            uint32_t cap_value = 0U;
+
             phy_info->part_number = data->dev.model;
             phy_info->revision = data->dev.rev;
 
-            phy_info->cap = 0;
-            if (lan887x_capability_priv(dev, MEPA_CAP_SPEED_1G)) {
-                phy_info->cap |= MEPA_CAP_SPEED_MASK_1G;
+            if (lan887x_capability_priv(dev, (uint32_t)MEPA_CAP_SPEED_1G) != 0U) {
+                cap_value |= (uint32_t)MEPA_CAP_SPEED_MASK_1G;
             }
 
-            if (lan887x_capability_priv(dev, MEPA_CAP_TS_NONE)) {
-                phy_info->cap |= MEPA_CAP_TS_MASK_NONE;
+            if (lan887x_capability_priv(dev, (uint32_t)MEPA_CAP_TS_NONE) != 0U) {
+                cap_value |= (uint32_t)MEPA_CAP_TS_MASK_NONE;
             }
+            phy_info->cap = (mepa_phy_cap_t)cap_value;
 
             phy_info->manufactor_name = "Microchip";
             phy_info->model_name = "LAN887X";
@@ -2243,7 +2241,7 @@ static mepa_rc lan887x_debug_info(struct mepa_device *dev,
         case MEPA_DEBUG_GROUP_ALL:
         case MEPA_DEBUG_GROUP_PHY: {
             MEPA_ENTER(dev);
-            phy_reg_dump(dev, ss, lan887x_regs, ARRAY_SIZE(lan887x_regs), 0U);
+            phy_reg_dump(dev, ss, lan887x_regs, (uint8_t)ARRAY_SIZE(lan887x_regs), 0U);
             rc = MEPA_RC_OK;
             MEPA_EXIT(dev);
         }
@@ -2263,7 +2261,7 @@ static mepa_rc lan887x_cable_diag_start(mepa_device_t *dev, int32_t mode)
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (dev != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
         mepa_status_t link_status;
         mepa_bool_t is_master = PHY_TRUE;
 
@@ -2310,7 +2308,7 @@ static mepa_rc lan887x_cable_diag_get(struct mepa_device *dev, mepa_cable_diag_r
     mepa_rc rc = MEPA_RC_ERROR;
 
     if ((dev != NULL) && (res != NULL)) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan887x_data_t *data = (lan887x_data_t *)dev->data;
 
         rc = MEPA_RC_OK;
 

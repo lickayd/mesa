@@ -16,7 +16,7 @@ MEPA_DRV(LIB_NAME mepa_drv_lan887x
          SRCS     ../common/src/phy_lib.c
                   src/lan887x.c
                   src/lan887x_tc10.c
-		 DEFS	  ${MEPA_lan887x_custom_defs}
+		 DEFS	  ${MEPA_lan887x_custom_defs} -DMEPA_HAS_LAN887X
          INCL_PUB ../../../me/include ../../include ../common/include
          INCL_PRI lan887x)
 
