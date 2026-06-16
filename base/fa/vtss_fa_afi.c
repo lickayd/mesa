@@ -879,6 +879,18 @@ vtss_rc vtss_cil_afi_dti_start(struct vtss_state_s *vtss_state,
     // jr2_afi_link_state_change() ensure that these up-flows are started and
     // stopped by link state changes.
     port_no = (dti->port_no != VTSS_PORT_NO_NONE ? dti->port_no : dti->masquerade_port_no);
+
+    // For Up-MEP masquerade injection using the AFI: set UPDATE_IFH_SRC_PORT_ENA=1 on the
+    // masquerade chip port. The CPU driver already encodes SRC_PORT=masq_chip in the
+    // injection IFH. With ENA=1, ANA_CL activates this value in the cell bus, retaining
+    // FWD.SRC_PORT=masq_chip
+    if (dti->port_no == VTSS_PORT_NO_NONE && dti->masquerade_port_no != VTSS_PORT_NO_NONE) {
+        u32 masq_chip = VTSS_CHIP_PORT_FROM_STATE(vtss_state, dti->masquerade_port_no);
+        REG_WRM(VTSS_ANA_CL_PORT_ID_CFG(masq_chip),
+                VTSS_F_ANA_CL_PORT_ID_CFG_UPDATE_IFH_SRC_PORT_MASQ_DIS(1),
+                VTSS_M_ANA_CL_PORT_ID_CFG_UPDATE_IFH_SRC_PORT_MASQ_DIS);
+    }
+
     link = (dti->port_no != VTSS_PORT_NO_NONE ? TRUE
                                               : fa_afi_port_tbl_entry(vtss_state, port_no)->link);
 
