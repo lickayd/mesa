@@ -1,6 +1,7 @@
 
 MEPA_DRV(LIB_NAME mepa_drv_dummy_phy
          SRCS     src/dummy_phy.c
+         DEFS     -DMEPA_HAS_DUMMY_PHY
          INCL_PUB ../../me/include ../include)
 
 option(MEPA_dummy_phy "Add dummy sw phy in libmeba" OFF)
