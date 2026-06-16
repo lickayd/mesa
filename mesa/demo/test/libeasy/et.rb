@@ -40,8 +40,21 @@ end.parse!
 
 $test_stack = []
 $global_errors = 0
+$global_aborted = false
 $stdout.sync = true
 $stderr.sync = true
+
+# A suite killed mid-run (e.g. by the dispatch `timeout`, which sends SIGTERM)
+# must not be reported as passed.  Record the reason as a failed assert — so it
+# shows as a named failure in both reports, not just a bare not-ok — then exit
+# so the END block still runs (emitting test_run_end + uninit) as a failure.
+Signal.trap("TERM") do
+    $global_aborted = true
+    xml_tag "assert", nil, { "val" => "not-ok",
+                             "msg" => "SUITE TIMED OUT (terminated by SIGTERM)",
+                             "ts"  => xml_ts(Time.now) }
+    exit(1)
+end
 
 class TestAbortException < StandardError
     attr_accessor :msg
@@ -576,7 +589,7 @@ end
 END {
     ts_root_end = Time.now
     s = "ok"
-    s = "not-ok" if $global_errors > 0
+    s = "not-ok" if $global_errors > 0 || $global_aborted
     a = {
         "ts"     => xml_ts(ts_root_end),
         "ts_rel" => xml_ts_diff($ts_root_begin, ts_root_end),
@@ -589,7 +602,7 @@ END {
     xml_tag "test_run_end", nil, a
     xml_tag_end "test_run"
 
-    if $global_errors > 0
+    if $global_errors > 0 || $global_aborted
         exit (-1)
     else
         exit (0)
