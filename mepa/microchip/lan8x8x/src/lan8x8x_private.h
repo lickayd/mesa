@@ -77,7 +77,7 @@ typedef struct {
     uint16_t  rev;
     mepa_bool_t is_master;
     mepa_bool_t is_master_fault;
-} phy_dev_info_t;
+} lan8x8x_dev_info_t;
 
 typedef struct {
     lan8x8x_otp_cap_t       t1_cap;
@@ -89,10 +89,10 @@ typedef struct {
     mepa_conf_t             conf;
     mepa_event_t            events;
     mepa_loopback_t         loopback;
-    phy_dev_info_t          dev;
+    lan8x8x_dev_info_t       dev;
     mepa_bool_t             ctx_status;
     mepa_cable_diag_result_t cd_res;
     mepa_gpio_conf_t        led_conf[4];
-} phy_data_t;
+} lan8x8x_data_t;
 
 #endif //LAN8X8X_PRIVATE_H
