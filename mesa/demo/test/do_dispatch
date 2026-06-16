@@ -12,7 +12,8 @@
 #   dut:         fa|fireant | la|lan969x | j2|jr2 | oc|ocelot | st|servalt |
 #                ca1|luton10 | mc | me|m8 | lan932x
 #   system:      optional specific system (e.g. dk-t34-3); first match used if omitted
-#   test_script: path relative to mesa/demo/test/ (e.g. reboot.rb)
+#   test_script: path relative to mesa/demo/test/ (e.g. reboot.rb), optionally
+#                test.rb:SECONDS to cap that suite (else run-suites-on's default)
 
 set -e
 
@@ -34,11 +35,13 @@ Usage: $0 [--clean] <dut> [<system>] <test_script> [<test_script> ...]
   --session-name|-n name: session name (default: auto timestamp)
   dut:              ${duts}
   system:      optional specific system (e.g. dk-t34-3), first match used if omitted
-  test_script: path relative to mesa/demo/test/ (e.g. reboot.rb)
+  test_script: path relative to mesa/demo/test/ (e.g. reboot.rb); append
+               :SECONDS to cap a suite (e.g. suite_qos.rb:600)
 
 Examples:
   $0 fa reboot.rb
   $0 fa reboot.rb l2_mac_table.rb
+  $0 fa suite_qos.rb:600      # cap this suite at 600s
   $0 --clean fa dk-t34-3 reboot.rb
   $0 fireant reboot.rb        # long form also accepted
 EOF
@@ -123,12 +126,12 @@ resolved=$(ruby -r yaml -e "
   end
   puts entry['system']
   puts entry['image']
-  puts (suites_cfg['timeout'] || 18000)
+  puts (suites_cfg['total_timeout'] || 18000)
 " "${SYSTEMS_CFG}" "${SUITES_CFG}" "${dut}" "${forced_system}") || exit 1
 
-system=$(echo "$resolved"       | sed -n '1p')
-image_yaml=$(echo "$resolved"   | sed -n '2p')
-TEST_TIMEOUT=$(echo "$resolved" | sed -n '3p')
+system=$(echo "$resolved"        | sed -n '1p')
+image_yaml=$(echo "$resolved"    | sed -n '2p')
+TOTAL_TIMEOUT=$(echo "$resolved" | sed -n '3p')
 
 # image_yaml is arch/mesa/demo/... (Jenkins format); prepend build- for local use
 arch="${image_yaml%%/*}"
@@ -158,8 +161,10 @@ if [[ ! -f "${REPO_ROOT}/${image}" ]]; then
 fi
 
 for t in "${test_scripts[@]}"; do
-    if [[ ! -f "${SCRIPT_DIR}/${t}" ]]; then
-        echo "Test script not found: ${t}"
+    # An entry may be "test.rb" or "test.rb:SECONDS" (per-suite cap); only the
+    # part before the colon is the file to check.
+    if [[ ! -f "${SCRIPT_DIR}/${t%%:*}" ]]; then
+        echo "Test script not found: ${t%%:*}"
         exit 1
     fi
 done
@@ -182,18 +187,19 @@ echo ""
 
 suite_args=()
 for t in "${test_scripts[@]}"; do
-    suite_args+=(-T "$t")
+    suite_args+=(-T "$t")          # pass "name" or "name:secs" verbatim to run-suites-on
 done
 
 suite_meta_args=()
 for t in "${test_scripts[@]}"; do
-    suite_meta_args+=(--suite "$t")
+    suite_meta_args+=(--suite "${t%%:*}")   # report wants the bare suite name
 done
 
 cd "${REPO_ROOT}"
 
-# Run test suites on the remote system
-"${RUNNER}" -s "${system}" -i "${image}" -o "${session_dir}" -t "${TEST_TIMEOUT}" "${suite_args[@]}"
+# Run test suites on the remote system (-t is the total budget for all suites;
+# each "name:secs" arg caps that suite, otherwise the run-suites-on default is used)
+"${RUNNER}" -s "${system}" -i "${image}" -o "${session_dir}" -t "${TOTAL_TIMEOUT}" "${suite_args[@]}"
 
 # Generate combined report
 "${REPORT}" -o "${session_dir}" \
