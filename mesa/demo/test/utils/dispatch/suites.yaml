@@ -4,27 +4,36 @@
 # Per-branch test recipe.  Owns:
 #   - suites_basic   — suites to run on every commit / PR build
 #   - suites_nightly — suites to run on the scheduled nightly pipeline
-#   - timeout        — per-suite timeout in seconds (optional)
+#   - total_timeout  — wall-clock budget (seconds) for the WHOLE batch of suites
 #
 # Read by Jenkins via `git show origin/<branch>:suites.yaml` for each system,
 # where <branch> is the branch declared for that system in `systems.yaml`.
 # So a branch's own copy of this file controls what runs on the DUT(s) that
 # point at it.  See companion `systems.yaml` for hardware inventory.
+#
+# Each suites_* entry is a map:
+#   - { suite: suite_x.rb }                 run with the default per-suite cap
+#   - { suite: suite_x.rb, timeout: 3600 }  cap that suite at N seconds
+#
+# NOTE: the FIRST suite to run on a server may trigger a one-time lazy pull of
+# the docker image (can take ~1h on a cold server). That happens before the
+# suite proper, inside its window, so give the first suite a generous timeout.
 
-timeout: 18000  # 5 hours per suite
+total_timeout: 18000  # whole-batch timeout
 
 suites_basic: []  # Add suites here when basic per-commit tests are desired
 
 suites_nightly:
-  - suite_acl.rb
-  - suite_examples.rb
-  - suite_hqos.rb
-  - suite_l2_basic.rb
-  - suite_l3_rt.rb
-  - suite_packet.rb
-  - suite_phy.rb
-  - suite_port.rb
-  - suite_protection.rb
-  - suite_qos.rb
-  - suite_ts.rb
-  - suite_vop.rb
+  # First suite: larger cap to absorb a possible one-time docker image pull.
+  - { suite: suite_acl.rb,        timeout: 7200 }
+  - { suite: suite_examples.rb,   timeout: 3600 }
+  - { suite: suite_hqos.rb,       timeout: 3600 }
+  - { suite: suite_l2_basic.rb,   timeout: 3600 }
+  - { suite: suite_l3_rt.rb,      timeout: 3600 }
+  - { suite: suite_packet.rb,     timeout: 3600 }
+  - { suite: suite_phy.rb,        timeout: 3600 }
+  - { suite: suite_port.rb,       timeout: 3600 }
+  - { suite: suite_protection.rb, timeout: 3600 }
+  - { suite: suite_qos.rb,        timeout: 3600 }
+  - { suite: suite_ts.rb,         timeout: 3600 }
+  - { suite: suite_vop.rb,        timeout: 3600 }
