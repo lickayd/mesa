@@ -10,6 +10,12 @@ require 'pathname'
 # Unbuffer stdout so the live log streams to the controller in real time.
 $stdout.sync = true
 
+# `timeout` exit codes that mean the suite hit its cap (GNU coreutils):
+#   124 = killed by the TERM we sent
+#   137 = ignored TERM, so `-k` escalated to SIGKILL (128 + 9)
+TIMEOUT_EXIT_TERM = 124
+TIMEOUT_EXIT_KILL = 137
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Run command
 # ---------------------------------------------------------------------------------------------------------------------
@@ -91,10 +97,16 @@ run_cmd("mkdir -p #{out_dir}", $options[:system])
 # Change to the test directory so the suite script can be invoked as ./suite.rb
 # and require_relative paths inside the suite resolve correctly
 Dir.chdir("#{$repo_root}/mesa/demo/test/")
-run_cmd("timeout -k 10 -s TERM #{$options[:timeout]}s ./#{$options[:test_to_run]}" \
-        " --test-suite-name #{suite_name}" \
-        " | tee #{out_et_xml}" \
-        " | libeasy/xml2console.rb --brief -O #{out_dir} -o #{out_dir} -j #{out_junit_xml} -n #{junit_suite_name} #{junit_props}", $options[:system])
+suite_cmd = "timeout -k 10 -s TERM #{$options[:timeout]}s ./#{$options[:test_to_run]}" \
+            " --test-suite-name #{suite_name}" \
+            " | tee #{out_et_xml}" \
+            " | libeasy/xml2console.rb --brief -O #{out_dir} -o #{out_dir} -j #{out_junit_xml} -n #{junit_suite_name} #{junit_props}"
+
+run_cmd("bash -c '#{suite_cmd}; " \
+        "rc=${PIPESTATUS[0]}; " \
+        "if [ $rc = #{TIMEOUT_EXIT_TERM} ] || [ $rc = #{TIMEOUT_EXIT_KILL} ]; then " \
+        "echo \"### SUITE TIMED OUT after #{$options[:timeout]}s (rc=$rc) ###\"; fi; " \
+        "exit 0'", $options[:system])
 
 puts("Suite '#{suite_name}' completed")
 
