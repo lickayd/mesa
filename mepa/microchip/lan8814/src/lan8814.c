@@ -2045,7 +2045,11 @@ static mepa_device_t *lan8814_probe(mepa_driver_t *drv,
         return NULL;
     }
 
-    if (sku == LAN8804_SKU) {
+    if (sku == LAN8804_SKU ||
+        sku == LAN8808_SKU) {
+        // In case the SKU is LAN8808_SKU will assign the driver with id
+        // LAN8804_SKU. It is fine to do that because the driver will be
+        // identical in this case.
         drv = &lan8814_drv.phy_drv[1];
     }
     if (sku == LAN8832_SKU) {
@@ -2328,8 +2332,16 @@ static mepa_rc lan8814_info_get(mepa_device_t *dev, mepa_phy_info_t *const phy_i
         phy_info->part_number = 8814;
         phy_info->model_name = "LAN8814";
     } else if (dev->drv->id == LAN8804_SKU) {
-        phy_info->part_number = 8804;
-        phy_info->model_name = "LAN8804";
+        // The driver with ID LAN8804_SKU covers both the LAN8804 and LAN8808
+        // devices, so in this case we need to check which SKU is it to set the
+        // correct part number and model
+        if (data->dev.sku == LAN8804_SKU) {
+            phy_info->part_number = 8804;
+            phy_info->model_name = "LAN8804";
+        } else {
+            phy_info->part_number = 8808;
+            phy_info->model_name = "LAN8808";
+        }
     } else {
         // unknown SKU; leave part_number/model_name unset
     }

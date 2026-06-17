@@ -33,6 +33,7 @@
 
 #define LAN8814_SKU    0x8814U
 #define LAN8804_SKU    0x8804U
+#define LAN8808_SKU    0x8808U
 #define LAN8832_SKU    0x8832U
 
 // Direct registers
