@@ -1515,16 +1515,16 @@ static mepa_rc lan8814_prbs_enable(mepa_device_t *dev, mepa_prbs_pattern_t prbs_
         // This applies both to the LANEN_DIG_RX_LBERT_CTL and
         // LANEN_DIG_TX_LBERT_CTL registers.
         if (prbs_pattern == MEPA_PRBS7) {
-            serdes_settings[i].data |= 0x4;
+            serdes_settings[i].data |= 0x4U;
         }
         if (prbs_pattern == MEPA_PRBS15) {
-            serdes_settings[i].data |= 0x3;
+            serdes_settings[i].data |= 0x3U;
         }
         if (prbs_pattern == MEPA_PRBS23) {
-            serdes_settings[i].data |= 0x2;
+            serdes_settings[i].data |= 0x2U;
         }
         if (prbs_pattern == MEPA_PRBS31) {
-            serdes_settings[i].data |= 0x1;
+            serdes_settings[i].data |= 0x1U;
         }
         rc = lan8814_serdes_set(dev, serdes_settings[i].addr, serdes_settings[i].data, serdes_settings[i].op_rd);
         if (rc < 0) {
@@ -2733,14 +2733,14 @@ static mepa_rc lan8814_sqi_read(mepa_device_t *dev, uint32_t *const value)
         goto do_exit;
     }
 
-    EP_RD(dev, LAN8814_DCQ_CTRL, &val);
+    (void)EP_RD(dev, LAN8814_DCQ_CTRL, &val);
     val &= ~LAN8814_M_DCQ_CTRL_CHANNEL_MASK; // Getting SQI value for channel 0;
     val |= LAN8814_F_DCQ_CTRL_READ_CAPTURE; // Enable this bit for capturing SQI values
-    EP_WR(dev, LAN8814_DCQ_CTRL, val);
+    (void)EP_WR(dev, LAN8814_DCQ_CTRL, val);
 
-    EP_RD(dev, LAN8814_DCQ_SQI, &val);
+    (void)EP_RD(dev, LAN8814_DCQ_SQI, &val);
 
-    *value = LAN8814_X_DCQ_SQI_VALUE(val);
+    *value = LAN8814_X_DCQ_SQI_VALUE((uint32_t)val);
 
     rc = MEPA_RC_OK;
 
