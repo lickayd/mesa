@@ -15,6 +15,8 @@ spec:
       requests:
         cpu: '30'
         memory: 60Gi
+        ephemeral-storage: 60Gi
       limits:
         cpu: '30'
         memory: 60Gi
+        ephemeral-storage: 60Gi
