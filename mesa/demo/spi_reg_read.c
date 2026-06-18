@@ -17,12 +17,15 @@ static int spi_fd = -1;
 static int spi_freq = 400000;
 static int spi_padding = 1;
 
-/* MEBA callouts */
 #define TO_SPI(_a_)     (_a_ & 0x00FFFFFF) /* 24 bit SPI address */
 #define SPI_NR_BYTES    7                  /* Number of bytes to transmit or receive */
 #define SPI_PADDING_MAX 15                 /* Maximum number of optional padding bytes */
 
-int spi_reg_read(const uint32_t addr, uint32_t *const value)
+/* Note: Padding only applies to read operations as this is where the device must
+ * be given time to respond to the request.
+ */
+
+static int spi_reg_read(const uint32_t addr, uint32_t *const value)
 {
     uint8_t  tx[SPI_NR_BYTES + SPI_PADDING_MAX] = {0};
     uint8_t  rx[sizeof(tx)] = {0};
@@ -45,7 +48,7 @@ int spi_reg_read(const uint32_t addr, uint32_t *const value)
 
     ret = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &tr);
     if (ret < 1) {
-        printf("ERROR:%d> spi_read: %s=n\n", __LINE__, strerror(errno));
+        printf("ERROR:%d> spi_read: '%s' (%d)\n", __LINE__, strerror(errno), errno);
         return -1;
     }
 
@@ -60,9 +63,9 @@ int spi_reg_read(const uint32_t addr, uint32_t *const value)
     return 0;
 }
 
-int spi_reg_write(const uint32_t addr, const uint32_t value)
+static int spi_reg_write(const uint32_t addr, const uint32_t value)
 {
-    uint8_t  tx[SPI_NR_BYTES] = {0};
+    uint8_t  tx[SPI_NR_BYTES + SPI_PADDING_MAX] = {0};
     uint8_t  rx[sizeof(tx)] = {0};
     uint32_t siaddr = TO_SPI(addr);
     uint32_t read_back;
@@ -79,7 +82,7 @@ int spi_reg_write(const uint32_t addr, const uint32_t value)
     struct spi_ioc_transfer tr = {
         .tx_buf = (unsigned long)tx,
         .rx_buf = (unsigned long)rx,
-        .len = sizeof(tx),
+        .len = SPI_NR_BYTES + spi_padding,
         .delay_usecs = 0,
         .speed_hz = spi_freq,
         .bits_per_word = 8,
@@ -89,7 +92,7 @@ int spi_reg_write(const uint32_t addr, const uint32_t value)
     if (ret < 1) {
         printf("TX: %02x %02x %02x-%02x %02x %02x %02x -> ERROR\n", tx[0], tx[1], tx[2], tx[3],
                tx[4], tx[5], tx[6]);
-        printf("ERROR:%d> spi_write: %s=n\n", __LINE__, strerror(errno));
+        printf("ERROR:%d> spi_write: '%s' (%d)\n", __LINE__, strerror(errno), errno);
         return -1;
     }
 
@@ -104,7 +107,7 @@ int spi_reg_write(const uint32_t addr, const uint32_t value)
     return 0;
 }
 
-int spi_reg_io_init(char *spi_dev)
+static int spi_reg_io_init(char *spi_dev)
 {
     int ret, mode = 0;
     printf("DEV: %s, Freq: %d, Padding: %d\n", spi_dev, spi_freq, spi_padding);
@@ -115,7 +118,7 @@ int spi_reg_io_init(char *spi_dev)
     }
     spi_fd = open(spi_dev, O_RDWR);
     if (spi_fd < 0) {
-        printf("ERROR:%d> could not open device %s=n\n", __LINE__, strerror(errno));
+        printf("ERROR:%d> could not open device: '%s' (%d)\n", __LINE__, strerror(errno), errno);
         return -1;
     }
 
@@ -140,39 +143,66 @@ int spi_reg_io_init(char *spi_dev)
 
 static void help(void)
 {
-    printf("Usage: spi_reg_read spi_dev offset_hex\n");
-    printf("options:\n");
-    printf("  -h | --help              Show this help text\n");
-    printf("commands:\n");
+    printf("Usage: spi_reg spi_dev word_address_hex [new_value_hex]\n");
+    printf("Options:\n");
+    printf("\t-h | --help\t\t\tShow this help text\n");
+    printf("\t-p | --padding BYTES\t\tUse this number of padding bytes.  Default is 1\n");
+    printf("\t-f | --frequency FREQ_HZ\tClock frequency to use in Hz.  Default is 1MHz\n");
+    printf("\nExamples:\n");
+    printf("\tReading a value from word address 0x1000:\n");
+    printf("\t\tspi_reg /dev/spidev1.0 0x1000\n\n");
+    printf("\tWriting 0xdeadbeef to word address 0x1002:\n");
+    printf("\t\tspi_reg /dev/spidev1.0 0x1002 0xdeadbeef\n");
 }
 
 int main(int argc, char **argv)
 {
-    int      res;
-    uint32_t chip_id;
+    int      arg_count = argc;
     uint32_t reg = 0;
-    int      f;
+    uint32_t value;
+    int      nopt;
+    int      res;
 
     static const struct option options[] = {
-        {.name = "help", .val = 'h'},
+        {.name = "help", .val = 'h', .has_arg = no_argument},
+        {.name = "padding", .val = 'p', .has_arg = optional_argument},
+        {.name = "frequency", .val = 'f', .has_arg = optional_argument},
         {0}
     };
 
-    while (EOF != (f = getopt_long(argc, argv, "h", options, NULL))) {
-        switch (f) {
+    while (EOF != (nopt = getopt_long(argc, argv, "hp:f:", options, NULL))) {
+        switch (nopt) {
         case 'h': help(); return 0;
+        case 'p':
+            spi_padding = atoi(optarg);
+            if (spi_padding > SPI_PADDING_MAX) {
+                printf("Too high padding value.  Max is %d", SPI_PADDING_MAX);
+                return 0;
+            }
+            break;
+        case 'f': spi_freq = atoi(optarg); break;
         }
     }
 
-    if (argc < 3) {
+    arg_count -= optind;
+    if (arg_count < 2) {
         help();
         return 0;
     }
 
-    reg = strtol(argv[2], NULL, 16);
+    res = spi_reg_io_init(argv[optind]);
+    if (res) {
+        return res;
+    }
 
-    res = spi_reg_io_init(argv[1]);
-    spi_reg_read(reg, &chip_id);
+    reg = strtol(argv[optind + 1], NULL, 16);
 
+    if (arg_count < 3) {
+        spi_reg_read(reg, &value);
+    } else {
+        value = strtoul(argv[optind + 2], NULL, 16);
+        printf("Write value: 0x%x\n", value);
+        spi_reg_write(reg, value);
+    }
     return res;
 }
