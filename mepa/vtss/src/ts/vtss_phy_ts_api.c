@@ -22488,24 +22488,40 @@ static void vtss_1588_api_dis_state(vtss_state_t *vtss_state, vtss_port_no_t por
     pr("auto_clear_ls     :: %s\n", pconf->auto_clear_ls ? "True" : "False");
     pr("macsec            :: %s\n", pconf->macsec_ena ? "Enabled" : "Disabled");
 }
-#if !defined(VTSS_PHY_TS_DISP_CSR)
-#define VTSS_PHY_TS_DISP_CSR(c,b,a,v) \
-                          if ( vtss_phy_ts_read_csr(vtss_state, c, b, a, v) == VTSS_RC_OK ) {   \
-                                                    pr("0x%08lx ",(long unsigned int)*v); }
-#endif
 static void vtss_phy_ts_api_dump_reg_ana_priv(vtss_state_t *vtss_state, vtss_port_no_t port_no, u8 blk_id, u16 start, u16 end, const vtss_debug_printf_t pr)
 {
     u32 value = 0;
     u16 l1 = 0, l2 = 0;
     for (l1 = start; l1 <= end; l1 = l1 + 4) {
-        pr("0x%03x: ", l1);
+        u32  vals[4];
+        BOOL valid[4];
+        BOOL any = FALSE;
         for (l2 = 0; l2 < 4; l2++) {
+            valid[l2] = FALSE;
             if ((blk_id == 6 || blk_id == 7) && ((l1 + l2) >= 0x5c && (l1 + l2) <= 0x63)) {
                 continue;
             }
-            VTSS_PHY_TS_DISP_CSR(port_no, blk_id, l1 + l2, &value);
+            if (vtss_phy_ts_read_csr(vtss_state, port_no, blk_id, l1 + l2, &value) == VTSS_RC_OK) {
+                vals[l2] = value;
+                valid[l2] = TRUE;
+                any = TRUE;
+            }
         }
-        pr("\n");
+        /* Only emit rows that actually have register data: when 1588 is not
+         * initialised the CSR reads fail and the row would otherwise be empty. */
+        if (any) {
+            pr("0x%03x: ", l1);
+            for (l2 = 0; l2 < 4; l2++) {
+                if (valid[l2]) {
+                    pr("0x%08lx ", (long unsigned int)vals[l2]);
+                } else {
+                    /* Mark a failed read explicitly and keep the same 10-char
+                     * width as a value so the remaining columns are not shifted. */
+                    pr("%-10s ", "READ_FAIL");
+                }
+            }
+            pr("\n");
+        }
     }
 }
 static BOOL is_1588_capable_phy(vtss_state_t *vtss_state,

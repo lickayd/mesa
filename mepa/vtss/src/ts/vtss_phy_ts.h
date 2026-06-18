@@ -21,9 +21,6 @@ typedef enum {
     VTSS_PHY_TS_MAX_BLK_ID
 } vtss_phy_ts_blk_id_t;
 
-#define VTSS_PHY_TS_DISP_CSR(c,b,a,v) \
-                     if ( vtss_phy_ts_read_csr(vtss_state, c, b, a, v) == VTSS_RC_OK ) { printf("0x%08lx ",(long unsigned int)*v); }
-
 #define VTSS_PHY_TS_READ_CSR(p, b, a, v) vtss_phy_ts_read_csr(vtss_state, p, b, a, v)
 
 #define VTSS_PHY_TS_WRITE_CSR(p, b, a, v) vtss_phy_ts_write_csr(vtss_state, p , b, a, v)
