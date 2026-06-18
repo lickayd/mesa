@@ -396,34 +396,58 @@ vtss_rc vtss_cil_debug_info_print(struct vtss_state_s           *vtss_state,
                                   lmu_ss_t                      *ss,
                                   const vtss_debug_info_t *const info)
 {
+#if VTSS_OPT_DEBUG_PRINT_MISC
     VTSS_RC(vtss_fa_misc_debug_print(vtss_state, ss, info));
+#endif
+#if VTSS_OPT_DEBUG_PRINT_PORT
     VTSS_RC(vtss_fa_port_debug_print(vtss_state, ss, info));
+#endif
+#if VTSS_OPT_DEBUG_PRINT_L2
     VTSS_RC(vtss_fa_l2_debug_print(vtss_state, ss, info));
+#endif
+#if VTSS_OPT_DEBUG_PRINT_L3
 #if defined(VTSS_FEATURE_LAYER3)
     VTSS_RC(vtss_fa_l3_debug_print(vtss_state, ss, info));
 #endif /* VTSS_FEATURE_LAYER3 */
+#endif
+#if VTSS_OPT_DEBUG_PRINT_ACL
 #if defined(VTSS_FEATURE_IS2)
     VTSS_RC(vtss_fa_vcap_debug_print(vtss_state, ss, info));
 #endif /* VTSS_FEATURE_IS2 */
+#endif
+#if VTSS_OPT_DEBUG_PRINT_QOS
 #if defined(VTSS_FEATURE_QOS)
     VTSS_RC(vtss_fa_qos_debug_print(vtss_state, ss, info));
 #endif /* VTSS_FEATURE_QOS */
+#endif
+#if VTSS_OPT_DEBUG_PRINT_HQOS
 #if defined(VTSS_FEATURE_HQOS)
     VTSS_RC(vtss_fa_hqos_debug_print(vtss_state, ss, info));
 #endif /* VTSS_FEATURE_HQOS */
+#endif
+#if VTSS_OPT_DEBUG_PRINT_PACKET
     VTSS_RC(vtss_fa_packet_debug_print(vtss_state, ss, info));
+#endif
+#if VTSS_OPT_DEBUG_PRINT_AFI
 #if defined(VTSS_FEATURE_AFI_SWC)
     VTSS_RC(vtss_fa_afi_debug_print(vtss_state, ss, info));
 #endif /* VTSS_FEATURE_AFI_SWC */
+#endif
+#if VTSS_OPT_DEBUG_PRINT_TS
 #if defined(VTSS_FEATURE_TIMESTAMP)
     VTSS_RC(vtss_fa_ts_debug_print(vtss_state, ss, info));
 #endif /* VTSS_FEATURE_TIMESTAMP */
+#endif
+#if VTSS_OPT_DEBUG_PRINT_VOP
 #if defined(VTSS_FEATURE_VOP)
     VTSS_RC(vtss_fa_vop_debug_print(vtss_state, ss, info));
 #endif /* VTSS_FEATURE_VOP */
+#endif
+#if VTSS_OPT_DEBUG_PRINT_MRP
 #if defined(VTSS_FEATURE_MRP)
     VTSS_RC(vtss_lan969x_mrp_debug_print(vtss_state, ss, info));
 #endif /* VTSS_FEATURE_MRP */
+#endif
     return VTSS_RC_OK;
 }
 
