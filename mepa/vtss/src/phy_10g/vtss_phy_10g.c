@@ -720,6 +720,14 @@ static vtss_rc vtss_phy_10g_reset_private(vtss_state_t *vtss_state,
     return VTSS_RC_OK;
 }
 
+/* Malibu GLOBAL_FAST_RESET (0x1E:0x8000): reset the chip and all four channel datapaths
+ * (CHIP_FAST_RESET | CHANNEL_0..3), leaving the CSR untouched. */
+#define MALIBU_GLOBAL_FAST_RESET     0x00f1
+/* Malibu Block_Level_Software_Reset (0x1E:0x0002): Software_Reset_Chip resets the datapath and
+ * configuration in all channels (except GPIO/global config registers), leaving the MDIO/SPI/TWS
+ * management interfaces untouched. */
+#define MALIBU_BLOCK_LEVEL_SW_RESET  0x0001
+
 static vtss_rc vtss_phy_10g_reset_blocks(vtss_state_t *vtss_state,
                                          const vtss_port_no_t port_no)
 {
@@ -736,8 +744,8 @@ static vtss_rc vtss_phy_10g_reset_blocks(vtss_state_t *vtss_state,
             VTSS_RC(vtss_mmd_wr(vtss_state, port_no, MMD_GLOBAL, 0x8000, 0xffff));
         }
         if(vtss_state->phy_10g_state[port_no].family == VTSS_PHY_FAMILY_MALIBU && vtss_state->phy_channel_id == 0) {
-            VTSS_RC(vtss_mmd_wr(vtss_state, port_no, MMD_GLOBAL, 0x8000, 0xffff));
-            VTSS_RC(vtss_mmd_wr(vtss_state, port_no, MMD_GLOBAL, 0x2, 0xffff));
+            VTSS_RC(vtss_mmd_wr(vtss_state, port_no, MMD_GLOBAL, 0x8000, MALIBU_GLOBAL_FAST_RESET));
+            VTSS_RC(vtss_mmd_wr(vtss_state, port_no, MMD_GLOBAL, 0x2, MALIBU_BLOCK_LEVEL_SW_RESET));
         }
     }
 
