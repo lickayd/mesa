@@ -126,6 +126,13 @@ $machines = {
                 { :name => "lan9668_ung8385_0_at_lan966x", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8385_0.dtso"},
             ]
           },
+          {
+            :file => "#{$bsp}/arm-cortex_a8-linux-gnu/xstax/release/lan966x-pcb8291.dtb",
+            :overlays => [
+                { :name => "lan9662_spi_ung8291_controller_ung8291_follower", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8291_spi.dtso"},
+                { :name => "lan9662_spi_ung8291_controller_ung8290_follower", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8290_spi.dtso"},
+            ]
+          },
         ],
         :fdtaddr => "<0x67e00000>",
         :rootfs => "#{$bsp}/arm-cortex_a8-linux-gnu/xstax/release/rootfs.tar",
