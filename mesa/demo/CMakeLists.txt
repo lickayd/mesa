@@ -158,7 +158,7 @@ macro(IMG_TARGET)
         set(KERNEL "${RELOCATED_HOST_DIR}/../mscc-linux-kernel.bin.xz")
     elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
         set(KERNEL "${RELOCATED_HOST_DIR}/../mscc-linux-kernel.bin.gz")
-    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "armv7l" AND A_MACHINE STREQUAL "BeagleBoneBlack")
+    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "armv7l")
         set(KERNEL "${RELOCATED_HOST_DIR}/../mscc-linux-kernel.bin.gz")
     endif()
 

@@ -202,41 +202,6 @@ $machines = {
         :rootfs => "#{$bsp}/arm64-armv8_a-linux-gnu/xstax/release/rootfs.tar",
     },
 
-    "BeagleBoneBlack" => {
-        :arch        => "arm",
-        :kernel      => "#{$bsp}/arm-cortex_a8-linux-gnu/standalone/release/mscc-linux-kernel.bin.gz",
-        :kerneladdr  => "<0x80080000>",
-        :kernelentry => "<0x80080000>",
-        :ramdiscaddr => "<0x88080000>",
-        :kcomp => "gzip",
-        :dt => [
-            {
-              :name => "pcb134",
-              :file => "#{$bsp}/arm-cortex_a8-linux-gnu/standalone/release/am335x-boneblack-mscc.dtb"
-            },
-            {
-              :file => "#{$bsp}/arm-cortex_a8-linux-gnu/standalone/release/am335x-boneblack-mscc.dtb",
-              :overlays => [
-                  { :name => "6813_0@bbb", :file => "#{$p_mesa}/meba/dt/meba_lan966x_6813_0.dtso"},
-                  { :name => "6849_0@bbb", :file => "#{$p_mesa}/meba/dt/meba_lan966x_6849_0.dtso"},
-                  { :name => "8290_0@bbb", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8290_0.dtso"},
-                  { :name => "8291_0@bbb", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8291_0.dtso"},
-                  { :name => "8309_0@bbb", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8309_0.dtso"},
-                  { :name => "8398_1@bbb", :file => "#{$p_mesa}/meba/dt/meba_lan969x_8398_0.dtso"},
-              ]
-            },
-            {
-              :file => "#{$bsp}/arm-cortex_a8-linux-gnu/standalone/release/am335x-boneblack-mscc-fpga.dtb",
-              :overlays => [
-                { :name => "6849_1@bbb", :file => "#{$p_mesa}/meba/dt/meba_lan969x_6849_0.dtso"},
-              ]
-            },
-
-        ],
-        :fw_env => "/dev/mmcblk1 0x260000 0x20000\n/dev/mmcblk1 0x280000 0x20000\n",
-        :rootfs => "#{$bsp}/arm-cortex_a8-linux-gnu/xstax/release/rootfs.tar",
-    },
-
     "luton_pcb090" => {
         :socfam => "luton26",
         :chipno => "2",
