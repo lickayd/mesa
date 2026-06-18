@@ -131,6 +131,7 @@ $machines = {
             :overlays => [
                 { :name => "lan9662_spi_ung8291_controller_ung8291_follower", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8291_spi.dtso"},
                 { :name => "lan9662_spi_ung8291_controller_ung8290_follower", :file => "#{$p_mesa}/meba/dt/meba_lan966x_8290_spi.dtso"},
+                { :name => "lan9662_spi_ung8291_controller", :file => "#{$p_mesa}/meba/dt/meba_lan966x_spi.dtso"},
             ]
           },
         ],

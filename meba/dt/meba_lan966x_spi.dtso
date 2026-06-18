@@ -1,0 +1,39 @@
+// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&flx2>;
+		__overlay__ {
+		    atmel,flexcom-mode = <2>;
+		    status = "okay";
+
+		    spi2: spi@400 {
+			pinctrl-0 = <&fc2_spi_pins>;
+			pinctrl-names = "default";
+			cs-gpios = <&gpio 51 1>;
+			status = "okay";
+
+			spi@0 {
+			    compatible = "spidev";
+			    reg = <0>;
+			    spi-max-frequency = <1000000>;
+			};
+		    };
+		};
+	};
+
+	fragment@1 {
+		target = <&gpio>;
+		__overlay__ {
+			fc2_spi_pins: fc2-spi-pins {
+				/* SPI - SCLK, MISO, MOSI */
+				pins = "GPIO_43", "GPIO_44", "GPIO_45";
+				function = "fc2_b";
+			};
+		};
+	};
+};
