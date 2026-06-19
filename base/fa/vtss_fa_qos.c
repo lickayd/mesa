@@ -6096,7 +6096,20 @@ static vtss_rc fa_qos_init(vtss_state_t *vtss_state)
         REG_WR(VTSS_XQS_QMAP_PORT_MODE(port),
                VTSS_F_XQS_QMAP_PORT_MODE_QMAP_MODE_SERVICE(0) |
                    VTSS_F_XQS_QMAP_PORT_MODE_QMAP_MODE_NONSERVICE(0));
+#if defined(VTSS_FEATURE_HQOS)
+        /* When HQOS is enabled, ingress frames carry a QGRP tag derived from the
+         * HQOS_ID (QGRP = HQOS_ID + 1). The egress port resolves QGRP to VPORT via
+         * QMAP_VPORT_TBL, which is an indirect register indexed by QGRP through
+         * MAP_CFG_CFG. Initialize every QGRP to the CPU port's base VPORT so that
+         * frames arriving from any HQOS flow are forwarded correctly regardless of
+         * which QGRP they carry. */
+        for (u32 qgrp = 0; qgrp < VTSS_HQOS_QGRP_CNT; ++qgrp) {
+            REG_WR(VTSS_XQS_MAP_CFG_CFG, VTSS_F_XQS_MAP_CFG_CFG_MAP_CFG_CFG(qgrp));
+            REG_WR(VTSS_XQS_QMAP_VPORT_TBL(0, port), port * 8U);
+        }
+#else
         REG_WR(VTSS_XQS_QMAP_VPORT_TBL(0, port), port * 8U);
+#endif
     }
 
 #if defined(VTSS_FEATURE_QOS_OT)

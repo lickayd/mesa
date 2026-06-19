@@ -693,6 +693,7 @@ vtss_rc vtss_fa_hqos_init(vtss_state_t *vtss_state, vtss_init_cmd_t cmd);
 vtss_rc vtss_fa_hqos_debug_print(vtss_state_t                  *vtss_state,
                                  lmu_ss_t                      *ss,
                                  const vtss_debug_info_t *const info);
+#define VTSS_HQOS_QGRP_CNT 1024
 #endif /* VTSS_FEATURE_HQOS */
 
 /* L2 functions */
