@@ -36,8 +36,8 @@ conf:
   # these names are used.
   #
   # MANDATORY.
-  friendly_name_prv: MESA-2026.03
-  friendly_name_cur: MESA-2026.06
+  friendly_name_prv: MESA-2026.06
+  friendly_name_cur: MESA-2026.09
 
   # If set to true, the script will attempt to map the bugs into "modules" and
   # sort them by these modules along with the name of the module. This only
