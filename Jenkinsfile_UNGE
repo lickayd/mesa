@@ -49,10 +49,14 @@ def runTestsOnAllSystems = { suiteType, sessionDir ->
 
                     def suitesCfg     = readYaml text: suitesTextRaw
                     def systemSuites  = suitesCfg["suites_${suiteType}"] ?: []
-                    def systemTimeout = suitesCfg.total_timeout ?: DEFAULT_TOTAL_TIMEOUT_SECS
-                    // Each entry is { suite: name[, timeout: secs] }; build -T "name[:secs]".
+                    // Accept both the new `total_timeout` and the old `timeout` field.
+                    def systemTimeout = suitesCfg.total_timeout ?: suitesCfg.timeout ?: DEFAULT_TOTAL_TIMEOUT_SECS
+                    // Each entry is either a bare suite name (old format) or a
+                    // { suite: name[, timeout: secs] } map; build -T "name[:secs]".
                     def suiteArgs     = systemSuites.collect { e ->
-                        e.timeout ? "-T \"${e.suite}:${e.timeout}\"" : "-T \"${e.suite}\""
+                        def name = (e instanceof Map) ? e.suite : e
+                        def cap  = (e instanceof Map) ? e.timeout : null
+                        cap ? "-T \"${name}:${cap}\"" : "-T \"${name}\""
                     }.join(" ")
 
                     // Pin SHA so the suite list and the suite files come from the same commit
@@ -64,7 +68,7 @@ def runTestsOnAllSystems = { suiteType, sessionDir ->
 
                     sh "mkdir -p '${sessionDir}'"
                     // Breadcrumb line per DUT — grep the console for `[<system>]` to see what was dispatched
-                    echo "[${s.system}] branch=${s.branch} sha=${systemSha} suites=${systemSuites.collect { it.suite }} timeout=${systemTimeout}"
+                    echo "[${s.system}] branch=${s.branch} sha=${systemSha} suites=${systemSuites.collect { (it instanceof Map) ? it.suite : it }} timeout=${systemTimeout}"
 
                     // Loud failure on empty list — silent skip would mask "forgot to declare suites_${suiteType}"
                     if (systemSuites.isEmpty()) {
@@ -113,7 +117,7 @@ def generateReport = { suiteType, sessionDir ->
             script: "git show 'origin/${s.branch}:mesa/demo/test/utils/dispatch/suites.yaml'"
         )
         def cfg = readYaml text: text
-        allSuites.addAll((cfg["suites_${suiteType}"] ?: []).collect { it.suite })
+        allSuites.addAll((cfg["suites_${suiteType}"] ?: []).collect { (it instanceof Map) ? it.suite : it })
     }
     def suiteArgs = allSuites.collect { "--suite \"${it}\"" }.join(" ")
     withCredentials([sshUserPrivateKey(credentialsId: 'lon-vm-ung-mdi', keyFileVariable: 'keyfile')]) {
