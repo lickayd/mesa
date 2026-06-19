@@ -240,6 +240,29 @@ end
 # Utils
 # ---------------------------------------------------------------------------------------------------------------------
 
+def force_release(system)
+    status = %x{et status #{system} 2>&1}
+    server = status[/\b(\d{1,3}(?:\.\d{1,3}){3}:\d+)\b/, 1]  # the easytest_server addr
+    state  = status[/\b(free|busy|dead)\b/, 1]
+
+    unless state == "busy" && server
+        log_local("--force-release: #{system} status='#{state || 'unknown'}', nothing to release")
+        return
+    end
+
+    log_local("=== --force-release: #{system} is RESERVED — force-releasing it ===")
+    log_local(status)  # the status table shows who holds it and since when
+    begin
+        res = http_get(URI("http://#{server}/release?Name=#{ENV['USER'] || 'jenkins'}"))
+        if res.code.to_i == HTTP_OK
+            log_local("Force-released #{system}")
+        else
+            log_local("Force-release failed: #{system} server returned #{res.code})")
+        end
+    rescue => e
+        log_local("--force-release: release failed (#{e.class}: #{e.message}); will still try to reserve")
+    end
+end
 
 def reserve(system, timeout)
     t1    = Time.now
@@ -311,6 +334,12 @@ OptionParser.new do |opts|
             "(default: working tree HEAD)") do |v|
         $options[:sha] = v
     end
+
+    opts.on("--force-release",
+            "If the DUT is already reserved, force-release it before reserving. " \
+            "For nightly use only — recovers a setup someone forgot to release.") do
+        $options[:force_release] = true
+    end
 end.parse!
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -331,6 +360,7 @@ if $options[:system]
     reserved = false
     begin
         log_section_header("Reserve")
+        force_release($options[:system]) if $options[:force_release]
         if !reserve($options[:system], RESERVE_TIMEOUT_SECS)
             log_local("Reserve timed out")
             exit 7

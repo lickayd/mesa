@@ -85,6 +85,8 @@ def runTestsOnAllSystems = { suiteType, sessionDir ->
                         "-t \"${systemTimeout}\"",
                         suiteArgs,
                         shaArg,
+                        // Reclaim a DUT someone left reserved.
+                        "--force-release",
                     ]
                     def cmd = cmdParts.join(' ')
 
