@@ -119,6 +119,8 @@ if File.exist? "./images"
   run "cp #{$out_name}/bin/mipsel/mesa/demo/*.mfi images/."
   run "cp #{$out_name}/bin/arm/mesa/demo/*.itb images/."
   run "cp #{$out_name}/bin/arm64/mesa/demo/*.itb images/."
+  run "cp #{$out_name}/bin/arm/mesa/demo/*.ext4.gz images/."
+  run "cp #{$out_name}/bin/arm64/mesa/demo/*.ext4.gz images/."
 end
 run "rm -rf #{$out_name}"
 

@@ -77,7 +77,7 @@ presets:
         - "./include_common/**/*"
         - "./liblan966x.{a,so}"
         - "./meba/*lan966*.{a,so}"
-        - "./mesa/demo/armv7_lan966{2,x}.itb"
+        - "./mesa/demo/armv7_lan966{2,x}.{itb,ext4.gz}"
 
     arm-debug:
         :arch:             "arm"
