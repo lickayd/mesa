@@ -7163,6 +7163,7 @@ static vtss_rc vtss_macsec_rxsc_counters_clear_priv(vtss_state_t *vtss_state,
     vtss_macsec_internal_secy_t *secy;
     u8 max_rxsc;
     u8 rxsc_idx;
+    u32 an;
 
     secy = &vtss_state->macsec_conf[port_no].secy[secy_id];
     max_rxsc = vtss_state->macsec_capability[port_no].max_sc_cnt;
@@ -7174,6 +7175,14 @@ static vtss_rc vtss_macsec_rxsc_counters_clear_priv(vtss_state_t *vtss_state,
             if (sci_cmp(sci_id, &secy->rx_sc[rxsc_idx]->sci)) {
                 memset(&secy->rx_sc[rxsc_idx]->cnt, 0, sizeof(vtss_macsec_rx_sc_counters_t));
                 memset(&secy->rx_sc[rxsc_idx]->del_rx_sa_cnt, 0, sizeof(vtss_macsec_rx_sa_counters_t));
+                /* get() re-derives the SC in_pkts_* from the per-SA counters,
+                 * so clear those too or the packet counts come back. */
+                for (an = 0; an < VTSS_MACSEC_SA_PER_SC_MAX; an++) {
+                    if (secy->rx_sc[rxsc_idx]->sa[an] != NULL) {
+                        memset(&secy->rx_sc[rxsc_idx]->sa[an]->cnt, 0,
+                               sizeof(vtss_macsec_rx_sa_counters_t));
+                    }
+                }
                 return VTSS_RC_OK;
             }
         }
@@ -7212,11 +7221,21 @@ static vtss_rc vtss_macsec_txsc_counters_clear_priv(vtss_state_t  *vtss_state,
                                                     u32  secy_id)
 {
     vtss_macsec_internal_secy_t *secy;
+    u32 an;
 
     secy = &vtss_state->macsec_conf[port_no].secy[secy_id];
     /* Clear Tx SC counters */
     memset(&secy->tx_sc.cnt, 0, sizeof(vtss_macsec_tx_sc_counters_t));
     memset(&secy->tx_sc.del_tx_sa_cnt, 0, sizeof(vtss_macsec_tx_sa_counters_t));
+    /* get() re-derives the SC out_pkts_* from the per-SA counters,
+     * so clear those too or the packet counts come back. */
+    for (an = 0; an < VTSS_MACSEC_SA_PER_SC_MAX; an++) {
+        if (secy->tx_sc.sa[an] != NULL) {
+            memset(&secy->tx_sc.sa[an]->cnt, 0, sizeof(vtss_macsec_tx_sa_counters_t));
+            memset(&vtss_state->macsec_conf[port_no].tx_sa[an].cnt, 0,
+                   sizeof(vtss_state->macsec_conf[port_no].tx_sa[an].cnt));
+        }
+    }
 
     return VTSS_RC_OK;
 }
