@@ -139,7 +139,8 @@ if $do_upload
   cmd << "--dep-file .cmake/deps-docker.json"
   cmd << "--dep-file .cmake/deps-toolchain.json"
   cmd << "--dep-file .cmake/deps-lmstax.json"
-  cmd << "#{$out_name}.tar.gz"
+  cmd << "./images " if File.exist? "./images"
+  cmd << "#{$out_name}.tar.gz "
   sys cmd.join(" ")
 end
 
