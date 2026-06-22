@@ -4995,7 +4995,7 @@ static vtss_rc fa_debug_qos(vtss_state_t                  *vtss_state,
         for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
             u32           dei, pcp;
             lmu_fmt_buf_t class_buf, dpl_buf;
-            if (info->port_list[port_no]) {
+            if (!info->port_list[port_no]) {
                 continue;
             }
             chip_port = VTSS_CHIP_PORT(port_no);
@@ -5408,7 +5408,7 @@ static vtss_rc fa_debug_qos(vtss_state_t                  *vtss_state,
         pr("-------------------\n");
         for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
             u32 pol_idx;
-            if (info->port_list[port_no]) {
+            if (!info->port_list[port_no]) {
                 continue;
             }
             chip_port = VTSS_CHIP_PORT(port_no);
@@ -5745,7 +5745,7 @@ static vtss_rc fa_debug_qos(vtss_state_t                  *vtss_state,
         pr("-------------------\n");
         for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
             u32 l0_se;
-            if (info->port_list[port_no] == FALSE) {
+            if (!info->port_list[port_no]) {
                 continue;
             }
             chip_port = VTSS_CHIP_PORT(port_no);
@@ -5784,7 +5784,7 @@ static vtss_rc fa_debug_qos(vtss_state_t                  *vtss_state,
             u32           layer = 2U, se;
             lmu_fmt_buf_t cost_buf;
             const char   *delim = "";
-            if (info->port_list[port_no]) {
+            if (!info->port_list[port_no]) {
                 continue;
             }
             chip_port = VTSS_CHIP_PORT(port_no);
@@ -5812,7 +5812,7 @@ static vtss_rc fa_debug_qos(vtss_state_t                  *vtss_state,
         for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
             lmu_fmt_buf_t buf;
             u32           port, tgt;
-            if (info->port_list[port_no]) {
+            if (!info->port_list[port_no]) {
                 port = VTSS_CHIP_PORT(port_no);
                 VTSS_FMT(buf, "Port %u (%u)", port, port_no);
                 vtss_fa_debug_reg_header(ss, buf.s);
@@ -5863,7 +5863,7 @@ static vtss_rc fa_debug_qos(vtss_state_t                  *vtss_state,
         for (port_no = VTSS_PORT_NO_START; port_no < (vtss_state->port_count + 2U); port_no++) {
             u32 layer = 2U, se;
             if (port_no < vtss_state->port_count) {
-                if (info->port_list[port_no] == FALSE) {
+                if (!info->port_list[port_no]) {
                     continue;
                 }
                 chip_port = VTSS_CHIP_PORT(port_no);
@@ -5898,7 +5898,7 @@ static vtss_rc fa_debug_qos(vtss_state_t                  *vtss_state,
         pr("Port configuration:\n");
         pr("-------------------\n");
         for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
-            if (info->port_list[port_no]) {
+            if (!info->port_list[port_no]) {
                 continue;
             }
             chip_port = VTSS_CHIP_PORT(port_no);
@@ -5936,7 +5936,7 @@ static vtss_rc fa_debug_qos(vtss_state_t                  *vtss_state,
             u32           pcp_de0, pcp_de1, dei_de0, dei_de1;
             lmu_fmt_buf_t pcp_de0_buf, pcp_de1_buf, dei_de0_buf, dei_de1_buf;
             const char   *delim = "";
-            if (info->port_list[port_no]) {
+            if (!info->port_list[port_no]) {
                 continue;
             }
             chip_port = VTSS_CHIP_PORT(port_no);
