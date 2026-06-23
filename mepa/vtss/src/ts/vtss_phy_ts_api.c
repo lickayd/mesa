@@ -15940,6 +15940,8 @@ vtss_rc vtss_phy_ts_init(const vtss_inst_t               inst,
         if (vtss_state->phy_10g_state[port_no].family == VTSS_PHY_FAMILY_MALIBU &&
                 conf->clk_src != VTSS_PHY_TS_CLOCK_SRC_EXTERNAL) {
             VTSS_E("Invalid clk_src selection, Please use ext clock source selection");
+            rc = VTSS_RC_ERROR;
+            break;
         }
 
         if (vtss_state->phy_10g_state[port_no].family == VTSS_PHY_FAMILY_VENICE &&
