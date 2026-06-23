@@ -407,6 +407,9 @@ pipeline {
     post {
         success {
             echo "Pipeline Success! Project: ${env.JOB_NAME}, Build Number: ${env.BUILD_NUMBER}"
+            script {
+                currentBuild.description = """Artifacts: <a href="https://artifacts-aws.devops.microchip.com/artifactory/ung-generic-dev-local/ci/${env.JOB_NAME}/${env.BUILD_NUMBER}/">${env.JOB_NAME} build ${env.BUILD_NUMBER}</a>"""
+            }
         }
         unstable {
             echo "Pipeline Unstable! Project: ${env.JOB_NAME}, Build Number: ${env.BUILD_NUMBER}"
@@ -416,9 +419,6 @@ pipeline {
         }
         failure {
             echo "Pipeline Failure! Project: ${env.JOB_NAME}, Build Number: ${env.BUILD_NUMBER}"
-        }
-        always {
-            archiveArtifacts artifacts: 'images/*'
         }
     }
 }
