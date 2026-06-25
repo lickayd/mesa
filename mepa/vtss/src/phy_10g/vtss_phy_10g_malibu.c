@@ -949,6 +949,14 @@ static vtss_rc malibu_phy_10g_sckout_set(struct vtss_state_s *vtss_state,
     if (sckout.enable) {
         /* Set required SCKOUT Freq */
         VTSS_RC(malibu_sckout_sd10g_rx_tx_cfg_ute(vtss_state, port_no, sckout.freq));
+        /* Power up the F2DF output buffer that drives the SCKOUT pad. */
+        CSR_WARM_WRM(port_no, VTSS_F2DF_DF2F_32BIT_SD10G65_OB_SD10G65_OB_CFG0,
+                     VTSS_F_F2DF_DF2F_32BIT_SD10G65_OB_SD10G65_OB_CFG0_EN_OB,
+                     VTSS_F_F2DF_DF2F_32BIT_SD10G65_OB_SD10G65_OB_CFG0_EN_OB);
+    } else {
+        /* Power the output buffer down so SCKOUT stops. */
+        CSR_WARM_WRM(port_no, VTSS_F2DF_DF2F_32BIT_SD10G65_OB_SD10G65_OB_CFG0, 0,
+                     VTSS_F_F2DF_DF2F_32BIT_SD10G65_OB_SD10G65_OB_CFG0_EN_OB);
     }
 
     CSR_WARM_WRM(base_port_no, VTSS_CLK_CFG_CS_SCKOUT_CLK_SEL,
