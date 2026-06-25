@@ -1516,44 +1516,62 @@ static mepa_rc lan8814_ts_classifier_vlan_conf_set_priv(mepa_device_t *dev, mepa
     }
 
     // common configuration for both ingress and egress, reconfigures
-    switch (vlan_conf->num_tag) {
-    case 2:
-        if (vlan_conf->outer_tag.mode == MEPA_TS_MATCH_MODE_RANGE) {
-            range_up = range_up | LAN8814_VLAN2_VID_RANGE_EN;
-            range_up = range_up | LAN8814_VLAN2_VID_RANGE_UP_VAL_F(vlan_conf->outer_tag.match.range.upper);
-            range_lo = range_lo | LAN8814_VLAN2_VID_RANGE_UP_VAL_F(vlan_conf->outer_tag.match.range.lower);
-            EP_WRM(dev, LAN8814_VLAN2_VID_RANGE_UP, range_up, LAN8814_DEF_MASK);
-            EP_WRM(dev, LAN8814_VLAN2_VID_RANGE_LO, range_lo, LAN8814_DEF_MASK);
-        } else {
-            vid = vid | LAN8814_VLAN2_TYPE_SELECT_F(0);
-            vid = vid | LAN8814_VLAN2_TYPE_ID_VAL_F(vlan_conf->outer_tag.match.value.val);
-            mask = mask | LAN8814_VLAN2_ID_MASK_VAL_F(vlan_conf->outer_tag.match.value.mask);
-            EP_WRM(dev, LAN8814_VLAN2_TYPE_ID, vid, LAN8814_DEF_MASK);
-            EP_WRM(dev, LAN8814_VLAN2_ID_MASK, mask, LAN8814_DEF_MASK);
-        }
-    /* fall-through */
-    case 1:
+    // Apparently when trying to match on 2 VLANs the VLAN1 correspond to outer
+    // tag and VLAN2 correspond to inner tag. But if we configure only 1 VLAN
+    // then VLAN1 is used
+    if (vlan_conf->num_tag == 1) {
         if (vlan_conf->inner_tag.mode == MEPA_TS_MATCH_MODE_RANGE) {
             range_up = 0, range_lo = 0;
-            range_up = range_up | LAN8814_VLAN1_VID_RANGE_EN;
-            range_up = range_up | LAN8814_VLAN1_VID_RANGE_UP_VAL_F(vlan_conf->inner_tag.match.range.upper);
-            range_lo = range_lo | LAN8814_VLAN1_VID_RANGE_UP_VAL_F(vlan_conf->inner_tag.match.range.lower);
+            range_up |= LAN8814_VLAN1_VID_RANGE_EN;
+            range_up |= LAN8814_VLAN1_VID_RANGE_UP_VAL_F(vlan_conf->inner_tag.match.range.upper);
+            range_lo |= LAN8814_VLAN1_VID_RANGE_UP_VAL_F(vlan_conf->inner_tag.match.range.lower);
             EP_WRM(dev, LAN8814_VLAN1_VID_RANGE_UP, range_up, LAN8814_DEF_MASK);
             EP_WRM(dev, LAN8814_VLAN1_VID_RANGE_LO, range_lo, LAN8814_DEF_MASK);
         } else {
             mask = 0, vid = 0;
-            vid = vid | LAN8814_VLAN1_TYPE_SELECT_F(0);
-            vid = vid | LAN8814_VLAN1_TYPE_ID_VAL_F(vlan_conf->inner_tag.match.value.val);
-            mask = mask | LAN8814_VLAN1_ID_MASK_VAL_F(vlan_conf->inner_tag.match.value.mask);
+            vid |= LAN8814_VLAN1_TYPE_SELECT_F(0);
+            vid |= LAN8814_VLAN1_TYPE_ID_VAL_F(vlan_conf->inner_tag.match.value.val);
+            mask |= LAN8814_VLAN1_ID_MASK_VAL_F(vlan_conf->inner_tag.match.value.mask);
             EP_WRM(dev, LAN8814_VLAN1_TYPE_ID, vid, LAN8814_DEF_MASK);
             EP_WRM(dev, LAN8814_VLAN1_ID_MASK, mask, LAN8814_DEF_MASK);
         }
-        break;
-    default:
+    } else if (vlan_conf->num_tag == 2) {
+        if (vlan_conf->inner_tag.mode == MEPA_TS_MATCH_MODE_RANGE) {
+            range_up = 0, range_lo = 0;
+            range_up |= LAN8814_VLAN2_VID_RANGE_EN;
+            range_up |= LAN8814_VLAN2_VID_RANGE_UP_VAL_F(vlan_conf->inner_tag.match.range.upper);
+            range_lo |= LAN8814_VLAN2_VID_RANGE_UP_VAL_F(vlan_conf->inner_tag.match.range.lower);
+            EP_WRM(dev, LAN8814_VLAN2_VID_RANGE_UP, range_up, LAN8814_DEF_MASK);
+            EP_WRM(dev, LAN8814_VLAN2_VID_RANGE_LO, range_lo, LAN8814_DEF_MASK);
+        } else {
+            mask = 0, vid = 0;
+            vid |= LAN8814_VLAN2_TYPE_SELECT_F(0);
+            vid |= LAN8814_VLAN2_TYPE_ID_VAL_F(vlan_conf->inner_tag.match.value.val);
+            mask |= LAN8814_VLAN2_ID_MASK_VAL_F(vlan_conf->inner_tag.match.value.mask);
+            EP_WRM(dev, LAN8814_VLAN2_TYPE_ID, vid, LAN8814_DEF_MASK);
+            EP_WRM(dev, LAN8814_VLAN2_ID_MASK, mask, LAN8814_DEF_MASK);
+        }
+
+        if (vlan_conf->outer_tag.mode == MEPA_TS_MATCH_MODE_RANGE) {
+            range_up = 0, range_lo = 0;
+            range_up |= LAN8814_VLAN1_VID_RANGE_EN;
+            range_up |= LAN8814_VLAN1_VID_RANGE_UP_VAL_F(vlan_conf->outer_tag.match.range.upper);
+            range_lo |= LAN8814_VLAN1_VID_RANGE_UP_VAL_F(vlan_conf->outer_tag.match.range.lower);
+            EP_WRM(dev, LAN8814_VLAN1_VID_RANGE_UP, range_up, LAN8814_DEF_MASK);
+            EP_WRM(dev, LAN8814_VLAN1_VID_RANGE_LO, range_lo, LAN8814_DEF_MASK);
+        } else {
+            mask = 0, vid = 0;
+            vid |= LAN8814_VLAN1_TYPE_SELECT_F(0);
+            vid |= LAN8814_VLAN1_TYPE_ID_VAL_F(vlan_conf->outer_tag.match.value.val);
+            mask |= LAN8814_VLAN1_ID_MASK_VAL_F(vlan_conf->outer_tag.match.value.mask);
+            EP_WRM(dev, LAN8814_VLAN1_TYPE_ID, vid, LAN8814_DEF_MASK);
+            EP_WRM(dev, LAN8814_VLAN1_ID_MASK, mask, LAN8814_DEF_MASK);
+        }
+    } else {
         T_E(MEPA_TRACE_GRP_TS, "Number of VLAN tags supported : 2 ::  Port : %d\n", data->port_no);
         return MEPA_RC_ERROR;
-        break;
     }
+
     return MEPA_RC_OK;
 }
 
