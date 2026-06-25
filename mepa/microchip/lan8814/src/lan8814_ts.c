@@ -1488,6 +1488,7 @@ static mepa_rc lan8814_ts_classifier_vlan_conf_set_priv(mepa_device_t *dev, mepa
         /* fall-through */
         case 1:
             vlan_parse = vlan_parse | LAN8814_PTP_RX_PARSE_VLAN_VLAN1_CHECK_EN;
+            vlan_parse = vlan_parse | LAN8814_PTP_RX_PARSE_VLAN_CHECK_EN;
             vlan_parse = vlan_parse | LAN8814_PTP_RX_PARSE_VLAN_TAG_COUNT_F(vlan_conf->num_tag);
             EP_WRM(dev, LAN8814_PTP_RX_PARSE_VLAN_CONFIG, vlan_parse, LAN8814_DEF_MASK);
             break;
@@ -1503,6 +1504,7 @@ static mepa_rc lan8814_ts_classifier_vlan_conf_set_priv(mepa_device_t *dev, mepa
         /* fall-through */
         case 1:
             vlan_parse = vlan_parse | LAN8814_PTP_TX_PARSE_VLAN_VLAN1_CHECK_EN;
+            vlan_parse = vlan_parse | LAN8814_PTP_TX_PARSE_VLAN_CHECK_EN;
             vlan_parse = vlan_parse | LAN8814_PTP_TX_PARSE_VLAN_TAG_COUNT_F(vlan_conf->num_tag);
             EP_WRM(dev, LAN8814_PTP_TX_PARSE_VLAN_CONFIG, vlan_parse, LAN8814_DEF_MASK);
             break;
