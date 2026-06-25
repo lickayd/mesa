@@ -7,7 +7,7 @@
 
 // Jenkins-specific scheduling config
 def TEST_NIGHTLY_BRANCH_NAME    = 'master.nightly'
-def TEST_HALLBERG_BRANCH_NAME   = 'master.hallberg-3'
+def TEST_HALLBERG_BRANCH_NAME   = 'master.hallberg-4'
 def TEST_NIGHTLY_TIME_HOUR      = 20
 def TEST_NIGHTLY_TIME_MIN       = 0
 def PIPELINE_TIMEOUT_HOURS      = 6

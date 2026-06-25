@@ -72,5 +72,5 @@ systems:
     image: arm64/mesa/demo/arm64_lan9698RED.itb
   - system: dk-t38-0
     dut: lan932x
-    branch: master.hallberg-3
+    branch: master.hallberg-4
     image: arm/mesa/demo/armv7_lan932x_fpga.itb
