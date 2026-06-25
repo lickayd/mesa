@@ -2020,6 +2020,108 @@ static mepa_rc lan8814_if_get(mepa_device_t *dev, mepa_port_speed_t speed,
     return MEPA_RC_OK;
 }
 
+#if !defined MEPA_LAN8814_LIGHT
+const lan8814_pvt_lut_t lan8814_pvt_lut[] = {
+    {0x036, -40}, {0x06C, -25}, {0x07F, -20}, {0x092, -15}, {0x0A6, -10},
+    {0x0BA,  -5}, {0x0CF,   0}, {0x0E4,   5}, {0x0FA,  10}, {0x110,  15},
+    {0x127,  20}, {0x13E,  25}, {0x156,  30}, {0x16E,  35}, {0x187,  40},
+    {0x1A0,  45}, {0x1BA,  50}, {0x1D5,  55}, {0x1F0,  60}, {0x20C,  65},
+    {0x229,  70}, {0x247,  75}, {0x265,  80}, {0x284,  85}, {0x2A4,  90},
+    {0x2C5,  95}, {0x2E6, 100}, {0x309, 105}, {0x32D, 110}, {0x351, 115},
+    {0x377, 120}, {0x39E, 125},
+};
+
+static i16 lan8814_pvt_code_to_temp(uint16_t code)
+{
+    const size_t n = sizeof(lan8814_pvt_lut) / sizeof(lan8814_pvt_lut[0]);
+    size_t i;
+
+    if (code <= lan8814_pvt_lut[0].code) {
+        return lan8814_pvt_lut[0].temp;
+    }
+    if (code >= lan8814_pvt_lut[n - 1].code) {
+        return lan8814_pvt_lut[n - 1].temp;
+    }
+    for (i = 1; i < n; i++) {
+        if (code <= lan8814_pvt_lut[i].code) {
+            const lan8814_pvt_lut_t *lo = &lan8814_pvt_lut[i - 1];
+            const lan8814_pvt_lut_t *hi = &lan8814_pvt_lut[i];
+            int dcode = hi->code - lo->code;
+            int dtemp = hi->temp - lo->temp;
+            // Rounded linear interpolation.
+            return (i16)(lo->temp + (((code - lo->code) * dtemp + (dcode / 2)) / dcode));
+        }
+    }
+    return lan8814_pvt_lut[n - 1].temp;
+}
+
+// One-time initialisation of the AB PVT IP for die-temperature measurement (AN4284).
+// vddah_2v5 reflects the board's VDDAH analog supply (see mepa_board_conf_t.lan8814_vddah_2v5).
+static mepa_rc lan8814_pvt_init(mepa_device_t *base_dev, mepa_bool_t vddah_2v5)
+{
+    // EP4.406 PSEL25: VDDAH select. 0x0000 = 3.3V, 0x0001 = 2.5V. Must match the
+    // board's actual VDDAH rail for the conversion table to be valid.
+    MEPA_RC(EP_WR(base_dev, LAN8814_AB_PVT_PSEL25,
+                  LAN8814_AB_PVT_PSEL25_PSEL25(vddah_2v5)));
+    // EP4.396 Thermal Comparator Control: THERM_COMP_CTL = 0x01 (enabled).
+    MEPA_RC(EP_WR(base_dev, LAN8814_AB_PVT_THERMAL_COMP_CTRL,
+                  LAN8814_AB_PVT_THERMAL_COMP_CTRL_THERM_COMP_CTL));
+    // EP4.394 Sample Time: 10 ms between samples.
+    MEPA_RC(EP_WR(base_dev, LAN8814_AB_PVT_SAMPLE_TIME,
+                  LAN8814_AB_PVT_SAMPLE_TIME_SAMPLE_TIME(10)));
+    // EP4.384 Control Register 1: SEL_ENA=0, PVT_EN=0, VSAMPLE=0, PSAMPLE=0, SEL_TRIM=0x0F.
+    MEPA_RC(EP_WRM(base_dev, LAN8814_AB_PVT_CTRL1,
+                   0, LAN8814_AB_PVT_CTRL1_SEL_ENA));
+
+    return MEPA_RC_OK;
+}
+
+static mepa_rc lan8814_chip_temp_get(mepa_device_t *dev, i16 *const temp)
+{
+    lan8814_data_t *data = (lan8814_data_t *)dev->data;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
+    lan8814_data_t *base_data = (lan8814_data_t *)base_dev->data;
+    uint16_t pvt_data;
+    mepa_rc rc;
+
+    MEPA_ENTER(dev);
+
+    // This lazy intialization is needed here and not in the probe because
+    // lan8814 is a quad PHY and this needs to be done only once on the base
+    // device. But in probe we don't know yet the base device so it can't be
+    // done there, therefore have it here.
+    if (!base_data->pvt_init_done) {
+        rc = lan8814_pvt_init(base_dev, base_data->vddah_2v5);
+        if (rc != MEPA_RC_OK) {
+            MEPA_EXIT(dev);
+            return rc;
+        }
+        base_data->pvt_init_done = TRUE;
+
+        // First sample is taken after one sample period (10 ms); wait so that the
+        // very first read returns a valid value rather than 0.
+        MEPA_MSLEEP(15);
+    }
+
+    rc = EP_RD(base_dev, LAN8814_AB_PVT_DATA, &pvt_data);
+    if (rc != MEPA_RC_OK) {
+        MEPA_EXIT(dev);
+        return rc;
+    }
+
+    pvt_data = LAN8814_X_AB_PVT_DATA_PVT_DATA(pvt_data);
+
+    *temp = lan8814_pvt_code_to_temp(pvt_data);
+
+    T_N(MEPA_TRACE_GRP_GEN, "port %u (base %u) AB PVT raw code 0x%x -> %d degC",
+        dev->numeric_handle, base_dev->numeric_handle, pvt_data, *temp);
+
+    MEPA_EXIT(dev);
+
+    return MEPA_RC_OK;
+}
+#endif
+
 static mepa_device_t *lan8814_probe(mepa_driver_t *drv,
                                     const mepa_callout_t    MEPA_SHARED_PTR *callout,
                                     struct mepa_callout_ctx MEPA_SHARED_PTR *callout_ctx,
@@ -2066,6 +2168,7 @@ static mepa_device_t *lan8814_probe(mepa_driver_t *drv,
     data = dev->data;
     data->port_no = board_conf->numeric_handle;
     data->events = 0;
+    data->vddah_2v5 = board_conf->lan8814_vddah_2v5;
 
     (void)lan8814_get_device_info(dev);
     data->dev.sku = sku;
@@ -3263,6 +3366,7 @@ mepa_drivers_t mepa_lan8814_driver_init(void)
             .mepa_driver_prbs_monitor_get = lan8814_prbs_monitor_get,
             .mepa_driver_sqi_read = lan8814_sqi_read,
 #if !defined MEPA_LAN8814_LIGHT
+            .mepa_driver_chip_temp_get = lan8814_chip_temp_get,
             .mepa_driver_eee_mode_conf_set = lan8814_eee_mode_conf_set,
             .mepa_driver_eee_mode_conf_get = lan8814_eee_mode_conf_get,
             .mepa_driver_eee_status_get = lan8814_eee_status_get,
@@ -3317,6 +3421,7 @@ mepa_drivers_t mepa_lan8814_driver_init(void)
             .mepa_driver_prbs_monitor_get = lan8814_prbs_monitor_get,
             .mepa_driver_sqi_read = lan8814_sqi_read,
 #if !defined MEPA_LAN8814_LIGHT
+            .mepa_driver_chip_temp_get = lan8814_chip_temp_get,
             .mepa_driver_eee_mode_conf_set = lan8814_eee_mode_conf_set,
             .mepa_driver_eee_mode_conf_get = lan8814_eee_mode_conf_get,
             .mepa_driver_eee_status_get = lan8814_eee_status_get,

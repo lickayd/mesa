@@ -289,6 +289,12 @@ typedef struct mepa_board_conf {
     uint32_t                 vtss_instance_create;
     uint32_t                 vtss_instance_use;
     vtss_inst_t              vtss_instance_ptr;
+    // LAN8814: selects the VDDAH analog supply rail feeding the AB PVT
+    // (die-temperature) IP, used to configure the PSEL25 register so that the
+    // temperature readings are calibrated correctly. 0 = VDDAH is 3.3V (default),
+    // 1 = VDDAH is 2.5V. This is a board-level hardware attribute and cannot be
+    // auto-detected, so it must be supplied per board.
+    mesa_bool_t              lan8814_vddah_2v5;
 } mepa_board_conf_t;
 
 /** \brief Create a new MEPA instance.

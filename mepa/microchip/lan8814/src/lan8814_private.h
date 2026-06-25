@@ -126,6 +126,10 @@ typedef struct {
     mepa_mch_pch_t                mch_pch;
 } lan8814_ts_data_t;
 
+typedef struct {
+    uint16_t code;
+    i16      temp;
+} lan8814_pvt_lut_t;
 
 typedef struct {
     mepa_bool_t              init_done;
@@ -158,6 +162,8 @@ typedef struct {
     mepa_bool_t              dsh_complete; //flag to denote downshift operation completed.
     mepa_bool_t              aneg_flag; //flag to denote ANEG restart is completed.
     uint8_t                  cable_diag_state[LAN8814_PAIRS]; // Contains the state of cable diagnostic when using with async. One state for each pair.
+    mepa_bool_t              pvt_init_done; // AB PVT (die temperature) sensor initialised. Tracked on the base port.
+    mepa_bool_t              vddah_2v5;     // VDDAH analog supply is 2.5V (else 3.3V). Board attribute for AB PVT PSEL25.
 } lan8814_data_t;
 
 mepa_rc lan8814_poll_priv(mepa_device_t *dev, mepa_status_t *status);

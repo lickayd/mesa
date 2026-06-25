@@ -358,6 +358,29 @@
 // Register 142
 #define LAN8814_SERDES_CLOCK_CONF LAN8814_EXT_PAGE_4, 142
 
+// AB PVT IP registers (AN4284). Note: register indices step by 2.
+// Register 384 - AB PVT CONTROL REGISTER 1 (SEL_ENA, PVT_EN, VSAMPLE, PSAMPLE, SEL_TRIM)
+#define LAN8814_AB_PVT_CTRL1 LAN8814_EXT_PAGE_4, 384
+#define LAN8814_AB_PVT_CTRL1_SEL_ENA LAN8814_BIT(0)
+
+// Register 392 - AB PVT DATA: last sensed value (die process, voltage or temperature)
+#define LAN8814_AB_PVT_DATA LAN8814_EXT_PAGE_4, 392
+#define LAN8814_X_AB_PVT_DATA_PVT_DATA(x) LAN8814_EXTRACT_BITFIELD(x, 0, 10)
+
+// Register 394 - AB PVT SAMPLE TIME: time between samples.
+// 0x0000 = sample whenever DATA_VALID is asserted; 0x0001-0xFFFF = sample time in ms.
+#define LAN8814_AB_PVT_SAMPLE_TIME LAN8814_EXT_PAGE_4, 394
+#define LAN8814_AB_PVT_SAMPLE_TIME_SAMPLE_TIME(x) LAN8814_ENCODE_BITFIELD(x, 0, 15)
+
+// Register 396 - AB PVT THERMAL COMPARATOR CONTROL: THERM_COMP_CTL[1:0]
+// 00 = disabled, 01 = enabled (sampled every 100 us)
+#define LAN8814_AB_PVT_THERMAL_COMP_CTRL LAN8814_EXT_PAGE_4, 396
+#define LAN8814_AB_PVT_THERMAL_COMP_CTRL_THERM_COMP_CTL LAN8814_BIT(0)
+
+// Register 406 - AB PVT PSEL25: VDDAH select. 0 = 3.3V (default), 1 = 2.5V
+#define LAN8814_AB_PVT_PSEL25 LAN8814_EXT_PAGE_4, 406
+#define LAN8814_AB_PVT_PSEL25_PSEL25(x) LAN8814_ENCODE_BITFIELD(x, 0, 0)
+
 //====================================================================================
 //      Extended Page 5
 //====================================================================================
