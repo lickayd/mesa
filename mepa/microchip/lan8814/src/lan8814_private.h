@@ -71,7 +71,7 @@ typedef struct {
     uint8_t  model;
     uint8_t  rev;
     uint16_t sku;
-} phy_dev_info_t;
+} lan8814_dev_info_t;
 
 typedef enum {
     LAN8814_TS_MODE_DISABLED = 0,      // PTP functions are disabled
@@ -139,7 +139,7 @@ typedef struct {
     mepa_event_t             events;
     mepa_loopback_t          loopback;
     mepa_bool_t              qsgmii_phy_aneg_dis;
-    phy_dev_info_t           dev;
+    lan8814_dev_info_t       dev;
     mepa_synce_clock_conf_t  synce_conf;
     mepa_device_t            *base_dev; // Pointer to the device of base port on the phy chip
     mepa_bool_t              link_status;
