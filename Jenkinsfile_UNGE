@@ -148,6 +148,7 @@ pipeline {
     agent { kubernetes { yamlFile '.cmake/pod-base.yaml' } }
 
     environment {
+        USER = "jenkins-mesa" // Adds info to the User column to easytest
         USER_NAME = "jenkins"
         WORK_DIR = "/home/$USER_NAME"
         BLD_ID = "${env.BUILD_NUMBER}"
