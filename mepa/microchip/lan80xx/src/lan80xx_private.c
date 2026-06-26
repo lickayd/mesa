@@ -59,7 +59,7 @@
 #define LAN80XX_CLEARTAGS_DISABLE  (1 << 4)
 #define LAN80XX_MPLS_DISABLE       (1 << 5)
 
-static uint8_t gau8RespBuffer[1024] = { 0 };
+
 
 static mepa_rc RevokeAllOtpKeys_priv(const mepa_device_t  *dev);
 static mepa_rc RevokeRotKey_priv(const mepa_device_t  *dev);
@@ -6747,6 +6747,7 @@ mepa_rc lan80xx_get_fw_info_priv(const mepa_device_t *dev, DEVICE_INFO *psDevInf
         rc = MEPA_RC_ERR_PARM;
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     // Step 1: Create Packet for Device Info
     u16PktLen = lan80xx_CreatePacket(eGET_DEVICE_INFO, 0, au8CmdBuffer, NULL, RESERVED_ID);
 
@@ -6811,6 +6812,7 @@ mepa_rc lan80xx_memory_read_priv(const mepa_device_t *dev, uint32_t u32Addres, u
         rc = MEPA_RC_ERR_PARM;
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     if (u16Len > MB_MAX_PAYLOAD_LEN) {
         T_E(MEPA_TRACE_GRP_GEN, "%s: Invalid length. Max supported length is: %d", __FUNCTION__, MB_MAX_PAYLOAD_LEN);
         rc = MEPA_RC_ERR_MB_INVALID_PKT_LEN;
@@ -6891,6 +6893,7 @@ mepa_rc lan80xx_memory_write_priv(const mepa_device_t *dev, uint32_t u32Addres, 
         rc = MEPA_RC_ERR_PARM;
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     if (u16Len > (MB_MAX_PAYLOAD_LEN - 6)) {
         T_E(MEPA_TRACE_GRP_GEN, "%s: Invalid length! Maximum writable per packet is (%d) Bytes", \
             __FUNCTION__, (MB_MAX_PAYLOAD_LEN - 6));
@@ -7040,6 +7043,7 @@ mepa_rc lan80xx_fw_update_priv(mepa_device_t *dev)
 #endif
 
     data = (phy25g_phy_state_t *)dev->data;
+    uint8_t *gau8RespBuffer = data->mcu.au8RespBuffer;
     port_no = data->port_no;
     mepa_device_t *base_dev;
     phy25g_phy_state_t *base_data;
@@ -7281,6 +7285,7 @@ mepa_rc lan80xx_otp_cfg_read_priv(const mepa_device_t  *dev,
         T_E(MEPA_TRACE_GRP_GEN, "%s - Invalid parameter",  __FUNCTION__);
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     T_D(MEPA_TRACE_GRP_GEN, "OTP Cfg read request with index: %d", u8RecIdx);
     /* Create command request Packet */
     u16PktLen = lan80xx_CreatePacket(eOTP_CFG_READ, 1, au8CmdBuffer, &u8RecIdx, RESERVED_ID);
@@ -7359,6 +7364,7 @@ mepa_rc lan80xx_otp_read_priv(const mepa_device_t  *dev,
         T_E(MEPA_TRACE_GRP_GEN, "%s - Invalid parameter",  __FUNCTION__);
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     u16OtpAddr = u16Offset;
     u16PktLen = 0;
     u16CurLen = 0;
@@ -7447,6 +7453,7 @@ mepa_rc lan80xx_otp_write_priv(const mepa_device_t  *dev,
         T_E(MEPA_TRACE_GRP_GEN, "%s - Invalid parameter",  __FUNCTION__);
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     u16OtpAddr = u16Offset;
     u16PktLen = 0;
     u16CurLen = 0;
@@ -7535,6 +7542,7 @@ mepa_rc lan80xx_otp_getKey_Status_priv(const mepa_device_t  *dev,
         T_E(MEPA_TRACE_GRP_GEN, "%s - Invalid parameter",  __FUNCTION__);
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     T_D(MEPA_TRACE_GRP_GEN, "OTP get active key");
     /* Create command request Packet */
     u16PktLen = lan80xx_CreatePacket(eOTP_KEY_STATUS, 0, au8CmdBuffer, NULL, RESERVED_ID);
@@ -7881,6 +7889,7 @@ static mepa_rc OTPProgReplacementKey_priv(const mepa_device_t  *dev,
         T_E(MEPA_TRACE_GRP_GEN, "%s - Invalid parameter",  __FUNCTION__);
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     T_D(MEPA_TRACE_GRP_GEN, "OTP PRG replacement key");
     /* Copy the key data into cmdparam */
     T_D(MEPA_TRACE_GRP_GEN, "Copying key data...");
@@ -7950,6 +7959,7 @@ static mepa_rc RevokeAllOtpKeys_priv(const mepa_device_t  *dev)
         T_E(MEPA_TRACE_GRP_GEN, "%s - Invalid parameter",  __FUNCTION__);
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     T_D(MEPA_TRACE_GRP_GEN, "OTP revoke all keys");
     /* Create command request Packet */
     u16PktLen = lan80xx_CreatePacket(u8PktId, 0, au8CmdBuffer, NULL, RESERVED_ID);
@@ -8016,6 +8026,7 @@ static mepa_rc RevokeRotKey_priv(const mepa_device_t  *dev)
         T_E(MEPA_TRACE_GRP_GEN, "%s - Invalid parameter",  __FUNCTION__);
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     T_D(MEPA_TRACE_GRP_GEN, "OTP revoke ROT key");
     /* Create command request Packet */
     u16PktLen = lan80xx_CreatePacket(u8PktId, 0, au8CmdBuffer, NULL, RESERVED_ID);
@@ -8084,6 +8095,7 @@ mepa_rc lan80xx_get_serdes_config_priv(const mepa_device_t *dev, SD_CFG_SPEED_ID
         rc = MEPA_RC_ERR_PARM;
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     au8CmdParam[u16CmdParamLen++] = speed;
     au8CmdParam[u16CmdParamLen++] = cfgType;
     // Step 1: Create Packet for Device Info
@@ -8265,6 +8277,7 @@ mepa_rc lan80xx_set_serdes_config_priv(const mepa_device_t *dev, SD_CFG_SPEED_ID
         rc = MEPA_RC_ERR_PARM;
         return rc;
     }
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     au8CmdParam[u16CmdParamLen++] = speed;
     au8CmdParam[u16CmdParamLen++] = cfgType;
     /* Increment len, as 2 cmd param added */
@@ -8415,6 +8428,7 @@ mepa_rc lan80xx_KRLog_Enable_priv(const mepa_device_t *dev, mepa_bool_t bkrlog_e
     }
 
     phy25g_phy_state_t *data = (phy25g_phy_state_t *) dev->data;
+    uint8_t *gau8RespBuffer = data->mcu.au8RespBuffer;
     mepa_device_t *base_dev;
     phy25g_phy_state_t *base_data;
     LAN80XX_BASE_DEV(data, base_dev, base_data);
@@ -8522,6 +8536,7 @@ mepa_rc lan80xx_KRLog_Reset_priv(const mepa_device_t *dev, uint32_t u32KRLogOffs
         return rc;
     }
 
+    uint8_t *gau8RespBuffer = ((phy25g_phy_state_t *)dev->data)->mcu.au8RespBuffer;
     T_D(MEPA_TRACE_GRP_GEN, "Sending RESET KR Log Memory at address:%2X, length: %2X \n\n", u32KRLogOffset, u16Len);
 
 

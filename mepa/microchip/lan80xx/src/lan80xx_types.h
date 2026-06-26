@@ -14,6 +14,7 @@
 
 #define LAN80XX_MAX_PORTS_PER_PHY   (4U)
 #define LAN80XX_GPIO_COUNT          (40U)
+#define LAN80XX_MB_MAX_PKT_LEN      (1024U)
 
 #define TRUE  1
 #define FALSE 0
@@ -183,6 +184,12 @@ typedef struct {
 
 /* MEPA-1226: mepa dev must be passed to callback function */
 typedef uint8_t(*phy25g_gpio_read_t)(const mepa_device_t *dev);
+
+/* Per-device MCU mailbox private data */
+typedef struct {
+    uint8_t au8RespBuffer[LAN80XX_MB_MAX_PKT_LEN]; /* MCU mailbox response buffer — one per device to allow parallel FW update */
+} phy25g_mcu_data_t;
+
 //
 // This structure is accessed from mepa_device->data member
 // which is info about malibu15g a.k.a private data
@@ -248,6 +255,7 @@ typedef struct phy25g_state_s {
     mepa_bool_t                     terminate_lfs_in_phy;
     mepa_bool_t                     host_mac_tx_pad;
     mepa_bool_t                     line_mac_tx_pad;
+    phy25g_mcu_data_t               mcu;
 } phy25g_phy_state_t;
 
 
