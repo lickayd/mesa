@@ -9,7 +9,7 @@
 /* LAN8770 is a Single-Port 100BASE-T1 Ethernet Phy*/
 
 static mepa_device_t lan8770_device[MAX_LAN8770_PHY];
-static phy_data_t lan8770_data[MAX_LAN8770_PHY];
+static lan8770_data_t lan8770_data[MAX_LAN8770_PHY];
 
 // LAN8770 Driver Helper APIs
 
@@ -181,7 +181,7 @@ static mepa_rc phy_get_device_info(mepa_device_t *const dev)
 {
     uint16_t val = 0;
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     MEPA_RC_GOTO(rc, phy_direct_reg_rd(dev, LAN8770_PHY_ID1_OFFSET, &val));
     /**
@@ -213,7 +213,7 @@ static mepa_rc phy_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
 {
     uint16_t regval = 0;
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
     mepa_manual_neg_t curr_val = ((config->man_neg == MEPA_MANUAL_NEG_REF) ? MEPA_MANUAL_NEG_REF : MEPA_MANUAL_NEG_CLIENT);
     /**
      * NOTE: Following are always fixed. Change in conf set will be ignored.
@@ -263,7 +263,7 @@ error:
 static mepa_rc phy_get_link_status_enhanced(mepa_device_t *const dev, mepa_status_t *const status)
 {
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
     uint16_t reg_0A_data = 0, reg_11_data = 0, pcs_descram_st = 0;
 
     /* bit 12 remote recceiver status; bit 13 local receiver status */
@@ -292,7 +292,7 @@ static mepa_rc phy_cable_diag_start(mepa_device_t *dev, int32_t mode)
 {
     uint16_t tempReg = 0;
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     if (!data->init_done) {
         T_E(MEPA_TRACE_GRP_GEN, "PHY not initilized\r\n");
@@ -347,7 +347,7 @@ error:
 static mepa_rc phy_cable_diag_get(mepa_device_t *const dev, mepa_cable_diag_result_t *const res)
 {
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     if (!data->init_done) {
         T_E( MEPA_TRACE_GRP_GEN, "PHY not initilized\r\n");
@@ -507,7 +507,7 @@ static uint16_t phy_convert_led_mode(mepa_gpio_mode_t const mode, mepa_bool_t ma
 static mepa_rc phy_led_mode_set(mepa_device_t *const dev, mepa_gpio_mode_t const led_mode, mepa_led_num_t const led_num)
 {
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     uint16_t led_ctrl = phy_convert_led_mode(led_mode, data->dev.is_master);
 
@@ -522,7 +522,7 @@ static void phy_dbg_pr (mepa_device_t *dev, lmu_ss_t *const ss,
                         uint16_t bank, uint16_t offset, const char *str)
 {
     if (ss != NULL) {
-        phy_data_t *data = (phy_data_t *)dev->data;
+        lan8770_data_t *data = (lan8770_data_t *)dev->data;
         mepa_port_no_t port_no = data->port_no;
         uint16_t value = 0;
         if (MEPA_RC_OK == phy_ext_bank_reg_rd(dev, bank, offset, &value)) {
@@ -586,7 +586,7 @@ static mepa_rc phy_sqi_read(mepa_device_t *const dev, uint32_t *const value)
     uint16_t rawTable[200];
     uint16_t linkTable[200];
     mepa_status_t status;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
     mepa_rc rc = MEPA_RC_ERROR;
 
     if (!data->init_done) {
@@ -695,12 +695,12 @@ error:
 
 static mepa_rc lan8770_delete(mepa_device_t *const dev)
 {
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     MEPA_ENTER(dev);
 
     data->ctx_status = FALSE;
-    memset(data, 0, sizeof(phy_data_t));
+    memset(data, 0, sizeof(lan8770_data_t));
 
     MEPA_EXIT(dev);
 
@@ -710,7 +710,7 @@ static mepa_rc lan8770_delete(mepa_device_t *const dev)
 static mepa_rc lan8770_reset(mepa_device_t *dev, const mepa_reset_param_t *rst_conf)
 {
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     MEPA_ENTER(dev);
 
@@ -755,7 +755,7 @@ static mepa_rc lan8770_conf_set(mepa_device_t *dev, const mepa_conf_t *config)
 
 static mepa_rc lan8770_conf_get(mepa_device_t *const dev, mepa_conf_t *const config)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     MEPA_ENTER(dev);
 
@@ -768,7 +768,7 @@ static mepa_rc lan8770_conf_get(mepa_device_t *const dev, mepa_conf_t *const con
 
 static mepa_rc lan8770_media_get(struct mepa_device *dev, mepa_media_interface_t *const media_if)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     MEPA_ENTER(dev);
 
@@ -909,7 +909,7 @@ static mepa_rc lan8770_event_enable_set(mepa_device_t *const dev, mepa_event_t c
 {
     mepa_rc rc = MEPA_RC_OK;
     uint16_t ev_mask = 0, i;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     data->events = enable ? (data->events | event) :
                    (data->events & ~event);
@@ -931,7 +931,7 @@ static mepa_rc lan8770_event_enable_set(mepa_device_t *const dev, mepa_event_t c
 
 static mepa_rc lan8770_event_enable_get(mepa_device_t *const dev, mepa_event_t *const event)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     MEPA_ENTER(dev);
 
@@ -947,7 +947,7 @@ static mepa_rc lan8770_event_status_poll(mepa_device_t *const dev, mepa_event_t 
 {
     uint16_t val = 0;
     mepa_rc rc = MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     MEPA_ENTER(dev);
 
@@ -968,7 +968,7 @@ static mepa_rc lan8770_event_status_poll(mepa_device_t *const dev, mepa_event_t 
 static mepa_rc lan8770_loopback_set(mepa_device_t *dev, const mepa_loopback_t *loopback)
 {
     mepa_rc rc = MEPA_RC_OK;
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     MEPA_ENTER(dev);
     // En(Dis)able MAC Loopback: Digital loopback at PCS
@@ -1019,7 +1019,7 @@ error:
 
 static mepa_rc lan8770_loopback_get(mepa_device_t *dev, mepa_loopback_t *const loopback)
 {
-    phy_data_t *data = (phy_data_t *)dev->data;
+    lan8770_data_t *data = (lan8770_data_t *)dev->data;
 
     MEPA_ENTER(dev);
 
@@ -1047,7 +1047,7 @@ static mepa_rc lan8770_gpio_mode_set(mepa_device_t *dev, const mepa_gpio_conf_t 
 static mepa_rc lan8770_info_get(mepa_device_t *dev, mepa_phy_info_t *const phy_info)
 {
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *)(dev->data);
+    lan8770_data_t *data = (lan8770_data_t *)(dev->data);
 
     if (data->init_done == 1U) {
         MEPA_ENTER(dev);

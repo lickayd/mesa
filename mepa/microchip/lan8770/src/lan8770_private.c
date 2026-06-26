@@ -151,7 +151,7 @@ mepa_rc phy_tc10_set_sleep_support(struct mepa_device          *dev,
 {
     uint16_t reg_data = 0;
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_PCS, LAN8770_PCS_SLEEP_WAKE_CTL_OFFSET, &reg_data));
 
@@ -172,7 +172,7 @@ error:
 mepa_rc phy_tc10_get_sleep_support(struct mepa_device       *dev,
                                    mepa_bool_t              *const enable)
 {
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     *enable = data->tc10.sleep_enable;
 
@@ -184,7 +184,7 @@ mepa_rc phy_tc10_set_wakeup_support(struct mepa_device                  *dev,
 {
     mepa_rc rc = MEPA_RC_ERROR;
     uint16_t reg_data1 = 0, reg_data2 = 0;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, &reg_data1));
     MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data2));
@@ -225,7 +225,7 @@ error:
 mepa_rc phy_tc10_get_wakeup_support(struct mepa_device          *dev,
                                     mepa_tc10_wakeup_mode_t     *const mode)
 {
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     *mode = data->tc10.wakeup_mode;
 
@@ -237,7 +237,7 @@ mepa_rc phy_tc10_set_wakeup_fwd_support(struct mepa_device                      
 {
     mepa_rc rc = MEPA_RC_ERROR;
     uint16_t reg_data1 = 0, reg_data2 = 0;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_PRT_CTL1_OFFSET, &reg_data1));
     MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data2));
@@ -278,7 +278,7 @@ error:
 mepa_rc phy_tc10_get_wakeup_fwd_support(struct mepa_device              *dev,
                                         mepa_tc10_wakeup_fwd_mode_t     *const mode)
 {
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     *mode = data->tc10.wakeup_fwd_mode;
 
@@ -291,7 +291,7 @@ mepa_rc phy_tc10_set_wake_pin_polarity(struct mepa_device               *dev,
 {
     uint16_t reg_data = 0;
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data));
 
@@ -334,7 +334,7 @@ mepa_rc phy_tc10_get_wake_pin_polarity(struct mepa_device           *dev,
                                        const mepa_tc10_pin_t        pin,
                                        mepa_gpio_mode_t             *const polarity)
 {
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     if (pin == MEPA_TC10_WAKE_IN) {
         *polarity = data->tc10.wake_in_pol;
@@ -353,7 +353,7 @@ mepa_rc phy_tc10_set_pin_mode(struct mepa_device            *dev,
 {
     uint16_t reg_data = 0;
     mepa_rc rc = MEPA_RC_ERROR;
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     MEPA_RC_GOTO(rc, phy_ext_bank_reg_rd(dev, LAN8770_PHY_BANK_MISC, LAN8770_MISC_WKP_COM_CTL0_OFFSET, &reg_data));
 
@@ -398,7 +398,7 @@ mepa_rc phy_tc10_get_pin_mode(struct mepa_device            *dev,
                               const mepa_tc10_pin_t         pin,
                               mepa_gpio_mode_t              *const mode)
 {
-    phy_data_t *data = (phy_data_t *) dev->data;
+    lan8770_data_t *data = (lan8770_data_t *) dev->data;
 
     if (pin == MEPA_TC10_INH) {
         *mode = data->tc10.inh_mode;
@@ -478,7 +478,7 @@ error:
     return rc;
 }
 
-mepa_rc phy_tc10_set_config(struct mepa_device *dev, phy_tc10_data_t *cfg)
+mepa_rc phy_tc10_set_config(struct mepa_device *dev, lan8770_tc10_data_t *cfg)
 {
     mepa_rc rc = MEPA_RC_ERROR;
 
@@ -496,7 +496,7 @@ error:
 
 uint32_t lan8770_capability_priv(mepa_device_t *const dev, uint32_t capability)
 {
-    phy_data_t *data = (phy_data_t *)(dev->data);
+    lan8770_data_t *data = (lan8770_data_t *)(dev->data);
     uint32_t c;
 
     switch (capability) {

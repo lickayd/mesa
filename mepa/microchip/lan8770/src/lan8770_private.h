@@ -29,7 +29,7 @@ typedef struct {
     uint8_t  rev;
     mepa_bool_t is_master;
     mepa_bool_t is_master_fault;
-} phy_dev_info_t;
+} lan8770_dev_info_t;
 
 typedef struct {
     mepa_bool_t                     sleep_enable;
@@ -39,7 +39,7 @@ typedef struct {
     mepa_gpio_mode_t                wake_out_pol;
     mepa_gpio_mode_t                wake_out_mode;
     mepa_gpio_mode_t                inh_mode;
-} phy_tc10_data_t;
+} lan8770_tc10_data_t;
 
 typedef struct {
     mepa_bool_t             init_done;
@@ -51,11 +51,11 @@ typedef struct {
     mepa_conf_t             conf;
     mepa_event_t            events;
     mepa_loopback_t         loopback;
-    phy_dev_info_t          dev;
+    lan8770_dev_info_t      dev;
     mepa_bool_t             ctx_status;
     mepa_bool_t             cdiags_start;
-    phy_tc10_data_t         tc10;
-} phy_data_t;
+    lan8770_tc10_data_t     tc10;
+} lan8770_data_t;
 
 extern mepa_tc10_driver_t lan8770_tc10_drivers;
 
@@ -124,7 +124,7 @@ mepa_rc phy_tc10_get_state(struct mepa_device       *dev,
 
 mepa_rc phy_tc10_send_wake_request(struct mepa_device *dev);
 
-mepa_rc phy_tc10_set_config(struct mepa_device *dev, phy_tc10_data_t *cfg);
+mepa_rc phy_tc10_set_config(struct mepa_device *dev, lan8770_tc10_data_t *cfg);
 
 uint32_t lan8770_capability_priv(mepa_device_t *const dev, uint32_t capability);
 
