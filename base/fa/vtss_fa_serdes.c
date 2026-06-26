@@ -4281,6 +4281,7 @@ vtss_rc fla_port_loopback_set(vtss_state_t *vtss_state, const vtss_port_no_t por
     VTSS_RC(vtss_fa_port2sd(vtss_state, port_no, &sd_indx, &sd_type));
 
     if (sd_type == FA_SERDES_TYPE_10G) {
+        u32 sd_lane_tgt = VTSS_TO_SD_LANE(sd_indx + RT_SERDES_10G_START);
         sd_tgt = VTSS_TO_SD10G_LANE(sd_indx);
 
         // Clear the loopback
@@ -4301,6 +4302,11 @@ vtss_rc fla_port_loopback_set(vtss_state_t *vtss_state, const vtss_port_no_t por
             REG_WRM(VTSS_PCS_10GBASE_R_PCS_SD_CFG(pcs),
                     VTSS_F_PCS_10GBASE_R_PCS_SD_CFG_SD_ENA(conf->sd_enable),
                     VTSS_M_PCS_10GBASE_R_PCS_SD_CFG_SD_ENA);
+            /* Cycle TX_REF_SEL MAIN->AUX1->MAIN to force CMU clock re-lock after LS3 loopback */
+            REG_WRM_SET(VTSS_SD_LANE_TARGET_SD_LANE_CFG(sd_lane_tgt),
+                        VTSS_F_SD_LANE_TARGET_SD_LANE_CFG_TX_REF_SEL(1));
+            REG_WRM_CLR(VTSS_SD_LANE_TARGET_SD_LANE_CFG(sd_lane_tgt),
+                        VTSS_M_SD_LANE_TARGET_SD_LANE_CFG_TX_REF_SEL);
         }
 
         switch (lb) {
