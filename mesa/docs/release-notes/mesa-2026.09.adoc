@@ -1,0 +1,36 @@
+// Copyright (c) 2004-2022 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+= MESA-2026.09
+
+== MESA-2026.09
+
+|===
+|Version:          |MESA-2026.09
+|Previous Version: |MESA-2026.06
+|Date:             |2026-09-30
+|Description:      |Roadmap release
+|===
+
+=== VCL actions and lookup flexibility
+
+For SparX-5 and LAN969x families, the actions, lookup and key generation for VCL has been extended:
+
+* VCL port key generation per lookup added in the `mesa_vcl_port_conf_t::lookup` field.
+* VCE lookup parameter (0-3) added in the `mesa_vce_key_t::lookup` field.
+** Lookup 0 and 1 map to VCAP CLM-A.
+** Lookup 2 and 3 map to VCAP CLM-B.
+* VCE generic key matching added in the `mesa_vce_key_t::gkey` field.
+* VCE port filtering added in the `mesa_vce_action_t::port_action` and `mesa_vce_action_t::port_list` fields.
+* VCE CPU copy options added in the added in the `mesa_vce_action_t::cpu` and `mesa_vce_action_t::cpu_queue` fields.
+* VCE generic key control added in the `mesa_vce_action_t::gkey_mode` and `mesa_vce_action_t::gkey` fields.
+** The generic key fields can be used to link rules in different lookups.
+
+=== ACL lookup flexibility
+
+For SparX-5 and LAN969x families, the lookup and key generation for ACL has been extended:
+
+* ACL port key generation per lookup added in the `mesa_acl_port_conf_t::lookup` field.
+* ACE lookup parameter (0-3) added in the `mesa_ace_t::lookup` field.
+** Lookup 0 and 1 map to VCAP IS2-A.
+** Lookup 2 and 3 map to VCAP IS2-B.
