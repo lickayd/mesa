@@ -360,10 +360,21 @@ mesa_rc mesa_vlan_counters_clear(const mesa_inst_t inst, const mesa_vid_t vid)
 
 /* - VCL ----------------------------------------------------------- */
 
+// VCL port configuration per lookup
+typedef struct {
+    mesa_bool_t          dmac_dip; // Enable DMAC/DIP matching (default SMAC/SIP)
+    mesa_vcap_key_type_t key_type; // Key type for VCAP CLM lookup */
+} mesa_vcl_port_lookup_conf_t;
+
 // VCL port configuration
 typedef struct {
     mesa_bool_t          dmac_dip; // Enable DMAC/DIP matching (default SMAC/SIP)
     mesa_vcap_key_type_t key_type; // Key type for VCL lookup
+    // The configuration above controls VCAP CLM lookup 0.
+    // The configuration below controls VCAP CLM lookup 1-3.
+    // Key generation configuration must be done before VCL rules are added.
+    mesa_vcl_port_lookup_conf_t lookup[3] CAP(L2_VCL_EXT_LOOKUP); // Configuration for VCAP CLM
+                                                                  // lookup 1-3
 } mesa_vcl_port_conf_t;
 
 // Get VCL port configuration.
@@ -458,11 +469,13 @@ typedef struct {
 
 // VCE Key
 typedef struct {
-    mesa_port_list_t port_list; // Port list
-    mesa_vce_mac_t   mac;       // MAC header
-    mesa_vce_tag_t   tag;       // Outer tag
-    mesa_vce_tag_t   inner_tag; // Inner tag
-    mesa_vce_type_t  type;      // VCE frame type
+    uint8_t lookup       CAP(L2_VCL_EXT_LOOKUP); // VCAP CLM lookup (0-3)
+    mesa_vcap_u16_t gkey CAP(L2_VCL_EXT_LOOKUP); // Generic key (for linking lookups)
+    mesa_port_list_t     port_list;              // Port list
+    mesa_vce_mac_t       mac;                    // MAC header
+    mesa_vce_tag_t       tag;                    // Outer tag
+    mesa_vce_tag_t       inner_tag;              // Inner tag
+    mesa_vce_type_t      type;                   // VCE frame type
 
     union {
         // MESA_VCE_TYPE_ANY: No specific fields
@@ -490,6 +503,20 @@ typedef enum {
     MESA_OAM_DETECT_TRIPLE_TAGGED CAP(VOP_V2) // Triple tagged OAM detection
 } mesa_oam_detect_t CAP(VOP);
 
+// VCL port action */
+typedef enum {
+    MESA_VCL_PORT_ACTION_NONE,   // No action from port list
+    MESA_VCL_PORT_ACTION_FILTER, // Port list filter is used
+    MESA_VCL_PORT_ACTION_REDIR   // Port list redirect is used
+} mesa_vcl_port_action_t;
+
+// VCL generic key mode
+typedef enum {
+    MESA_VCL_GKEY_MODE_NONE,    // Do not change generic key
+    MESA_VCL_GKEY_MODE_REPLACE, // Replace generic key with new value
+    MESA_VCL_GKEY_MODE_ADD      // Add value to generic key
+} mesa_vcl_gkey_mode_t;
+
 // VCE Action
 typedef struct {
     mesa_vid_t                vid;               // Classified VLAN ID
@@ -515,6 +542,12 @@ typedef struct {
     mesa_dei_t          dei;                     // DEI value
     uint16_t match_id   CAP(PACKET_RX_MATCH_ID); // Match ID value for CPU frame Rx information
     uint16_t match_mask CAP(PACKET_RX_MATCH_ID); // Match ID mask
+    mesa_vcl_port_action_t port_action CAP(L2_VCL_EXT_LOOKUP); // Port action
+    mesa_port_list_t port_list         CAP(L2_VCL_EXT_LOOKUP); // Egress port list
+    mesa_bool_t cpu                    CAP(L2_VCL_EXT_LOOKUP); // Forward to CPU
+    mesa_packet_rx_queue_t cpu_queue   CAP(L2_VCL_EXT_LOOKUP); // CPU queue
+    mesa_vcl_gkey_mode_t gkey_mode     CAP(L2_VCL_EXT_LOOKUP); // Generic key mode
+    uint16_t gkey                      CAP(L2_VCL_EXT_LOOKUP); // Generic key value
 } mesa_vce_action_t;
 
 // VLAN Control Entry

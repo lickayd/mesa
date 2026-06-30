@@ -163,6 +163,7 @@ typedef enum {
     MESA_CAP_L2_TCL_KEY_OAM,           /**< TCL OAM MEL key */
     MESA_CAP_L2_TCL_ACT_FWD,           /**< TCL forwarding action */
     MESA_CAP_L2_BUM_POL_CNT,           /**< Number of BUM policers */
+    MESA_CAP_L2_VCL_EXT_LOOKUP,        /**< VCL extended lookups */
 
     // Layer 3
     MESA_CAP_L3 = 500,    /**< Layer 3 switching */
@@ -293,6 +294,7 @@ typedef enum {
     MESA_CAP_ACL_EXT_MAC,                   /**< ACL extended IPv4/IPv6 rules with MAC address
                                                matching */
     MESA_CAP_ACL_MAC_IGR,                   /**< ACL ingress MAC address operations */
+    MESA_CAP_ACL_EXT_LOOKUP,                /**< ACL extended lookups */
 
     // EVC
     MESA_CAP_EVC_EVC_CNT = 900,        /**< Number of EVCs */

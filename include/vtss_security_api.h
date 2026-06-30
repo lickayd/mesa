@@ -366,6 +366,16 @@ typedef struct {
     vtss_acl_policy_no_t policy_no; /**< Policy number */
     vtss_acl_action_t    action;    /**< Action */
     vtss_acl_frame_key_t key;       // ACL key generation
+#if defined(VTSS_ARCH_FA)
+    // The configuration above controls VCAP IS2 lookup 0.
+    // The configuration below controls VCAP IS2 lookup 1-3.
+    // The default key generation supports HACLs.
+    // If the key generation is changed, HACLs may not work as expected.
+    // Key generation configuration must be done before ACL rules are added.
+    // VCAP IS2 lookup 3 is used for IP mulicast forwarding with a fixed key generation.
+    // In this lookup, IP multicast frames can not be matched by ACL rules.
+    vtss_acl_frame_key_t lookup[3]; // ACL key generation for VCAP IS2 lookup 1-3
+#endif
 } vtss_acl_port_conf_t;
 
 /**
@@ -610,6 +620,9 @@ typedef struct {
 /** \brief Access Control Entry */
 typedef struct {
     vtss_ace_id_t id; /**< ACE ID, must be different from VTSS_ACE_ID_LAST */
+#if defined(VTSS_ARCH_FA)
+    u8 lookup; // VCAP IS2 lookup (0-3)
+#endif
 #if defined(VTSS_ARCH_OCELOT)
     u8   lookup;       /**< Lookup, any non-zero value means second lookup */
     BOOL isdx_enable;  /**< Use VID value for ISDX value */

@@ -756,10 +756,24 @@ vtss_rc vtss_vlan_counters_clear(const vtss_inst_t inst, const vtss_vid_t vid);
     By default, no VCE rules are setup.
 */
 
+#if defined(VTSS_ARCH_FA)
+// VCL port configuration per lookup
+typedef struct {
+    BOOL                 dmac_dip; // Enable DMAC/DIP matching (default SMAC/SIP)
+    vtss_vcap_key_type_t key_type; // Key type for VCAP CLM lookup */
+} vtss_vcl_port_lookup_conf_t;
+#endif
+
 /** \brief VCL port configuration */
 typedef struct {
     BOOL                 dmac_dip; /**< Enable DMAC/DIP matching (default SMAC/SIP) */
     vtss_vcap_key_type_t key_type; /**< Key type for VCL lookup */
+#if defined(VTSS_ARCH_FA)
+    // The configuration above controls VCAP CLM lookup 0.
+    // The configuration below controls VCAP CLM lookup 1-3.
+    // Key generation configuration must be done before VCL rules are added.
+    vtss_vcl_port_lookup_conf_t lookup[3]; // Configuration for VCAP CLM lookup 1-3
+#endif
 } vtss_vcl_port_conf_t;
 
 /**
@@ -872,6 +886,10 @@ typedef struct {
 
 /** \brief VCE Key*/
 typedef struct {
+#if defined(VTSS_ARCH_FA)
+    u8              lookup; // VCAP CLM lookup (0-3)
+    vtss_vcap_u16_t gkey;   // Generic key (for linking lookups)
+#endif
     BOOL           port_list[VTSS_PORT_ARRAY_SIZE]; /**< Port list */
     vtss_vce_mac_t mac;                             /**< MAC header */
     vtss_vce_tag_t tag;                             /**< Outer tag */
@@ -905,6 +923,22 @@ typedef enum {
     VTSS_OAM_DETECT_TRIPLE_TAGGED  /**< Triple tagged OAM detection */
 } vtss_oam_detect_t;
 
+#if defined(VTSS_ARCH_FA)
+// VCL port action */
+typedef enum {
+    VTSS_VCL_PORT_ACTION_NONE,   // No action from port list
+    VTSS_VCL_PORT_ACTION_FILTER, // Port list filter is used
+    VTSS_VCL_PORT_ACTION_REDIR   // Port list redirect is used
+} vtss_vcl_port_action_t;
+
+// VCL generic key mode
+typedef enum {
+    VTSS_VCL_GKEY_MODE_NONE,    // Do not change generic key
+    VTSS_VCL_GKEY_MODE_REPLACE, // Replace generic key with new value
+    VTSS_VCL_GKEY_MODE_ADD      // Add value to generic key
+} vtss_vcl_gkey_mode_t;
+#endif
+
 /** \brief VCE Action */
 typedef struct {
     vtss_vid_t           vid;        /**< Classified VLAN ID */
@@ -934,6 +968,14 @@ typedef struct {
 #if defined(VTSS_FEATURE_MATCH_ID)
     u16 match_id;   // Match ID value for CPU frame Rx information
     u16 match_mask; // Match ID mask
+#endif
+#if defined(VTSS_ARCH_FA)
+    vtss_vcl_port_action_t port_action;           // Port action
+    BOOL                   port_list[VTSS_PORTS]; // Egress port list
+    BOOL                   cpu;                   // Forward to CPU
+    vtss_packet_rx_queue_t cpu_queue;             // CPU queue
+    vtss_vcl_gkey_mode_t   gkey_mode;             // Generic key mode
+    u16                    gkey;                  // Generic key value
 #endif
 } vtss_vce_action_t;
 

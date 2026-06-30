@@ -192,6 +192,14 @@ typedef struct {
     mesa_acl_policy_no_t policy_no; // Policy number
     mesa_acl_action_t    action;    // Action
     mesa_acl_frame_key_t key;       // ACL key generation
+    // The configuration above controls VCAP IS2 lookup 0.
+    // The configuration below controls VCAP IS2 lookup 1-3.
+    // The default key generation supports HACLs.
+    // If the key generation is changed, HACLs may not work as expected.
+    // Key generation configuration must be done before ACL rules are added.
+    // VCAP IS2 lookup 3 is used for IP mulicast forwarding with a fixed key generation.
+    // In this lookup, IP multicast frames can not be matched by ACL rules.
+    mesa_acl_frame_key_t lookup[3] CAP(ACL_EXT_LOOKUP); // ACL key generation for VCAP IS2 lookup 1-3
 } mesa_acl_port_conf_t;
 
 // Get ACL configuration for port.
@@ -401,15 +409,16 @@ typedef struct {
 
 // Access Control Entry
 typedef struct {
-    mesa_ace_id_t            id;                  // ACE ID, must be different from MESA_ACE_ID_LAST
-    uint8_t lookup           CAP(ACL_KEY_LOOKUP); // Lookup, any non-zero value means second lookup
-    mesa_bool_t isdx_enable  CAP(ACL_KEY_ISDX);   // Use VID value for ISDX value
-    mesa_bool_t isdx_disable CAP(ACL_KEY_ISDX);   // Match only frames with ISDX zero
-    mesa_port_list_t         port_list;           // Port list
-    mesa_ace_u8_t            policy;              // Policy number
-    mesa_ace_type_t          type;                // ACE frame type
-    mesa_bool_t              type_ext;            // Use extended type for IPv4/IPv6
-    mesa_acl_action_t        action;              // ACE action
+    mesa_ace_id_t  id;                          // ACE ID, must be different from MESA_ACE_ID_LAST
+    uint8_t lookup CAP(ACL_KEY_LOOKUP);         // OCELOT : Any non-zero value means second lookup
+                                                // ARCH_FA: VCAP IS2 lookup (0-3)
+    mesa_bool_t isdx_enable  CAP(ACL_KEY_ISDX); // Use VID value for ISDX value
+    mesa_bool_t isdx_disable CAP(ACL_KEY_ISDX); // Match only frames with ISDX zero
+    mesa_port_list_t         port_list;         // Port list
+    mesa_ace_u8_t            policy;            // Policy number
+    mesa_ace_type_t          type;              // ACE frame type
+    mesa_bool_t              type_ext;          // Use extended type for IPv4/IPv6
+    mesa_acl_action_t        action;            // ACE action
 
     mesa_ace_bit_t dmac_mc; // Multicast DMAC
     mesa_ace_bit_t dmac_bc; // Broadcast DMAC
