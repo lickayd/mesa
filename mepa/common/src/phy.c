@@ -139,10 +139,8 @@ uint32_t mepa_phy_id_get(const mepa_callout_t    MEPA_SHARED_PTR *callout,
 
     // PHY responding to APB register access
     if ((callout->apb_read != NULL) && (reg2 == 0U) && (reg3 == 0U)) {
-        (void)callout->apb_read(callout_ctx, MEPA_REGACC_APB_PORT_BASE_ADDR_IDX, (MEPA_REG_ADDR_2 * 4), &reg2_16);
-        (void)callout->apb_read(callout_ctx, MEPA_REGACC_APB_PORT_BASE_ADDR_IDX, (MEPA_REG_ADDR_3 * 4), &reg3_16);
-        reg2 = (uint32_t)reg2_16;
-        reg3 = (uint32_t)reg3_16;
+        (void)callout->apb_read(callout_ctx, MEPA_REGACC_APB_PORT_BASE_ADDR_IDX, (MEPA_REG_ADDR_2 * 4), &reg2);
+        (void)callout->apb_read(callout_ctx, MEPA_REGACC_APB_PORT_BASE_ADDR_IDX, (MEPA_REG_ADDR_3 * 4), &reg3);
     }
 
     reg2 = (uint32_t)(reg2 & 0xFFFFU);

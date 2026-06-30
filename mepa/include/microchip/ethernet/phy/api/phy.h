@@ -129,7 +129,7 @@ typedef mepa_rc (*mepa_miim_write_t)(struct mepa_callout_ctx         *ctx,
 typedef mepa_rc (*mepa_apb_read_t)(struct mepa_callout_ctx      *ctx,
                                    mepa_regacc_apb_idx_t        idx,
                                    const uint32_t               offset,
-                                   uint16_t                     *const data);
+                                   uint32_t                     *const data);
 
 /**
  * \brief APB write function
@@ -146,7 +146,7 @@ typedef mepa_rc (*mepa_apb_read_t)(struct mepa_callout_ctx      *ctx,
 typedef mepa_rc (*mepa_apb_write_t)(struct mepa_callout_ctx     *ctx,
                                     mepa_regacc_apb_idx_t       idx,
                                     const uint32_t              offset,
-                                    const uint16_t              data);
+                                    const uint32_t              data);
 
 
 /**
