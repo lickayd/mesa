@@ -885,12 +885,10 @@ vtss_rc vtss_cil_l2_vlan_counters_clear(vtss_state_t *vtss_state, vtss_vid_t vid
 #if defined(VTSS_FEATURE_VCAP)
 vtss_rc vtss_cil_l2_vcl_port_conf_set(struct vtss_state_s *vtss_state, const vtss_port_no_t port_no)
 {
-    vtss_vcl_port_conf_t *conf = &vtss_state->l2.vcl_port_conf[port_no];
-
     VTSS_RC(vtss_cmn_vcl_port_conf_set(vtss_state, port_no));
 
     /* Set port key */
-    return vtss_fa_vcap_port_key_set(vtss_state, port_no, 2U, conf->key_type, conf->dmac_dip);
+    return vtss_fa_vcap_port_key_set(vtss_state, port_no);
 }
 #endif
 
@@ -3389,6 +3387,7 @@ static vtss_rc fa_debug_vxlat(vtss_state_t                  *vtss_state,
     u32 a = info->action;
 
     if (a == 0U || a == 3U) {
+        VTSS_RC(vtss_fa_debug_clm_a(vtss_state, ss, info));
         VTSS_RC(vtss_fa_debug_clm_b(vtss_state, ss, info));
     }
     if (a == 0U || a == 4U) {

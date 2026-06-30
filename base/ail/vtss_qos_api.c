@@ -1736,16 +1736,24 @@ vtss_rc vtss_cmn_qce_add(vtss_state_t           *vtss_state,
 
     is1->lookup = 1; /* Second lookup */
 
-#if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_LAN966X)
-    /* For Serval, the configured key of the first port is used */
+#if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_LAN966X) || defined(VTSS_ARCH_FA)
+    /* The configured key of the first port is used */
     {
         vtss_port_no_t port_no;
-        is1->lookup = 2; /* Third lookup */
-
+#if defined(VTSS_ARCH_FA)
+        key->key_type = VTSS_VCAP_KEY_TYPE_MAC_IP_ADDR;
+#else
+        is1->lookup = 2;                               /* Third lookup */
         key->key_type = VTSS_VCAP_KEY_TYPE_DOUBLE_TAG; /* Default if no ports assigned */
+#endif
+
         for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
             if (qce->key.port_list[port_no]) {
+#if defined(VTSS_ARCH_FA)
+                key->key_type = vtss_state->l2.vcl_port_conf[0].lookup[is1->lookup].key_type;
+#else
                 key->key_type = vtss_state->qos.port_conf[port_no].key_type;
+#endif
                 VTSS_D("Using key_type %u from port %u", key->key_type, port_no);
                 break; /* Stop after first port */
             }
@@ -1754,11 +1762,9 @@ vtss_rc vtss_cmn_qce_add(vtss_state_t           *vtss_state,
     }
 #endif
 
-#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_FA)
-    if (vtss_state->arch == VTSS_ARCH_JR2 || vtss_state->arch == VTSS_ARCH_ANT) {
-        /* Jaguar-2 consumes full row */
-        key->key_type = VTSS_VCAP_KEY_TYPE_MAC_IP_ADDR;
-    }
+#if defined(VTSS_ARCH_JAGUAR_2)
+    /* Jaguar-2 consumes full row */
+    key->key_type = VTSS_VCAP_KEY_TYPE_MAC_IP_ADDR;
 #endif
 
     /* Check if main entry exists */

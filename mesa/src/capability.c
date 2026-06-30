@@ -891,6 +891,12 @@ uint32_t mesa_capability(mesa_inst_t inst, mesa_cap_t cap)
 #endif
         break;
 
+    case MESA_CAP_L2_VCL_EXT_LOOKUP:
+#if defined(VTSS_ARCH_FA)
+        c = 1;
+#endif
+        break;
+
     // Layer 3
     case MESA_CAP_L3:
 #if defined(VTSS_FEATURE_LAYER3)
@@ -1245,9 +1251,14 @@ uint32_t mesa_capability(mesa_inst_t inst, mesa_cap_t cap)
         break;
 
     case MESA_CAP_ACL_CNT_LM:
-    case MESA_CAP_ACL_KEY_LOOKUP:
     case MESA_CAP_ACL_KEY_ISDX:
 #if defined(VTSS_ARCH_OCELOT)
+        c = 1;
+#endif
+        break;
+
+    case MESA_CAP_ACL_KEY_LOOKUP:
+#if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_FA)
         c = 1;
 #endif
         break;
@@ -1332,6 +1343,12 @@ uint32_t mesa_capability(mesa_inst_t inst, mesa_cap_t cap)
 
     case MESA_CAP_ACL_MAC_IGR:
 #if defined(VTSS_ARCH_LAN969X)
+        c = 1U;
+#endif
+        break;
+
+    case MESA_CAP_ACL_EXT_LOOKUP:
+#if defined(VTSS_ARCH_FA)
         c = 1U;
 #endif
         break;

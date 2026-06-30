@@ -753,11 +753,7 @@ vtss_rc vtss_lan969x_mrp_debug_print(vtss_state_t                  *vtss_state,
 /* VCAP functions */
 #if defined(VTSS_FEATURE_VCAP)
 vtss_rc vtss_fa_vcap_init(vtss_state_t *vtss_state, vtss_init_cmd_t cmd);
-vtss_rc vtss_fa_vcap_port_key_set(vtss_state_t        *vtss_state,
-                                  vtss_port_no_t       port_no,
-                                  u32                  lookup,
-                                  vtss_vcap_key_type_t key_type,
-                                  BOOL                 dmac_dip);
+vtss_rc vtss_fa_vcap_port_key_set(vtss_state_t *vtss_state, vtss_port_no_t port_no);
 vtss_rc vtss_fa_vcap_port_update(vtss_state_t *vtss_state, vtss_port_no_t port_no);
 vtss_rc vtss_fa_vcap_debug_print(vtss_state_t                  *vtss_state,
                                  lmu_ss_t                      *ss,

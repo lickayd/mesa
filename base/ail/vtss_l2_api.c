@@ -6508,6 +6508,15 @@ static void vtss_cmn_key_type_get(vtss_state_t         *vtss_state,
 #else
         key->dmac_dip = conf->dmac_dip;
 #endif
+#if defined(VTSS_ARCH_FA)
+        if (lookup > 0U && lookup < 4U) {
+            // Lookup 1-3
+            vtss_vcl_port_lookup_conf_t *c = &conf->lookup[lookup - 1U];
+
+            key->key_type = c->key_type;
+            key->dmac_dip = c->dmac_dip;
+        }
+#endif
     }
     *key_size = vtss_vcap_key_type2size(key->key_type);
 }
@@ -6561,6 +6570,7 @@ vtss_rc vtss_cmn_vce_add(struct vtss_state_s    *vtss_state,
 #if defined(VTSS_FEATURE_VOP_V2)
     vtss_sdx_entry_t *sdx;
 #endif
+    u8 lookup = 0U;
 
     /* Check VCE ID */
     if (vce->id == VTSS_VCE_ID_LAST || vce->id == vce_id) {
@@ -6569,6 +6579,13 @@ vtss_rc vtss_cmn_vce_add(struct vtss_state_s    *vtss_state,
     }
 
     /* Check if main entry exists */
+#if defined(VTSS_ARCH_FA)
+    lookup = vce->key.lookup;
+    if (lookup > 1U) {
+        // Notice that moving VCEs between CLM-A and CLM-B is not supported
+        obj = &vtss_state->vcap.clm_b.obj;
+    }
+#endif
     VTSS_MEMSET(&res_chg, 0, sizeof(res_chg));
     if (vtss_vcap_lookup(vtss_state, obj, user, vce->id, &data, NULL) == VTSS_RC_OK) {
         /* Free any old range checkers */
@@ -6586,8 +6603,9 @@ vtss_rc vtss_cmn_vce_add(struct vtss_state_s    *vtss_state,
     is1->flags = VTSS_IS1_FLAG_TRI_VID;
 
 #if !defined(VTSS_ARCH_LUTON26)
-    vtss_cmn_key_type_get(vtss_state, is1->port_no, is1->lookup, key, &data.key_size);
+    vtss_cmn_key_type_get(vtss_state, is1->port_no, lookup, key, &data.key_size);
 #endif
+    is1->lookup = (lookup & 1U);
 
     /* Check that the entry can be added */
     res_chg.add_key[data.key_size] = 1U;
@@ -6649,6 +6667,16 @@ vtss_rc vtss_cmn_vce_add(struct vtss_state_s    *vtss_state,
 #if defined(VTSS_FEATURE_MATCH_ID)
     action->match_id = vce->action.match_id;
     action->match_mask = vce->action.match_mask;
+#endif
+#if defined(VTSS_ARCH_FA)
+    action->port_action = vce->action.port_action;
+    VTSS_MEMCPY(action->port_list, vce->action.port_list, sizeof(action->port_list));
+    action->cpu = vce->action.cpu;
+    action->cpu_queue = (u8)vce->action.cpu_queue;
+    action->gkey_mode = vce->action.gkey_mode;
+    action->gkey = vce->action.gkey;
+    key->g_idx.value = (u16)vtss_u16_get(vce->key.gkey.value);
+    key->g_idx.mask = (u16)vtss_u16_get(vce->key.gkey.mask);
 #endif
 
     /* Copy key data */
@@ -6737,14 +6765,22 @@ vtss_rc vtss_cmn_vce_add(struct vtss_state_s    *vtss_state,
 /* Delete VCE */
 vtss_rc vtss_cmn_vce_del(struct vtss_state_s *vtss_state, const vtss_vce_id_t vce_id)
 {
+    vtss_rc          rc;
     vtss_vcap_obj_t *obj = vtss_vcap_is1_obj_get(vtss_state);
     vtss_vcap_user_t user = VTSS_IS1_USER_VCL;
     vtss_vcap_data_t data;
     vtss_is1_data_t *is1 = &data.u.is1;
 
-    if (vtss_vcap_lookup(vtss_state, obj, user, vce_id, &data, NULL) != VTSS_RC_OK) {
-        /* This is possible as add may fail in some situations due to hardware
-         * limitation */
+    rc = vtss_vcap_lookup(vtss_state, obj, user, vce_id, &data, NULL);
+#if defined(VTSS_ARCH_FA)
+    if (rc != VTSS_RC_OK) {
+        // The VCE may be in CLM-A or CLM-B
+        obj = &vtss_state->vcap.clm_b.obj;
+        rc = vtss_vcap_lookup(vtss_state, obj, user, vce_id, &data, NULL);
+    }
+#endif
+    if (rc != VTSS_RC_OK) {
+        /* This is possible as add may fail in some situations due to hardware limitation */
         VTSS_D("vce_id: %u not found", vce_id);
         return VTSS_RC_OK;
     }
@@ -7454,6 +7490,12 @@ static void vtss_debug_print_vcl(vtss_state_t                  *vtss_state,
         conf = &vtss_state->l2.vcl_port_conf[port_no];
         pr("%-6u%-14s%s\n", port_no, vtss_vcap_key_type2txt(conf->key_type),
            vtss_bool_txt(conf->dmac_dip));
+#if defined(VTSS_ARCH_FA)
+        for (u8 i = 0U; i < 3U; i++) {
+            pr("      %-14s%s\n", vtss_vcap_key_type2txt(conf->lookup[i].key_type),
+               vtss_bool_txt(conf->lookup[i].dmac_dip));
+        }
+#endif
     }
     if (!first) {
         pr("\n");

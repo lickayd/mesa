@@ -1019,8 +1019,9 @@ vtss_vcap_obj_t *vtss_vcap_is1_obj_get(struct vtss_state_s *vtss_state)
 {
 #if defined(VTSS_FEATURE_IS1)
     return &vtss_state->vcap.is1.obj;
-#endif /* VTSS_FEATURE_IS1 */
-#if defined(VTSS_FEATURE_CLM)
+#elif defined(VTSS_ARCH_FA)
+    return &vtss_state->vcap.clm_a.obj;
+#else
     return &vtss_state->vcap.clm_b.obj;
 #endif /* VTSS_FEATURE_CLM */
 }
@@ -2300,6 +2301,9 @@ void vtss_vcap_debug_print_is1(struct vtss_state_s           *vtss_state,
     vtss_vcap_debug_print(ss, info, &vtss_state->vcap.is1.obj, sizeof(vtss_is1_data_t),
                           sizeof(vtss_is1_info_t));
 #endif /* VTSS_FEATURE_IS1 */
+#if defined(VTSS_ARCH_FA)
+    vtss_vcap_debug_print_clm_a(vtss_state, ss, info);
+#endif
 #if defined(VTSS_FEATURE_CLM)
     vtss_vcap_debug_print_clm_b(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_CLM */
@@ -2372,8 +2376,10 @@ void vtss_vcap_debug_print_acl(struct vtss_state_s           *vtss_state,
     vtss_acl_port_conf_t *conf;
     vtss_acl_action_t    *act;
     vtss_acl_policer_no_t policer_no;
+    vtss_acl_frame_key_t *k;
     lmu_fmt_buf_t         buf;
     u32                   cnt, a = info->action;
+    const char           *txt;
 #endif
 
     if (!vtss_debug_group_enabled(ss, info, VTSS_DEBUG_GROUP_ACL)) {
@@ -2404,9 +2410,8 @@ void vtss_vcap_debug_print_acl(struct vtss_state_s           *vtss_state,
         act = &conf->action;
         if (header) {
             header = FALSE;
-            pr("Port  Policy  CPU  Once  Queue  Policer  Learn  IPV4/IPV6/ARP      ");
+            pr("Port  Policy  CPU  Once  Queue  Policer  Learn  IPV4/IPV6/ARP/ETYPE      ");
             vtss_debug_print_port_header(vtss_state, ss, "Mirror  PTP  Port  ", 0U, TRUE);
-            pr("\n");
         }
         if (conf->policy_no == VTSS_ACL_POLICY_NO_NONE) {
             VTSS_FMT(buf, "None");
@@ -2424,9 +2429,15 @@ void vtss_vcap_debug_print_acl(struct vtss_state_s           *vtss_state,
             VTSS_FMT(buf, "Disabled");
         }
         pr("%-9s%-7u", &buf, act->learn);
-        VTSS_FMT(buf, "%s/%s/%s", vtss_acl_key_txt(conf->key.ipv4),
-                 vtss_acl_key_txt(conf->key.ipv6), vtss_acl_key_txt(conf->key.arp));
-        pr("%-19s", &buf);
+        k = &conf->key;
+#if defined(VTSS_FEATURE_ACL_EXT_ETYPE)
+        txt = vtss_acl_key_txt(k->etype);
+#else
+        txt = "-";
+#endif
+        VTSS_FMT(buf, "%s/%s/%s/%s", vtss_acl_key_txt(k->ipv4), vtss_acl_key_txt(k->ipv6),
+                 vtss_acl_key_txt(k->arp), txt);
+        pr("%-25s", &buf);
         pr("%-8u%-5s%-6s", act->mirror,
            act->ptp_action == VTSS_ACL_PTP_ACTION_NONE       ? "None"
            : act->ptp_action == VTSS_ACL_PTP_ACTION_ONE_STEP ? "One"
@@ -2437,7 +2448,19 @@ void vtss_vcap_debug_print_acl(struct vtss_state_s           *vtss_state,
            : act->port_action == VTSS_ACL_PORT_ACTION_REDIR  ? "Redir"
                                                              : "?");
         vtss_debug_print_port_members(vtss_state, ss, act->port_list, TRUE);
-        pr("\n");
+#if defined(VTSS_ARCH_FA)
+        for (u8 i = 0U; i < 3U; i++) {
+            k = &conf->lookup[i];
+#if defined(VTSS_FEATURE_ACL_EXT_ETYPE)
+            txt = vtss_acl_key_txt(k->etype);
+#else
+            txt = "-";
+#endif
+            VTSS_FMT(buf, "%s/%s/%s/%s", vtss_acl_key_txt(k->ipv4), vtss_acl_key_txt(k->ipv6),
+                     vtss_acl_key_txt(k->arp), txt);
+            pr("%48s%s\n", "", &buf);
+        }
+#endif
     }
     if (!header) {
         header = TRUE;

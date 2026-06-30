@@ -1599,10 +1599,8 @@ static vtss_rc jr2_clm_entry_add(vtss_state_t     *vtss_state,
         JR2_ACT_SET(CLM, X1_NXT_KEY, fwd_to_next_key_map[action->mpls_fwd_type]);
         JR2_ACT_SET(CLM, X1_NXT_W32_OFFS, 1);
         JR2_ACT_SET(CLM, X1_NXT_NORMALIZE, 1);
-        JR2_ACT_SET(CLM, X1_NXT_IDX_CTRL,
-                    (action->nxt_idx_enable ? 3 : 0)); // 3: G_IDX is an ISDX, sets is-service bit
-                                                       // which is then used by EVC TRI_VID_IDX keys
-        JR2_ACT_SET(CLM, X1_NXT_IDX, action->nxt_idx);
+        JR2_ACT_SET(CLM, X1_NXT_IDX_CTRL, 0);
+        JR2_ACT_SET(CLM, X1_NXT_IDX, 0);
         if (action->mpls_fwd_type == VTSS_MPLS_FWD_TYPE_TERMINATE_PW) {
             JR2_ACT_SET(CLM, X1_NXT_PROT_OFFS, (action->mpls_cw_enable ? 1 : 0));
         } else {
@@ -1655,14 +1653,14 @@ static vtss_rc jr2_clm_entry_add(vtss_state_t     *vtss_state,
         JR2_ACT_SET(CLM, CLAS_PL_ENA, action->pipe_enable);
         JR2_ACT_SET(CLM, CLAS_PL_PT, action->pipe_pt);
         JR2_ACT_SET(CLM, CLAS_NXT_KEY, action->nxt_key_type);
-        JR2_ACT_SET(CLM, CLAS_NXT_IDX_CTRL, (action->nxt_idx_enable ? 1 : 0));
-        JR2_ACT_SET(CLM, CLAS_NXT_IDX, action->nxt_idx);
+        JR2_ACT_SET(CLM, CLAS_NXT_IDX_CTRL, 0);
+        JR2_ACT_SET(CLM, CLAS_NXT_IDX, 0);
     } else {
         /* X4 */
 
         JR2_ACT_ENA_SET(CLM, X4_ISDX, action->isdx_enable, action->isdx);
-        JR2_ACT_SET(CLM, X4_NXT_IDX_CTRL, (action->nxt_idx_enable ? 1 : 0));
-        JR2_ACT_SET(CLM, X4_NXT_IDX, action->nxt_idx);
+        JR2_ACT_SET(CLM, X4_NXT_IDX_CTRL, 0);
+        JR2_ACT_SET(CLM, X4_NXT_IDX, 0);
         JR2_ACT_SET(CLM, X4_PL_ENA, action->pipe_enable);
         JR2_ACT_SET(CLM, X4_PL_PT, action->pipe_pt);
 #if !defined(VTSS_ARCH_JAGUAR_2_B)

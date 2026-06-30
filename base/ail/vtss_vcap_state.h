@@ -435,13 +435,16 @@ typedef struct {
     u8         nxt_key_type; /**< Next key type */
     u16        match_id;
     u16        match_mask;
-    BOOL       nxt_idx_enable; /**< The nxt_idx replace action is enabled */
-    u16        nxt_idx;        /**< The index that can be used as next lookup key. See
-                                  VTSS_IS1_NXT_IDX_EVC_MASK */
-    BOOL fwd_disable;          /**< Forwarding is disabled */
-    u8   rt_sel;               /**< Routing selection */
-    BOOL cpu;                  /**< Redirect to CPU if TRUE */
-    u8   cpu_queue;            /**< CPU queue used for redirect to CPU */
+    BOOL       fwd_disable; /**< Forwarding is disabled */
+    u8         rt_sel;      /**< Routing selection */
+    BOOL       cpu;         /**< Redirect to CPU if TRUE */
+    u8         cpu_queue;   /**< CPU queue used for redirect to CPU */
+#if defined(VTSS_ARCH_FA)
+    vtss_vcl_port_action_t port_action;           // Port action
+    BOOL                   port_list[VTSS_PORTS]; // Egress port list
+    vtss_vcl_gkey_mode_t   gkey_mode;             // Generic key mode
+    u16                    gkey;                  // Generic key value
+#endif
 
     u8                     mpls_rsvd_lbl;     /**< MPLS Reserved Label Value, usually GAL == 13 */
     vtss_mpls_fwd_type_t   mpls_fwd_type;     /**< MPLS forwarding type */
@@ -1423,6 +1426,7 @@ typedef struct {
     vtss_vcap_range_chk_table_t es2_range;
     u8                          is2b_cnt_alloc[VTSS_BF_SIZE(VTSS_ACL_CNT_SIZE)];
     u8                          es2_cnt_alloc[VTSS_BF_SIZE(VTSS_ES2_CNT_SIZE)];
+    u8                          lookup; // Legacy ACL (IPACL) lookup
 #endif
 #endif // VTSS_FEATURE_IS2
 } vtss_vcap_state_t;
