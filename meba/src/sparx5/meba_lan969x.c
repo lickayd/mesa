@@ -1088,10 +1088,17 @@ static mesa_rc lan969x_sensor_get(meba_inst_t inst, meba_sensor_t type, int six,
 
     T_N(inst, "Called %d:%d", type, six);
 
-    if (type == MEBA_SENSOR_BOARD_TEMP ||
-        type == MEBA_SENSOR_PORT_TEMP) { // Port/Phy temperature not available
+    if (type == MEBA_SENSOR_BOARD_TEMP) {
         rc = mesa_temp_sensor_get(NULL, &temp);
+    } else if (type == MEBA_SENSOR_PORT_TEMP) {
+        rc = meba_phy_chip_temp_get(inst, six, &temp);
+
+        if (rc != MESA_RC_OK) {
+            T_D(inst, "Falling back to board temperature sensor");
+            rc = mesa_temp_sensor_get(NULL, &temp);
+        }
     }
+
     if (rc == MESA_RC_OK) {
         T_N(inst, "Temp %d:%d = %d", type, six, temp);
         *value = temp;
