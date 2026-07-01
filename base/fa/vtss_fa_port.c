@@ -2635,7 +2635,7 @@ static vtss_rc fa_port_fc_setup(vtss_state_t *vtss_state, u32 port, vtss_port_co
 
     /* No ingress drops in FC */
     REG_WRM(VTSS_QFWD_SWITCH_PORT_MODE(port),
-            VTSS_F_QFWD_SWITCH_PORT_MODE_INGRESS_DROP_MODE(!fc_obey),
+            VTSS_F_QFWD_SWITCH_PORT_MODE_INGRESS_DROP_MODE(!(fc_gen || fc_obey)),
             VTSS_M_QFWD_SWITCH_PORT_MODE_INGRESS_DROP_MODE);
 
     /* Set Pause WM hysteresis */
@@ -2666,7 +2666,8 @@ static vtss_rc fa_port_fc_setup(vtss_state_t *vtss_state, u32 port, vtss_port_co
             VTSS_M_DSM_RX_PAUSE_CFG_RX_PAUSE_EN);
 
     /* Disable forward pressure when in fc (JIRA-UNG_FIREANT-17) */
-    REG_WRM(VTSS_QSYS_FWD_PRESSURE(port), VTSS_F_QSYS_FWD_PRESSURE_FWD_PRESSURE_DIS(fc_obey),
+    REG_WRM(VTSS_QSYS_FWD_PRESSURE(port),
+            VTSS_F_QSYS_FWD_PRESSURE_FWD_PRESSURE_DIS((fc_gen || fc_obey)),
             VTSS_M_QSYS_FWD_PRESSURE_FWD_PRESSURE_DIS);
 
     /* Discard pause frame 01-80-C2-00-00-01 */
