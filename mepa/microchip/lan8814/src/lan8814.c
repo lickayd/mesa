@@ -401,8 +401,8 @@ static mepa_rc lan8814_framepreempt_set_(mepa_device_t *dev, mepa_bool_t const e
 {
     uint16_t val;
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
-    lan8814_data_t *base_data = (base_dev != NULL) ? ((lan8814_data_t *)(base_dev->data)) : NULL;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
+    lan8814_data_t *base_data = (lan8814_data_t *)(base_dev->data);
 
     if (base_data == NULL) {
         return MEPA_RC_OK;
@@ -3166,10 +3166,8 @@ static mepa_rc lan8814_serdes_tx_conf_set(mepa_device_t *dev, const mepa_serdes_
 {
     uint16_t      value     = 0;
     lan8814_data_t    *data     = (lan8814_data_t *)dev->data, *base_data;
-    mepa_device_t *base_dev = (mepa_device_t *)data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     mepa_rc       rc;
-
-    MEPA_ASSERT(base_dev == NULL);
 
     base_data = (lan8814_data_t *)base_dev->data;
 

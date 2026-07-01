@@ -292,12 +292,11 @@ static mepa_rc lan8814_ts_port_init(mepa_device_t *dev, const mepa_ts_init_conf_
 static mepa_rc lan8814_ts_init_conf_set(mepa_device_t *dev, const mepa_ts_init_conf_t *const ts_init_conf)
 {
     uint16_t val = 0;
-    mepa_device_t *base_dev;
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     mepa_rc rc = MEPA_RC_OK;
 
     MEPA_ASSERT(ts_init_conf == NULL);
-    base_dev = data->base_dev;
     if (base_dev == dev) {
         MEPA_ASSERT(base_dev == NULL);
 
@@ -402,10 +401,9 @@ static mepa_rc lan8814_ts_ltc_ls_en_set(mepa_device_t *dev, const mepa_ts_ls_typ
 {
     uint16_t val = 0, gpio = 3; // Remove the hardcoded GPIO#3 and take it as input;
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     mepa_bool_t     ls_pps = TRUE;
 
-    MEPA_ASSERT(base_dev == NULL );
     MEPA_ENTER(dev);
     if (base_dev == dev) {
         switch (ls_type) {
@@ -447,9 +445,9 @@ static mepa_rc lan8814_ts_ltc_get(mepa_device_t *dev, mepa_timestamp_t *const ts
     uint16_t val = 0, ns_h = 0, ns_l = 0;;
     mepa_bool_t     ls_pps = TRUE;
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t  *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
 
-    MEPA_ASSERT((ts == NULL) || (base_dev == NULL) );
+    MEPA_ASSERT(ts == NULL);
     MEPA_ENTER(dev);
     if (base_dev == dev) {
         if (ls_pps == FALSE) {
@@ -503,10 +501,10 @@ static mepa_rc lan8814_ts_ltc_set(mepa_device_t *dev, const mepa_timestamp_t *co
 {
     uint16_t val = 0, cmd = 0;
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     lan8814_data_t *base_data = (lan8814_data_t *)base_dev->data;
 
-    MEPA_ASSERT((ts == NULL) || (base_dev == NULL) );
+    MEPA_ASSERT(ts == NULL);
     MEPA_ENTER(dev);
 
     if (base_dev == dev) {
@@ -574,7 +572,7 @@ static mepa_rc lan8814_ts_clock_rateadj_set(mepa_device_t *dev, const mepa_ts_sc
 {
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
     uint16_t val = 0;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     lan8814_data_t *base_data = (lan8814_data_t *)base_dev->data;
 
     MEPA_ASSERT(adj == NULL);
@@ -620,7 +618,7 @@ static mepa_rc lan8814_ts_clock_rateadj_set(mepa_device_t *dev, const mepa_ts_sc
 static mepa_rc lan8814_ts_clock_adj1ns(mepa_device_t *dev, const mepa_bool_t incr)
 {
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     lan8814_data_t *base_data;
     uint16_t val = 0, cmd = 0, cmd_org = 0, adj = 0;
     MEPA_ENTER(dev);
@@ -811,7 +809,7 @@ static mepa_rc lan8814_ts_clock_egress_latency_get(mepa_device_t *dev, mepa_time
 static mepa_rc lan8814_ts_clock_egress_latency_set_priv(mepa_device_t *dev, const mepa_timeinterval_t *const input_latency, mepa_bool_t two_step)
 {
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     lan8814_data_t *base_data = (lan8814_data_t *)base_dev->data;
     uint16_t val = 0;
     mepa_timeinterval_t latency;
@@ -991,7 +989,7 @@ static mepa_rc lan8814_ts_clock_ingress_latency_get(mepa_device_t *dev, mepa_tim
 static mepa_rc lan8814_ts_clock_ingress_latency_set(mepa_device_t *dev, const mepa_timeinterval_t *const latency)
 {
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     lan8814_data_t *base_phy;
     uint16_t val = 0;
     mepa_status_t status;
@@ -2111,7 +2109,7 @@ static mepa_rc lan8814_ltc_target_seconds(mepa_device_t *dev, uint32_t sec)
 {
     uint16_t val = sec & 0xFFFF;
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     lan8814_data_t *base_data = (lan8814_data_t *)base_dev->data;
 
     EP_WR(dev, LAN8814_PTP_LTC_TARGET_SEC_LO_A, val);
@@ -2132,7 +2130,7 @@ static mepa_rc lan8814_ts_pps_conf_set (mepa_device_t *dev, const mepa_ts_pps_co
     mepa_timestamp_t ts = {};
     uint16_t i;
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     lan8814_data_t *base_data = (lan8814_data_t *)base_dev->data;
 
     lan8814_ts_ltc_get(dev, &ts);
@@ -2447,7 +2445,7 @@ mepa_rc lan8814_ts_test_config(mepa_device_t *dev, uint16_t test_id, mepa_bool_t
     uint16_t ts_insert = 0, cf_update = 0, val = 0, tx_mod = 0, rx_mod = 0;
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
     mepa_ts_classifier_t pkt_conf;
-    mepa_device_t *base_dev = data->base_dev;
+    mepa_device_t *base_dev = (data->base_dev != NULL) ? data->base_dev : dev;
     mepa_rc rc = MEPA_RC_OK;
     mepa_ts_classifier_ptp_t ptp_class_conf = {};
     MEPA_ENTER(dev);
