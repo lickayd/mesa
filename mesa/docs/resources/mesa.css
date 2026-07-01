@@ -66,3 +66,39 @@ h2 {
     box-shadow:none;
 }
 
+/* The navigation tree entries are non-wrapping (white-space:nowrap) and some
+   capability / file names are wider than the fixed 25% Bootstrap sidebar
+   column, so they used to overflow and get painted over by the content panel.
+   Lay the main row out with flexbox instead: the sidebar takes the width its
+   content needs (capped, with its own scroll), and the content fills the rest
+   without overlapping. Scoped to #main-row so the Bootstrap grid used elsewhere
+   is unaffected. */
+#main-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+#main-row > #nav-col {
+    width: auto;
+    max-width: 40%;
+    flex: 0 0 auto;
+}
+
+#main-row > #nav-col > .well {
+    overflow: auto;
+    max-height: calc(100vh - 20px);
+    position: sticky;
+    top: 0;
+}
+
+#main-row > .col-lg-9 {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+#content {
+    overflow-x: auto;
+}
+

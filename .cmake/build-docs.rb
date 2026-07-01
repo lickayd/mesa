@@ -35,7 +35,22 @@ def run cmd
   return o, e, s
 end
 
-run "./mesa/docs/scripts/capdump.rb -o mesa/docs/capdb.yaml -c mesa/include/microchip/ethernet/switch/api/capability.h -C #{$ws}/bin/x86/capability_dumper #{$ws}/bin/x86/libvsc*.so"
+# Regenerate the capability database from freshly built x86 libraries, but only
+# when they (and the capability_dumper) are actually present. The docs are
+# normally built without an x86 build available (e.g. in CI), and in that case
+# we must keep the capability database that is checked into git rather than
+# overwriting mesa/docs/capdb.yaml with empty placeholder entries.
+cap_dumper = "#{$ws}/bin/x86/capability_dumper"
+cap_libs   = Dir["#{$ws}/bin/x86/libvsc*.so"] +
+             Dir["#{$ws}/bin/x86/liblan*.so"] +
+             Dir["#{$ws}/bin/x86/libp64h*.so"]
+
+if File.executable?(cap_dumper) && !cap_libs.empty?
+    run "./mesa/docs/scripts/capdump.rb -o mesa/docs/capdb.yaml -c mesa/include/microchip/ethernet/switch/api/capability.h -C #{cap_dumper} #{cap_libs.join(' ')}"
+else
+    STDOUT.puts "Skipping capdb regeneration: '#{cap_dumper}' and/or x86 libraries not found; using the capdb.yaml checked into git"
+    STDOUT.flush
+end
 # TODO, check if equal to the one checked into git
 run "cp mesa/docs/capdb.yaml ws/mesa/docs/capdb.yaml" if File.exist? "./ws"
 run "cp mesa/docs/capdb.yaml images/." if File.exist? "./images"

@@ -559,7 +559,7 @@ def cap_cross_index
 
         chip_list.each do |chip|
             html += "<tr>"
-            html += "<td><a href=\"../index/#{chip[:chip]}.html\">#{chip[:chip]}</a></td>"
+            html += "<td><a href=\"#index/#{chip[:chip]}.html\">#{chip[:chip]}</a></td>"
             html += "<td>#{chip[:val]}</td>"
             html += "</tr>"
         end
@@ -589,8 +589,8 @@ def cap_cross_index
 
         cap_list.each do |cap|
             html += "<tr>"
-            html += "<td><a href=\"../index/#{cap[:str]}.html\">#{cap[:str]}(#{cap[:int]})</a></td>"
-            html += "<td>#{cap[:val]}</td></tr>"
+            html += "<td><a href=\"#index/#{cap[:str]}.html\">#{cap[:str]}(#{cap[:int]})</a></td>"
+            html += "<td>#{cap[:val]}</td>"
             html += "</tr>"
         end
 
@@ -714,8 +714,8 @@ h += " (#{$opt[:sha]})" if $opt[:sha]
 html += "        <h1>#{h}</h1>\n"
 html += "      </div>\n"
 html += "    </div>\n"
-html += "    <div class=\"row\">\n"
-html += "      <div class=\"col-lg-3\">\n"
+html += "    <div class=\"row\" id=\"main-row\">\n"
+html += "      <div class=\"col-lg-3\" id=\"nav-col\">\n"
 html += "        <div style=\"background-color: white\" class=\"well\">\n"
 html += gen_menu_list($data, "          ", "demoTree")
 html += "        </div>\n"

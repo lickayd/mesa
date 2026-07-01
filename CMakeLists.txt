@@ -316,6 +316,9 @@ mark_as_advanced(BUILD_MESA_CAPABILITY_DUMPER)
 if (${BUILD_MESA_CAPABILITY_DUMPER})
     add_executable(capability_dumper mesa/src/capability_dumper.c)
     target_link_libraries(capability_dumper dl)
+    # Export the executable's dynamic symbols (-rdynamic) so the dlopen'ed
+    # switch libraries can resolve the trace callout stubs defined in the dumper.
+    set_target_properties(capability_dumper PROPERTIES ENABLE_EXPORTS ON)
 endif()
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/sw-mera/CMakeLists.txt)
