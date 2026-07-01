@@ -2787,12 +2787,96 @@ static mepa_rc lan80xx_mode_conf_set(mepa_device_t *dev, mepa_port_no_t port_no,
 }
 
 
+/*Helper function to stop traffic flow (both egress and ingress) */
+static mepa_rc lan80xx_traffic_stop(mepa_device_t *dev, const mepa_port_no_t port_no)
+{
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
+
+    T_I(MEPA_TRACE_GRP_GEN, "\n Stopping traffic on port %d", port_no);
+
+    if (data->port_state.port_mode.oper_mode == MAC_RETIMER) {
+        /* Disable HOST_MAC RX - stops egress path */
+        LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_MAC_HOST_MAC_MAC_ENA_CFG, 0,
+                        LAN80XX_M_HOST_MAC_HOST_MAC_MAC_ENA_CFG_RX_ENA);
+
+        /* Disable LINE_MAC RX - stops ingress path */
+        LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_MAC_LINE_MAC_MAC_ENA_CFG, 0,
+                        LAN80XX_M_LINE_MAC_LINE_MAC_MAC_ENA_CFG_RX_ENA);
+    }
+
+    /* Assert PCS_KR_RX_RST on both Host and Line side */
+    LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_PMA_SD_DES_RST,
+                    LAN80XX_M_HOST_PMA_SD_DES_RST_PCS_KR_RX_RST,
+                    LAN80XX_M_HOST_PMA_SD_DES_RST_PCS_KR_RX_RST);
+
+    LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_PMA_SD_DES_RST,
+                    LAN80XX_M_LINE_PMA_SD_DES_RST_PCS_KR_RX_RST,
+                    LAN80XX_M_LINE_PMA_SD_DES_RST_PCS_KR_RX_RST);
+
+    MEPA_MSLEEP(10);
+
+    LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_PMA_SD_SER_RST,
+                    LAN80XX_M_HOST_PMA_SD_SER_RST_PCS_KR_TX_RST,
+                    LAN80XX_M_HOST_PMA_SD_SER_RST_PCS_KR_TX_RST);
+
+    LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_PMA_SD_SER_RST,
+                    LAN80XX_M_LINE_PMA_SD_SER_RST_PCS_KR_TX_RST,
+                    LAN80XX_M_LINE_PMA_SD_SER_RST_PCS_KR_TX_RST);
+
+    return MEPA_RC_OK;
+}
+
+static mepa_rc lan80xx_traffic_resume(mepa_device_t *dev, const mepa_port_no_t port_no)
+{
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
+
+    T_I(MEPA_TRACE_GRP_GEN, "\n Resuming traffic on port %d", port_no);
+
+    /* De-assert PCS_KR_RX_RST on both Host and Line side to release PCS from reset */
+    LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_PMA_SD_DES_RST, 0,
+                    LAN80XX_M_HOST_PMA_SD_DES_RST_PCS_KR_RX_RST);
+
+    LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_PMA_SD_DES_RST, 0,
+                    LAN80XX_M_LINE_PMA_SD_DES_RST_PCS_KR_RX_RST);
+
+    LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_PMA_SD_SER_RST, 0,
+                    LAN80XX_M_HOST_PMA_SD_SER_RST_PCS_KR_TX_RST);
+
+    LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_PMA_SD_SER_RST, 0,
+                    LAN80XX_M_LINE_PMA_SD_SER_RST_PCS_KR_TX_RST);
+
+    if (data->port_state.port_mode.oper_mode == MAC_RETIMER) {
+        /* Re-enable HOST MAC RX */
+        LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_MAC_HOST_MAC_MAC_ENA_CFG,
+                        LAN80XX_M_HOST_MAC_HOST_MAC_MAC_ENA_CFG_RX_CLK_ENA |
+                        LAN80XX_M_HOST_MAC_HOST_MAC_MAC_ENA_CFG_RX_ENA,
+                        LAN80XX_M_HOST_MAC_HOST_MAC_MAC_ENA_CFG_RX_CLK_ENA |
+                        LAN80XX_M_HOST_MAC_HOST_MAC_MAC_ENA_CFG_RX_ENA);
+
+        /* Re-enable LINE MAC RX */
+        LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_MAC_LINE_MAC_MAC_ENA_CFG,
+                        LAN80XX_M_LINE_MAC_LINE_MAC_MAC_ENA_CFG_RX_CLK_ENA |
+                        LAN80XX_M_LINE_MAC_LINE_MAC_MAC_ENA_CFG_RX_ENA,
+                        LAN80XX_M_LINE_MAC_LINE_MAC_MAC_ENA_CFG_RX_CLK_ENA |
+                        LAN80XX_M_LINE_MAC_LINE_MAC_MAC_ENA_CFG_RX_ENA);
+    }
+    T_I(MEPA_TRACE_GRP_GEN, "\n Traffic resumed on port %d", port_no);
+    return MEPA_RC_OK;
+}
+
 /* Initial function. Sets the operating mode of the Phy.   */
 static mepa_rc lan80xx_mode_set_init(mepa_device_t *dev, const mepa_port_no_t port_no, phy25g_port_mode_t  *mode)
 {
 
     phy25g_phy_state_t *data = (phy25g_phy_state_t *) dev->data;
     mepa_rc rc = MEPA_RC_ERROR;
+
+    /* Stop traffic before reconfiguration */
+    rc = lan80xx_traffic_stop(dev, port_no);
+    if (rc != MEPA_RC_OK) {
+        T_E(MEPA_TRACE_GRP_GEN, "Error in stopping traffic on port no : %d", port_no);
+        return rc;
+    }
 
     data->port_state.gpio_count = LAN80XX_GPIO_COUNT;
     //Mode set enable PCS and PMA
@@ -2819,7 +2903,7 @@ static mepa_rc lan80xx_mode_set_init(mepa_device_t *dev, const mepa_port_no_t po
     }
 
     if (data->port_state.port_mode.oper_mode == MAC_RETIMER) {
-
+        /* Configure FC buffer thresholds based on speed mode */
         u8 rx_read_thresh = 0, tx_read_thresh = 0;
         switch (mode->speed_oper_mode) {
         case LAN80XX_PHY_1G_MODE:
@@ -2846,12 +2930,18 @@ static mepa_rc lan80xx_mode_set_init(mepa_device_t *dev, const mepa_port_no_t po
                         LAN80XX_M_MAC_FC_BUFFER_MAC_FC_BUFFER_PPM_RATE_ADAPT_THRESH_CFG_TX_PPM_RATE_ADAPT_THRESH |
                         LAN80XX_M_MAC_FC_BUFFER_MAC_FC_BUFFER_PPM_RATE_ADAPT_THRESH_CFG_RX_PPM_RATE_ADAPT_THRESH);
 
-
         LAN80XX_CSR_WRM(port_no, LAN80XX_MAC_FC_BUFFER_MAC_FC_BUFFER_FC_READ_THRESH_CFG,
-                        (LAN80XX_F_MAC_FC_BUFFER_MAC_FC_BUFFER_FC_READ_THRESH_CFG_TX_READ_THRESH(tx_read_thresh) |
-                         LAN80XX_F_MAC_FC_BUFFER_MAC_FC_BUFFER_FC_READ_THRESH_CFG_RX_READ_THRESH(rx_read_thresh)),
+                        LAN80XX_F_MAC_FC_BUFFER_MAC_FC_BUFFER_FC_READ_THRESH_CFG_TX_READ_THRESH(tx_read_thresh) |
+                        LAN80XX_F_MAC_FC_BUFFER_MAC_FC_BUFFER_FC_READ_THRESH_CFG_RX_READ_THRESH(rx_read_thresh),
                         LAN80XX_M_MAC_FC_BUFFER_MAC_FC_BUFFER_FC_READ_THRESH_CFG_TX_READ_THRESH |
                         LAN80XX_M_MAC_FC_BUFFER_MAC_FC_BUFFER_FC_READ_THRESH_CFG_RX_READ_THRESH);
+    }
+
+    /* Resume traffic after reconfiguration */
+    rc = lan80xx_traffic_resume(dev, port_no);
+    if (rc != MEPA_RC_OK) {
+        T_E(MEPA_TRACE_GRP_GEN, "Error in resuming traffic on port no : %d", port_no);
+        return rc;
     }
 
     mode->oper_mode = data->port_state.port_mode.oper_mode;
@@ -6300,18 +6390,40 @@ mepa_rc lan80xx_post1_init_priv(mepa_device_t   *dev, mepa_port_no_t port_no)
     if (data->dev.rev == LAN80XX_REV_A0 || data->dev.rev == LAN80XX_REV_A1) {
         val = val | LAN80XX_BIST_BYPASS_STRAP;
     }
+    /* Verify all port devices are available */
     for (u8 i = 0; i < base_data->max_port_cnt; i++) {
-
         if (base_data->other_port_dev[i] == NULL) {
             T_E(MEPA_TRACE_GRP_GEN, "\n Port %d Instance is not available in Base Dev \n", base_data->chip_ports[i]);
             base_data->post1_passed = 0;
             return MEPA_RC_ERROR;
         }
+    }
 
+    /* Stop traffic on ALL ports FIRST before any RAM_INIT.
+     * This prevents traffic issues when doing sequential RAM_INIT across ports. */
+    T_I(MEPA_TRACE_GRP_GEN, "\n Stopping traffic on all %u ports before RAM_INIT", base_data->max_port_cnt);
+    for (u8 i = 0; i < base_data->max_port_cnt; i++) {
+        if (lan80xx_traffic_stop(base_data->other_port_dev[i], base_data->chip_ports[i]) != MEPA_RC_OK) {
+            T_E(MEPA_TRACE_GRP_GEN, "\n Failed to stop traffic on port %d", base_data->chip_ports[i]);
+            rc = MEPA_RC_ERROR;
+        }
+    }
+
+    /* Perform RAM_INIT (or BIST) on all ports */
+    for (u8 i = 0; i < base_data->max_port_cnt; i++) {
         if (val & LAN80XX_BIST_BYPASS_STRAP) {
             rc = lan80xx_ram_init(base_data->other_port_dev[i], base_data->chip_ports[i]);
         } else {
             rc = lan80xx_post1_bist_trigger(base_data->other_port_dev[i], base_data->chip_ports[i]);
+        }
+    }
+
+    /* Resume traffic on ALL ports AFTER all RAM_INITs complete */
+    T_I(MEPA_TRACE_GRP_GEN, "\n Resuming traffic on all %u ports after RAM_INIT", base_data->max_port_cnt);
+    for (u8 i = 0; i < base_data->max_port_cnt; i++) {
+        if (lan80xx_traffic_resume(base_data->other_port_dev[i], base_data->chip_ports[i]) != MEPA_RC_OK) {
+            T_E(MEPA_TRACE_GRP_GEN, "\n Failed to resume traffic on port %d", base_data->chip_ports[i]);
+            rc = MEPA_RC_ERROR;
         }
     }
     if ((base_data->post1_passed == 1)) {
