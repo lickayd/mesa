@@ -1,0 +1,19 @@
+// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+= MEPA-2026.09
+
+== MEPA-2026.09
+[cols="25%,75%"]
+|===
+|Version:          |MEPA-2026.09
+|Previous Version: |MEPA-2026.06
+|Date:             |2026-09-30
+|Description:      |Release Notes
+|===
+
+=== MEPA: Update APB callout function formal argument update
+
+Update apb read/write callout formal argument value to 32bit.
+This is to allow 32bit register read/write for the PHYs using APB access.
+
