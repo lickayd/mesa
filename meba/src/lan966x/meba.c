@@ -694,7 +694,14 @@ static mesa_rc lan966x_sensor_get(meba_inst_t inst, meba_sensor_t type, int six,
 
     switch (type) {
     case MEBA_SENSOR_BOARD_TEMP: rc = mesa_temp_sensor_get(NULL, &temp); break;
-    case MEBA_SENSOR_PORT_TEMP:  rc = mesa_temp_sensor_get(NULL, &temp);
+    case MEBA_SENSOR_PORT_TEMP:
+        rc = meba_phy_chip_temp_get(inst, six, &temp);
+
+        if (rc != MESA_RC_OK) {
+            T_D(inst, "Falling back to board temperature sensor");
+            rc = mesa_temp_sensor_get(NULL, &temp);
+        }
+        break;
     }
 
     if (rc == MESA_RC_OK) {
