@@ -313,6 +313,11 @@ typedef enum {
     // size
     MEBA_CAP_RECOMMENDED_MTU_SIZE,
 
+    // Board-level RS422 (serial/1PPS) timestamp interface support. Defaults to
+    // the chip capability MESA_CAP_TS_PTP_RS422, but a board may return 0 to
+    // indicate that RS422 is not wired up / not to be used on this board.
+    MEBA_CAP_TS_PTP_RS422,
+
     // For backwards compatibility, add new capabilities here!
 
     MEBA_CAP_LAST // Last MEBA capability (must be last in list)
