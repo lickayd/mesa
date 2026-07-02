@@ -4281,7 +4281,6 @@ vtss_rc fla_port_loopback_set(vtss_state_t *vtss_state, const vtss_port_no_t por
     VTSS_RC(vtss_fa_port2sd(vtss_state, port_no, &sd_indx, &sd_type));
 
     if (sd_type == FA_SERDES_TYPE_10G) {
-        u32 sd_lane_tgt = VTSS_TO_SD_LANE(sd_indx + RT_SERDES_10G_START);
         sd_tgt = VTSS_TO_SD10G_LANE(sd_indx);
 
         // Clear the loopback
@@ -4302,11 +4301,6 @@ vtss_rc fla_port_loopback_set(vtss_state_t *vtss_state, const vtss_port_no_t por
             REG_WRM(VTSS_PCS_10GBASE_R_PCS_SD_CFG(pcs),
                     VTSS_F_PCS_10GBASE_R_PCS_SD_CFG_SD_ENA(conf->sd_enable),
                     VTSS_M_PCS_10GBASE_R_PCS_SD_CFG_SD_ENA);
-            /* Cycle TX_REF_SEL MAIN->AUX1->MAIN to force CMU clock re-lock after LS3 loopback */
-            REG_WRM_SET(VTSS_SD_LANE_TARGET_SD_LANE_CFG(sd_lane_tgt),
-                        VTSS_F_SD_LANE_TARGET_SD_LANE_CFG_TX_REF_SEL(1));
-            REG_WRM_CLR(VTSS_SD_LANE_TARGET_SD_LANE_CFG(sd_lane_tgt),
-                        VTSS_M_SD_LANE_TARGET_SD_LANE_CFG_TX_REF_SEL);
         }
 
         switch (lb) {
@@ -4332,9 +4326,26 @@ vtss_rc fla_port_loopback_set(vtss_state_t *vtss_state, const vtss_port_no_t por
             REG_WR(VTSS_SD10G_LANE_TARGET_LANE_91(sd_tgt),
                    VTSS_F_SD10G_LANE_TARGET_LANE_91_R_LBSLV_IN_PMAD(1));
             break;
-        default:
-            // Empty on purpose
+        default: {
+            /* Loopback disabled.
+             * Re-initialize SerDes through a different CMU to
+             * force full analog reset after LS3 loopback.
+             * SGMII/1000BaseX/100FX use AUX1 -> intermediate via SFI (MAIN).
+             * All other modes use MAIN -> intermediate via SGMII (AUX1). */
+            vtss_serdes_mode_t m = vtss_state->port.sd28_mode[sd_indx];
+            vtss_port_conf_t  *pcf = &vtss_state->port.conf[port_no];
+            if (m == VTSS_SERDES_MODE_SGMII || m == VTSS_SERDES_MODE_1000BaseX ||
+                m == VTSS_SERDES_MODE_100FX) {
+                vtss_port_speed_t saved_speed = pcf->speed;
+                pcf->speed = VTSS_SPEED_10G;
+                VTSS_RC(vtss_fa_sd_cfg(vtss_state, port_no, VTSS_SERDES_MODE_SFI));
+                pcf->speed = saved_speed;
+            } else {
+                VTSS_RC(vtss_fa_sd_cfg(vtss_state, port_no, VTSS_SERDES_MODE_SGMII));
+            }
+            VTSS_RC(vtss_fa_sd_cfg(vtss_state, port_no, m));
             break;
+        }
         }
 #if defined(VTSS_FEATURE_SD_25G)
     } else if (sd_type == FA_SERDES_TYPE_25G) {
