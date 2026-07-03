@@ -25,8 +25,8 @@ test_table =
         chk: {size: 600, etolerance: [3]}
     },
     {
-        txt: "Shaper port frame rate 300000 kpps (300 Mpps)",
-        cfg: {idx: 0, frame_rate: true, rate: 50000},
+        txt: "Shaper port frame rate 50000 kpps (50 Mpps)",
+        cfg: {idx: 0, frame_rate: true, rate: 50_000},
         chk: {etolerance: [3]}
     },
     {

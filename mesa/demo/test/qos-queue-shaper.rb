@@ -119,21 +119,19 @@ def egress_ctag_all(port)
     end
 end
 
-$frame_support = nil
 def configure_queue_port(cfg, port, q)
     conf = $ts.dut.call("mesa_qos_port_conf_get", port)
     conf["queue"][q]["shaper"]["level"] = fld_get(cfg, :level)
     conf["queue"][q]["shaper"]["rate"] = cfg[:rate]
     isFrameRate = fld_get(cfg, :frame_rate, false)
     isDataRate = fld_get(cfg, :data_rate, false)
-    $frame_support = $ts.dut.call("mesa_capability", "MESA_CAP_QOS_EGRESS_SHAPER_FRAME") unless $frame_support == nil
 
     if (cfg[:rate] == 0xffffffff)
         $ts.dut.call("mesa_qos_port_conf_set", port, conf)
         return true
     end
     
-    if (isFrameRate && !isDataRate && $frame_support == 1)
+    if (isFrameRate && !isDataRate && cap_get("QOS_EGRESS_SHAPER_FRAME") == 1)
         conf["queue"][q]["shaper"]["mode"] = "MESA_SHAPER_MODE_FRAME"
         $ts.dut.call("mesa_qos_port_conf_set", port, conf)
         return true
