@@ -26,20 +26,6 @@
                      _14, _15, N, ...)                                         \
     N
 
-#if defined(__GNUC__)
-#if __GNUC__ == 13
-// Not sure when it is best to use __VA_OPT__(,) instead of ##__VA_ARGS__, but
-// we see that gcc 13 does not shallow the comma in the MACROs below.
-// But we cannot change to always __VA_OPT__(,) as this is not supported in
-// GCC10
-#define LMU_PP_USE___VA_OPT__
-#endif
-#endif
-
-#if defined(__llvm__)
-#define LMU_PP_USE___VA_OPT__
-#endif
-
 #if defined(LMU_PP_USE___VA_OPT__)
 #define LMU_PP_VA_ARGS_NARG_(DUMMY, ...) LMU_PP_ARG_N(__VA_ARGS__)
 #define LMU_PP_VA_ARGS_NARG(...)                                               \
