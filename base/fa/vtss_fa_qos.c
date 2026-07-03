@@ -4373,9 +4373,17 @@ vtss_rc vtss_cil_qos_fp_port_status_get(struct vtss_state_s             *vtss_st
         return VTSS_RC_OK;
     }
 
+    /* Preemption is active if any queue has P_QUEUES enabled in the scheduler */
+    status->preemption_active = FALSE;
+    for (u32 i = 0U; i < 8U; i++) {
+        REG_RD(VTSS_HSCH_HSCH_L0_CFG(FA_HSCH_L0_SE(port, i)), &value);
+        if (VTSS_X_HSCH_HSCH_L0_CFG_P_QUEUES(value) != 0U) {
+            status->preemption_active = TRUE;
+            break;
+        }
+    }
     DEV_RD(MM_STATUS, port, &value);
-    status->preemption_active = (VTSS_X_DEV1G_MM_STATUS_PRMPT_ACTIVE_STATUS(value) != 0U);
-    if (vtss_state->qos.fp.port_conf[port_no].verify_disable_tx) {
+    if (conf->verify_disable_tx) {
         v = (u32)VTSS_MM_STATUS_VERIFY_DISABLED;
     } else {
         v = VTSS_X_DEV1G_MM_STATUS_PRMPT_VERIFY_STATE(value);

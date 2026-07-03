@@ -1931,8 +1931,10 @@ vtss_rc vtss_cil_qos_fp_port_status_get(vtss_state_t                    *vtss_st
     u32                      value, v, port = VTSS_CHIP_PORT(port_no);
     vtss_qos_fp_port_conf_t *conf = &vtss_state->qos.fp.port_conf[port_no];
 
+    /* Preemption is active if any queue has P_QUEUES enabled in the scheduler */
+    REG_RD(QSYS_PREEMPT_CFG(port), &value);
+    status->preemption_active = (QSYS_PREEMPT_CFG_P_QUEUES_X(value) != 0U);
     REG_RD(DEV_MM_STATUS(port), &value);
-    status->preemption_active = DEV_MM_STATUS_PRMPT_ACTIVE_STATUS_X(value);
     if (vtss_state->qos.fp.port_conf[port_no].verify_disable_tx) {
         v = VTSS_MM_STATUS_VERIFY_DISABLED;
     } else {
