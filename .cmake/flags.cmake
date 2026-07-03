@@ -10,7 +10,7 @@ string (REPLACE " -" ";-" C_FLAGS               "${CMAKE_C_FLAGS}")
 string (REPLACE " -" ";-" EXE_LINKER_FLAGS      "${CMAKE_EXE_LINKER_FLAGS}")
 
 
-LIST(APPEND C_FLAGS   "-Wall -Werror -Wno-unknown-pragmas -Wno-array-bounds -Wno-stringop-overflow -Wno-nonnull -fasynchronous-unwind-tables -std=c11 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl")
+LIST(APPEND C_FLAGS   "-Wall -Werror -Wno-unknown-pragmas -Wno-array-bounds -Wno-stringop-overflow -Wno-nonnull -fasynchronous-unwind-tables -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl")
 
 # This is always set by buildroot - not sure why
 LIST(REMOVE_ITEM C_FLAGS   "-Os")

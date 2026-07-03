@@ -347,9 +347,9 @@ int main(int argc, char *argv[])
     change_root(buf_block);
 
     if (cmd_arg("init_next=", sizeof(buf_init), buf_init)) {
-        execl(buf_init, buf_init, 0);
+        execl(buf_init, buf_init, NULL);
     } else {
-        execl("/sbin/init", "init", 0);
+        execl("/sbin/init", "init", NULL);
     }
 
     reboot(LINUX_REBOOT_CMD_RESTART);
