@@ -132,6 +132,27 @@ test "frame-io" do
     end
 end
 
+test "disable" do
+    port = $lp0
+
+    # Disable Tx frame preemption
+    conf = $ts.dut.call("mesa_qos_fp_port_conf_get", port)
+    conf["enable_tx"] = false
+    $ts.dut.call("mesa_qos_fp_port_conf_set", port, conf)
+
+    # Verify preemption is no longer active
+    sleep(1)
+    s = $ts.dut.call("mesa_qos_fp_port_status_get", port)
+    status = s["status_verify"]
+    active = s["preemption_active"]
+    txt = "port #{port} status: #{status}, active: #{active}"
+    if (!active)
+        t_i(txt)
+    else
+        t_e(txt)
+    end
+end
+
 test_summary
 
 test "dump" do
