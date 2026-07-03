@@ -239,7 +239,7 @@ static void cli_cmd_phy_conf(cli_req_t *req)
                 goto file_close;
             }
             if (json_rpc_get_mepa_conf_t(&json_req, json_req.params, &conf) != MESA_RC_OK) {
-                T_E("Error in the json configuration");
+                T_E("Error in the json configuration %s", json_req.buf);
                 goto file_close;
             }
             if (mepa_conf_set(dev, &conf) != MESA_RC_OK) {
