@@ -12,6 +12,7 @@
 #include "phy_demo_apps.h"
 #include "mepa_driver.h"
 #include "lan80xx.h"
+#include "lan80xx_mcu.h"
 
 #define LAN80XX_MAX_VREF_EYE 127
 
@@ -416,6 +417,38 @@ static void cli_cmd_csr_rd(cli_req_t *req)
     return;
 }
 
+static void cli_cmd_serdes_get(cli_req_t *req)
+{
+    mepa_device_t    *dev = meba_phy_diag_instance->phy_devices[req->port_no];
+    const char       *spd_name[] = {"1G", "10G", "25G"};
+    __SERDES_CONFIG_T cfg;
+    mepa_rc           rc, rc2;
+
+    if (dev == NULL) {
+        cli_printf(" Dev is Not Created for the port : %d\n", req->port_no);
+        return;
+    }
+
+    cli_printf("\nSerDes config  port %u  (MCU mailbox)\n", req->port_no);
+    for (int spd = SD_CFG_1G; spd < SD_UNKNOWN_SPEED; spd++) { /* 1G, 10G, 25G */
+        memset(&cfg, 0, sizeof(cfg));
+        rc = lan80xx_get_serdes_config(dev, (SD_CFG_SPEED_IDX_t)spd, eTX_EQ_CFG, &cfg);
+        rc2 = lan80xx_get_serdes_config(dev, (SD_CFG_SPEED_IDX_t)spd, eTX_SWING_CFG, &cfg);
+        if (rc != MEPA_RC_OK || rc2 != MEPA_RC_OK) {
+            cli_printf("  [%-3s] get failed (TX_EQ rc=%d, TX_SWING rc=%d)\n", spd_name[spd], rc,
+                       rc2);
+            continue;
+        }
+        cli_printf(
+            "  [%-3s] TX FFE: main=%u dly(pre)=%u adv(post)=%u  en[m/d/a]=%u/%u/%u  swing(Itx)=%u\n",
+            spd_name[spd], cfg.sTx_eq_cfg.Tap_main, cfg.sTx_eq_cfg.Tap_dly, cfg.sTx_eq_cfg.Tap_adv,
+            cfg.sTx_eq_cfg.En_main, cfg.sTx_eq_cfg.En_dly, cfg.sTx_eq_cfg.En_adv,
+            cfg.sTx_swing_cfg.Itx_ipdriver_base);
+    }
+
+    return;
+}
+
 static void cli_cmd_tx_eqa(cli_req_t *req)
 {
     phy25g_appl_diag_t      *mreq = req->module_req;
@@ -751,7 +784,7 @@ static cli_cmd_t cli_cmd_table[] = {
 
     {
      "PHY RX_EQA <port_no> <host|line> <dfe_adp|dfe_man|disable> ctle_r <equ_val> ctle_c <equ_val> vga <equ_val>",
-     "Rx Equalizer Config",                                                                                                                           cli_cmd_rx_eqa,
+     "Rx Equalizer Config",                                                                                                                                           cli_cmd_rx_eqa,
      },
 
     {
@@ -759,33 +792,37 @@ static cli_cmd_t cli_cmd_table[] = {
      cli_cmd_tx_eqa, },
 
     {
-     "PHY CL45_READ <port_no> <mmd> <address>",                                                        "Clause 45 CSR Read of PHY",
+     "PHY SERDES_GET <port_no>",                                                        "Get MCU-mailbox SerDes TX-EQ/swing config for all speeds",
+     cli_cmd_serdes_get, },
+
+    {
+     "PHY CL45_READ <port_no> <mmd> <address>",                                    "Clause 45 CSR Read of PHY",
      cli_cmd_csr_rd, },
 
     {
-     "PHY CL45_WRITE <port_no> <mmd> <address> <reg_val>",                                    "Clause 45 CSR Write of PHY",
+     "PHY CL45_WRITE <port_no> <mmd> <address> <reg_val>",                         "Clause 45 CSR Write of PHY",
      cli_cmd_csr_wr, },
 
     {
-     "PHY STATE <port_no>",          "PCS and PMA Status of PHY",
+     "PHY STATE <port_no>",                                                 "PCS and PMA Status of PHY",
      cli_cmd_phy_state, },
 
     {
      "PHY PRBS_TEST <port_no> <host|line> <prbs7|prbs9|prbs11|prbs15|prbs23|prbs31|user_ptn> <gen_enable|gen_disable> <mon_enable|mon_disable> [<user_val>]",
-     "PRBS Generator and Monitor Conf",                                                                                                                           cli_cmd_prbs_set,
+     "PRBS Generator and Monitor Conf",                                                                                                                               cli_cmd_prbs_set,
      },
 
     {
-     "PHY PRBS_STATUS <port_no> <host|line>","PRBS Staus",
+     "PHY PRBS_STATUS <port_no> <host|line>",                                                   "PRBS Staus",
      cli_cmd_prbs_status, },
 
     {
      "PHY PKT_BIST <port_no> <eth|ptp> <egr|ingr> <conti|single> <ethtype> <src_mac> <dst_mac> <gen_enable|gen_disable> <mon_enable|mon_disable>",
-     "Packet generator",                                                                                                         cli_cmd_pkt_bist,
+     "Packet generator",                                                                                                                            cli_cmd_pkt_bist,
      },
 
     {
-     "PHY PKT_MON <port_no> reset <reset_enable|reset_disable>",                                 "Packet Monitor Status",
+     "PHY PKT_MON <port_no> reset <reset_enable|reset_disable>",                              "Packet Monitor Status",
      cli_cmd_pkt_mon, },
 };
 
