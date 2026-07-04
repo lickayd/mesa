@@ -66,6 +66,10 @@ typedef struct {
 } lan887x_tc10_data_t;
 
 typedef struct {
+    phy_t1_otp_t    cap;
+} lan887x_t1_cap_t;
+
+typedef struct {
     mepa_bool_t             init_done;
     mepa_bool_t             link_status;
     mepa_port_no_t          port_no;
@@ -79,6 +83,7 @@ typedef struct {
     mepa_cable_diag_result_t cd_res;
     lan887x_tc10_data_t         tc10_cfg;
     mepa_gpio_conf_t        led_conf[4];
+    lan887x_t1_cap_t        t1_cap;
     /* Pointer to the device of base port on the phy chip */
     //mepa_device_t           *base_dev;
 } lan887x_data_t;

@@ -15,6 +15,12 @@ struct phy_reg_dbg {
     u8 is_32bit;
 };
 
+typedef struct {
+    mepa_bool_t     dis_100;
+    mepa_bool_t     dis_1000;
+    mepa_bool_t     dis_sgmii;
+} phy_t1_otp_t;
+
 mepa_rc phy_reg_rd(mepa_device_t *const phydev,
                    uint32_t const offset, uint16_t *const value);
 

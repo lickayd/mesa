@@ -169,6 +169,7 @@ static mepa_rc lan887x_int_reset(mepa_device_t *dev, const lan887x_reset_typ typ
 static mepa_rc lan887x_phy_init(mepa_device_t *const dev);
 static mepa_rc lan887x_gpio_mode_set_private(mepa_device_t *dev, const mepa_gpio_conf_t *gpio_conf);
 static mepa_rc lan887x_isolate_mode_int(struct mepa_device *dev, mepa_bool_t const en);
+static mepa_rc lan887x_init_conf(mepa_device_t *const dev);
 /**********************************
  * Internal APIs
  *********************************/
@@ -918,11 +919,11 @@ error:
 
 static mepa_rc lan887x_check_media(struct mepa_device *dev, mepa_media_interface_t media_if, mesa_port_speed_t speed)
 {
+    lan887x_data_t *data = (lan887x_data_t *)dev->data;
     int rc = MEPA_RC_ERR_KR_CONF_NOT_SUPPORTED;
 
-    if ((media_if == MESA_PHY_MEDIA_IF_T1_100FX) || (media_if == MESA_PHY_MEDIA_IF_T1_1000FX)) {
-        lan887x_data_t *data = (lan887x_data_t *)dev->data;
-
+    if (((media_if == MESA_PHY_MEDIA_IF_T1_100FX) && (!data->t1_cap.cap.dis_100)) ||
+        ((media_if == MESA_PHY_MEDIA_IF_T1_1000FX) && (!data->t1_cap.cap.dis_1000))) {
         // speed selection based on media type
         if (media_if == MESA_PHY_MEDIA_IF_T1_100FX) {
             if ((speed == MESA_SPEED_AUTO &&
@@ -947,9 +948,7 @@ static mepa_rc lan887x_config_set(mepa_device_t *dev, const mepa_conf_t *config)
     mepa_bool_t re_config = PHY_FALSE;
     lan887x_reset_typ type = LAN887X_RST_SOFT;
 
-    if ((config->man_neg != MEPA_MANUAL_NEG_CLIENT &&
-         config->man_neg != MEPA_MANUAL_NEG_REF) ||
-        (config->fdx != PHY_TRUE) ||
+    if ((config->fdx != PHY_TRUE) ||
         (config->speed != MESA_SPEED_100M &&
          config->speed != MESA_SPEED_1G &&
          config->speed != MESA_SPEED_AUTO)) {
@@ -1567,6 +1566,58 @@ static mepa_rc lan887x_delete(struct mepa_device *dev)
     return rc;
 }
 
+static mepa_rc lan887x_read_capabilities(mepa_device_t *const dev)
+{
+    lan887x_data_t *priv = (lan887x_data_t *)dev->data;
+    uint16_t val = 0U;
+    mepa_bool_t     is_sgmii;
+    mepa_rc rc;
+
+    //Read EFUSE Data
+    rc = phy_mmd_reg_rd(dev, MDIO_MMD_VEND1, LAN887X_EFUSE_READ_DAT9, &val);
+    if (rc != MEPA_RC_OK) {
+        return rc;
+    }
+
+    priv->t1_cap.cap.dis_sgmii = PHY_FALSE;
+    if ((val & LAN887X_EFUSE_READ_DAT9_SGMII_DIS) != 0U) {
+        priv->t1_cap.cap.dis_sgmii = PHY_TRUE;
+    }
+
+    is_sgmii = PHY_FALSE;
+    if ((priv->t1_cap.cap.dis_sgmii == PHY_FALSE) &&
+        (LAN887X_MIS_CFG_REG0_MAC_MODE_SGMII ==
+         (val & LAN887X_EFUSE_READ_DAT9_MAC_MODE))) {
+        is_sgmii = PHY_TRUE;
+    }
+
+    priv->t1_cap.cap.dis_1000 = PHY_FALSE;
+    if ((val & LAN887X_EFUSE_READ_DAT9_DIS_1000BT1) != 0U) {
+        priv->t1_cap.cap.dis_1000 = PHY_TRUE;
+    }
+
+    priv->t1_cap.cap.dis_100 = PHY_FALSE;
+    if ((val & LAN887X_EFUSE_READ_DAT9_DIS_100BT1) != 0U) {
+        priv->t1_cap.cap.dis_100 = PHY_TRUE;
+    }
+
+    if ((priv->t1_cap.cap.dis_100 == PHY_TRUE) &&
+        (priv->t1_cap.cap.dis_1000 == PHY_TRUE)) {
+        return MEPA_RC_ERR_PARM;
+    }
+
+    priv->media_intf = MESA_PHY_MEDIA_IF_T1_100FX;
+    if (priv->t1_cap.cap.dis_1000 == PHY_FALSE) {
+        priv->media_intf = MESA_PHY_MEDIA_IF_T1_1000FX;
+    }
+
+    if (is_sgmii == PHY_TRUE) {
+        priv->mac_if = MESA_PORT_INTERFACE_SGMII;
+    }
+
+    return MEPA_RC_OK;
+}
+
 static void lan887x_fill_probe_data(mepa_driver_t *drv,
                                     mepa_device_t *dev,
                                     lan887x_data_t *data,
@@ -1612,6 +1663,9 @@ static void lan887x_fill_probe_data(mepa_driver_t *drv,
     data->cd_res.link = PHY_LINKDOWN;
     data->cd_res.length[0] = 0;
     data->cd_res.status[0] = MESA_VERIPHY_STATUS_UNKNOWN;
+
+    //Strap data
+    lan887x_read_capabilities(dev);
 
     (void) lan887x_phy_setup(dev);
 
@@ -2161,8 +2215,9 @@ static uint32_t lan887x_capability_priv(mepa_device_t *dev, uint32_t capability)
     lan887x_data_t *data = (lan887x_data_t *)(dev->data);
     uint32_t c;
 
-    if (capability == (uint32_t)MEPA_CAP_SPEED_1G) {
-        c = (data->conf.speed == MESA_SPEED_100M) ? 1U : 0U;
+    if ((capability == (uint32_t)MEPA_CAP_SPEED_1G) &&
+        (data->t1_cap.cap.dis_1000 == PHY_FALSE)) {
+        c = ONE;
     } else if (capability == (uint32_t)MEPA_CAP_TS_NONE) {
         c = (data->conf.speed != MESA_SPEED_100M) ? 1U : 0U;
     } else {
