@@ -16,6 +16,7 @@ struct phy_reg_dbg {
 };
 
 typedef struct {
+    mepa_bool_t     dis_macsec;
     mepa_bool_t     dis_100;
     mepa_bool_t     dis_1000;
     mepa_bool_t     dis_sgmii;

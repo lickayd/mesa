@@ -63,14 +63,6 @@ static inline uint32_t GET_PHY_MODEL(uint32_t x)
  * Data structures
  */
 typedef struct {
-    mepa_bool_t dis_macsec;
-    mepa_bool_t dis_1588;
-    mepa_bool_t dis_1000;
-    mepa_bool_t dis_100;
-    mepa_bool_t is_sgmii;
-} lan8x8x_otp_cap_t;
-
-typedef struct {
     uint32_t id;
     uint16_t  part_id;
     uint16_t  model;
@@ -86,7 +78,12 @@ typedef enum {
 } lan8x8x_cd_state_t;
 
 typedef struct {
-    lan8x8x_otp_cap_t       t1_cap;
+    phy_t1_otp_t    cap;
+    mepa_bool_t     is_sgmii;
+} lan8x8x_t1_cap_t;
+
+typedef struct {
+    lan8x8x_t1_cap_t        t1_cap;
     mepa_bool_t             init_done;
     mepa_bool_t             link_status;
     mepa_port_no_t          port_no;
