@@ -5517,6 +5517,23 @@ static vtss_rc fa_port_init(vtss_state_t *vtss_state)
     // Count QS drops at egress port
     REG_WR(VTSS_XQS_STAT_CNT_CFG, VTSS_F_XQS_STAT_CNT_CFG_DROP_COUNT_EGRESS(1));
 
+    // Reset registers touched by uboot
+    for (port = 0U; port < RT_CHIP_PORTS; port++) {
+        REG_WR(VTSS_DSM_DEV_TX_STOP_WM_CFG(port),
+               VTSS_F_DSM_DEV_TX_STOP_WM_CFG_FAST_STARTUP_ENA(1));
+        REG_WR(VTSS_DSM_TX_START_WM_CFG(port), 0);
+        REG_WR(VTSS_ASM_PORT_CFG(port), 0);
+    }
+    REG_WR(VTSS_ASM_PORT_CFG(RT_CHIP_PORT_CPU), 0);
+    for (port = 0U; port < RT_CHIP_PORTS_ALL; port++) {
+        REG_WRM_CLR(VTSS_QFWD_SWITCH_PORT_MODE(port), VTSS_M_QFWD_SWITCH_PORT_MODE_PORT_ENA);
+    }
+#if defined(VTSS_ARCH_SPARX5)
+    for (port = 0U; port < 6U; port++) {
+        REG_WR(VTSS_PORT_CONF_USGMII_CFG(port), 0);
+    }
+#endif
+
     /* Reset the Port Mux (not done through chip-soft-reset) */
 #if !defined(VTSS_ARCH_LAIKA)
     REG_WR(VTSS_PORT_CONF_DEV5G_MODES, 0);
