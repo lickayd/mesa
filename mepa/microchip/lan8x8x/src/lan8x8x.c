@@ -93,7 +93,7 @@ static void lan8x8x_read_capabilities(mepa_device_t *const dev)
         } else {
             priv->conf.speed = MESA_SPEED_100M;
             if ((IS_LAN888X(dev->drv->id) == ONE) &&
-                ((val & OTP_STRAP_SPEED_SEL) != 0U)) {
+                ((val & OTP_STRAP_READ_SPEED_SEL) != 0U)) {
                 priv->conf.speed = MESA_SPEED_1G;
             }
         }

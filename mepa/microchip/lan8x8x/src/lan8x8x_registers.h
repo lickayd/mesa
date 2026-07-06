@@ -150,6 +150,7 @@ static inline uint32_t LAN8X8X_SQI_GET(uint32_t v)
 #define L3P_LPBK        BIT(0)
 
 #define OTP_STRAP_READ_REG              (CHIPTOP + 0x38U)
+#define OTP_STRAP_READ_SPEED_SEL        BIT(2)
 #define OTP_STRAP_READ_AUTO_NEG_EN      BIT(1)
 #define OTP_STRAP_READ_MST_SLV_SEL      BIT(0)
 
