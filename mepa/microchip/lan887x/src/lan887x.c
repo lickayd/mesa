@@ -227,7 +227,7 @@ static void phy_cfg_regs(mepa_device_t *const dev, const struct phy_reg_map *reg
 
 static mepa_rc phy_c45_get_link_status(mepa_device_t *const dev, mepa_status_t *const status)
 {
-    mepa_rc rc = MEPA_RC_ERROR;
+    mepa_rc rc;
     uint16_t reg_val = 0;
     lan887x_data_t *data = (lan887x_data_t *) dev->data;
 
@@ -498,7 +498,7 @@ error:
 
 static mepa_rc lan887x_int_events_set(struct mepa_device *dev, mepa_event_t event, mesa_bool_t enable)
 {
-    mepa_rc rc = MEPA_RC_ERROR;
+    mepa_rc rc;
     uint32_t tmp_evt = (event & LAN887X_DEF_MASK);
     uint16_t int_mask = LAN887X_DEF_MASK, i;
     lan887x_data_t *data = (lan887x_data_t *)dev->data;
@@ -900,7 +900,7 @@ static mepa_rc lan887x_phy_reset(mepa_device_t *dev, mepa_bool_t hard_reset)
         while (done == PHY_FALSE && timeout == PHY_FALSE) {
             uint16_t tmp = 0;
 
-            timeout = (MEPA_MTIMER_TIMEOUT(&timer) != 0);
+            timeout = (MEPA_MTIMER_TIMEOUT(&timer) != PHY_FALSE);
             (void) phy_reg_rd(dev, MII_BMCR, &tmp);
             if (!((tmp & BMCR_RESET) == BMCR_RESET)) {
                 done = PHY_TRUE;
@@ -1244,7 +1244,7 @@ static mepa_rc lan887x_cable_test_report(mepa_device_t *const dev, mepa_bool_t m
     const uint16_t noise_margin = 20U, time_margin = 89U;
     const uint16_t min_time_diff = 96U, max_time_diff = 96U + time_margin;
     mepa_rc rc = MEPA_RC_OK;
-    float distance = -1.0F;
+    float distance;
     lan887x_cd_status_t detect = LAN87XX_CABLE_TEST_OK;
 
     lan887x_data_t *data = (lan887x_data_t *)dev->data;
@@ -1412,7 +1412,6 @@ static mepa_rc lan887x_phy_cable_diag_start(mepa_device_t *dev, mepa_bool_t is_h
     mepa_rc rc = MEPA_RC_INV_STATE;
 
     if (data->init_done && data->conf.admin.enable) {
-        mepa_bool_t diagTimeout = PHY_FALSE;
         mepa_bool_t bDone = PHY_FALSE;
         mepa_mtimer_t   timer = { 0 };
         mepa_cable_diag_result_t *res = &(data->cd_res);
@@ -1427,13 +1426,16 @@ static mepa_rc lan887x_phy_cable_diag_start(mepa_device_t *dev, mepa_bool_t is_h
         LAN887X_MTIMER_START(&timer, 4000U);
 
         // wait for cable diag to finish or timeout (4 seconds)
-        while (bDone == PHY_FALSE && diagTimeout == PHY_FALSE) {
+        while (PHY_TRUE) {
             uint16_t tmp = 0;
 
-            diagTimeout = (MEPA_MTIMER_TIMEOUT(&timer) != 0);
+            if (MEPA_MTIMER_TIMEOUT(&timer)) {
+                break;
+            }
             (void) phy_mmd_reg_rd(dev, MDIO_MMD_VEND1, LAN887X_DSP_REGS_START_CBL_DIAG_100, &tmp);
             if ((tmp & LAN887X_DSP_REGS_START_CBL_DIAG_DONE) == LAN887X_DSP_REGS_START_CBL_DIAG_DONE) {
                 bDone = PHY_TRUE;
+                break;
             }
         }
         if (bDone == PHY_FALSE) {
@@ -2413,7 +2415,6 @@ static mepa_rc lan887x_isolate_mode_set(struct mepa_device *dev, mepa_bool_t con
 
 mepa_drivers_t mepa_lan887x_driver_init(void)
 {
-    static const int nr_lan887x_drivers = 1;
     static mepa_driver_t lan887x_drivers[] = {
         {
             //Device ID & Mask
@@ -2457,7 +2458,7 @@ mepa_drivers_t mepa_lan887x_driver_init(void)
     mepa_drivers_t result;
 
     result.phy_drv = lan887x_drivers;
-    result.count = nr_lan887x_drivers;
+    result.count = 1U;
 
     return result;
 }
