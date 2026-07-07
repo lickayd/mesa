@@ -16,4 +16,5 @@ run %w{./sec_auth.rb}
 run %w{./sec_hacl.rb}
 run %w{./sec_racl.rb}
 run %w{./rcl.rb}
+run %w{./xcl.rb}
 run %w{./ethercat.rb}

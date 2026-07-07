@@ -22,21 +22,17 @@
         if (v) {                                                                                   \
             a[(n) / 8U] |= (1U << ((n) % 8U));                                                     \
         } else {                                                                                   \
-            u8 mask = (1U << ((n) % 8U));                                                          \
-            a[(n) / 8U] &= ~mask;                                                                  \
+            u8 u8_mask = (1U << ((n) % 8U));                                                       \
+            a[(n) / 8U] &= ~u8_mask;                                                               \
         }                                                                                          \
     } while (0 == 1)
 #define VTSS_BF_CLR(a, n) (VTSS_MEMSET(a, 0, VTSS_BF_SIZE(n)))
 
 /* Port member bit field macros */
-#define VTSS_PORT_BF_SIZE            VTSS_BF_SIZE(VTSS_PORTS)
-#define VTSS_PORT_BF_GET(a, port_no) VTSS_BF_GET(a, ((u8)port_no) - VTSS_PORT_NO_START)
-#define VTSS_PORT_BF_SET(a, port_no, v)                                                            \
-    {                                                                                              \
-        u8 port = (u8)(port_no) - VTSS_PORT_NO_START;                                              \
-        VTSS_BF_SET(a, port, v);                                                                   \
-    }
-#define VTSS_PORT_BF_CLR(a) VTSS_BF_CLR(a, VTSS_PORTS)
+#define VTSS_PORT_BF_CLR(a)             VTSS_BF_CLR(a, VTSS_PORTS)
+#define VTSS_PORT_BF_SIZE               VTSS_BF_SIZE(VTSS_PORTS)
+#define VTSS_PORT_BF_GET(a, port_no)    VTSS_BF_GET(a, (u8)port_no)
+#define VTSS_PORT_BF_SET(a, port_no, v) VTSS_BF_SET(a, (u8)port_no, v)
 
 #if defined(VTSS_FEATURE_MISC)
 #include "vtss_misc_state.h"

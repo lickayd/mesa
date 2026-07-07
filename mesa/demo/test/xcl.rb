@@ -34,10 +34,14 @@ test_table = [
     {
         # IPv4/IPv6 frames are filtered/redirected
         txt: "vcl-port-action",
+        idx_dis: 2,
+        cfg: [{idx: 1, uvid: 4096}],
         vcl: [{id: 1, key: {type: "IPV4"}, act: {port_action: "FILTER", idx: 1}},
-              {id: 2, key: {type: "IPV6"}, act: {port_action: "REDIR", idx: 0}}],
+              {id: 2, key: {type: "IPV6"}, act: {port_action: "REDIR", idx: 0}},
+              {id: 3, key: {type: "ANY"}, act: {vid: 2, port_action: "ADD", idx: [1, 2]}}],
         frm: [{cmd: "ipv4", fwd: [{idx_tx: 0}, {idx_rx: 1}]},
-              {cmd: "ipv6", fwd: [{idx_tx: 0}, {idx_rx: 0}]}],
+              {cmd: "ipv6", fwd: [{idx_tx: 0}, {idx_rx: 0}]},
+              {fwd: [{idx_tx: 0}, {idx_rx: 1}]}],
     },
     {
         # IPv4/IPv6 frames are matched by rules with different key size
@@ -138,11 +142,23 @@ def xcl_test(t)
         $ts.dut.call("mesa_npi_conf_set", c)
     end
 
+    # VLAN port configuration
+    cfg_old = []
+    cfg = fld_get(t, :cfg, [])
+    cfg.each do |e|
+        idx = fld_get(e, :idx)
+        port = $ts.dut.p[idx]
+        c = $ts.dut.call("mesa_vlan_port_conf_get", port)
+        cfg_old.push({port: port, conf: c})
+        c["untagged_vid"] = fld_get(e, :uvid)
+        $ts.dut.call("mesa_vlan_port_conf_set", port, c)
+    end
+
     # VCL port configuration
     vpc_old = []
     vpc = fld_get(t, :vpc, [])
     vpc.each do |e|
-        idx = fld_get(e, :idx)        
+        idx = fld_get(e, :idx)
         port = $ts.dut.p[idx]
         c = $ts.dut.call("mesa_vcl_port_conf_get", port)
         # Deep copy of configuration
@@ -183,6 +199,7 @@ def xcl_test(t)
         # Action fields
         act = fld_get(e, :act, {})
         a = c["action"]
+        a["vid"] = fld_get(act, :vid)
         a["policy_no"] = fld_get(act, :policy_no)
         a["cpu"] = fld_get(act, :cpu, false)
         a["cpu_queue"] = fld_get(act, :cpu_queue)
@@ -244,6 +261,12 @@ def xcl_test(t)
         $ts.dut.call("mesa_ace_add", 0, c)
     end
 
+    # Disable port
+    idx_dis = fld_get(t, :idx_dis, nil)
+    if (idx_dis != nil)
+        $ts.dut.call("mesa_stp_port_state_set", $ts.dut.p[idx_dis], "MESA_STP_STATE_DISCARDING")
+    end
+
     # Frames
     frm_tab = fld_get(t, :frm, [])
     frm_tab.each do |f|
@@ -294,6 +317,11 @@ def xcl_test(t)
         $ts.dut.call("mesa_npi_conf_set", c)
     end
 
+    # Restore VLAN port configuration
+    cfg_old.each do |e|
+        $ts.dut.call("mesa_vlan_port_conf_set", e[:port], e[:conf])
+    end
+
     # Delete VCL rules
     vcl.each do |e|
         $ts.dut.call("mesa_vce_del", fld_get(e, :id, 1))
@@ -312,6 +340,11 @@ def xcl_test(t)
     # Restore ACL port configuration
     apc_old.each do |e|
         $ts.dut.call("mesa_acl_port_conf_set", e[:port], e[:conf])
+    end
+
+    # Enable port again
+    if (idx_dis != nil)
+        $ts.dut.call("mesa_stp_port_state_set", $ts.dut.p[idx_dis], "MESA_STP_STATE_FORWARDING")
     end
 end
 
