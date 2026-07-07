@@ -1355,7 +1355,8 @@ vtss_rc vtss_vcap_is2_update(struct vtss_state_s *vtss_state)
     /* Update port actions */
     for (port_no = 0U; port_no < vtss_state->port_count; port_no++) {
         conf = &vcap->acl_port_conf[port_no];
-        if (conf->action.port_action == VTSS_ACL_PORT_ACTION_REDIR) {
+        if (conf->action.port_action == VTSS_ACL_PORT_ACTION_REDIR ||
+            conf->action.port_action == VTSS_ACL_PORT_ACTION_ADD) {
             VTSS_I("update port_no: %u", port_no);
             vcap->acl_old_port_conf = *conf;
             VTSS_RC(vtss_cil_vcap_acl_port_conf_set(vtss_state, port_no));
@@ -1374,6 +1375,25 @@ vtss_rc vtss_vcap_is2_update(struct vtss_state_s *vtss_state)
         }
         ndx[idx.key_size]++;
     }
+
+#if defined(VTSS_FEATURE_CLM)
+    // Update CLM rules
+    for (int i = 0; i < 2; i++) {
+        VTSS_MEMSET(ndx, 0, sizeof(ndx));
+        obj = (i == 0 ? &vcap->clm_a.obj : &vcap->clm_b.obj);
+        for (cur = obj->used_list; cur != NULL; cur = cur->next) {
+            vtss_is1_data_t *is1 = &cur->data.u.is1;
+            idx.key_size = cur->data.key_size;
+            if ((is1->flags & VTSS_IS1_FLAG_REDIR) > 0U) {
+                vtss_vcap_pos_get(obj, &idx, ndx[idx.key_size]);
+                VTSS_I("update row: %u, col: %u", idx.row, idx.col);
+                VTSS_RC(vtss_cil_vcap_clm_entry_update(vtss_state, obj->type, &idx, is1));
+            }
+            ndx[idx.key_size]++;
+        }
+    }
+#endif
+
     return VTSS_RC_OK;
 }
 

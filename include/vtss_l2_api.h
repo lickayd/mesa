@@ -928,7 +928,8 @@ typedef enum {
 typedef enum {
     VTSS_VCL_PORT_ACTION_NONE,   // No action from port list
     VTSS_VCL_PORT_ACTION_FILTER, // Port list filter is used
-    VTSS_VCL_PORT_ACTION_REDIR   // Port list redirect is used
+    VTSS_VCL_PORT_ACTION_REDIR,  // Port list redirect is used
+    VTSS_VCL_PORT_ACTION_ADD,    // Port list is added to destination set
 } vtss_vcl_port_action_t;
 
 // VCL generic key mode

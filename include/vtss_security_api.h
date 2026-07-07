@@ -201,7 +201,8 @@ vtss_rc vtss_acl_policer_conf_set(const vtss_inst_t                    inst,
 typedef enum {
     VTSS_ACL_PORT_ACTION_NONE,   /**< No action from port list */
     VTSS_ACL_PORT_ACTION_FILTER, /**< Port list filter is used */
-    VTSS_ACL_PORT_ACTION_REDIR   /**< Port list redirect is used */
+    VTSS_ACL_PORT_ACTION_REDIR,  /**< Port list redirect is used */
+    VTSS_ACL_PORT_ACTION_ADD,    /**< Port list is added to destination set */
 } vtss_acl_port_action_t;
 
 /** \brief ACL PTP action */

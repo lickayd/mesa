@@ -58,7 +58,8 @@ mesa_rc mesa_acl_policer_conf_set(const mesa_inst_t                    inst,
 typedef enum {
     MESA_ACL_PORT_ACTION_NONE,   // No action from port list
     MESA_ACL_PORT_ACTION_FILTER, // Port list filter is used
-    MESA_ACL_PORT_ACTION_REDIR   // Port list redirect is used
+    MESA_ACL_PORT_ACTION_REDIR,  // Port list redirect is used
+    MESA_ACL_PORT_ACTION_ADD,    // Port list is added to destination set
 } mesa_acl_port_action_t;
 
 // ACL PTP action

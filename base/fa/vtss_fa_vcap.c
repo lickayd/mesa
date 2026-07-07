@@ -1600,7 +1600,7 @@ static vtss_rc fa_clm_entry_add(vtss_state_t     *vtss_state,
     vtss_vcap_vid_t         g_idx = key->g_idx;
     vtss_vcap_vr_t         *dscp, *sport, *dport;
     fa_clm_key_info_t       info;
-    BOOL                    sipv6_copy = FALSE;
+    BOOL                    sipv6_copy = FALSE, filter;
     vtss_vcap_bit_t         first;
     vtss_port_no_t          port_no;
 #if !VTSS_OPT_LIGHT
@@ -1996,6 +1996,7 @@ static vtss_rc fa_clm_entry_add(vtss_state_t     *vtss_state,
         nxt_idx_ctrl = 0U;
     }
 
+    filter = (action->port_action == VTSS_VCL_PORT_ACTION_FILTER);
     if (data->type == FA_VCAP_TG_X1) {
 #if !VTSS_OPT_LIGHT
         /* X1 action: MLBS_REDUCED */
@@ -2016,7 +2017,7 @@ static vtss_rc fa_clm_entry_add(vtss_state_t     *vtss_state,
         FA_ACT_SET(CLM, CLASSIFICATION_ISDX_ADD_REPLACE_SEL, action->isdx_enable);
         FA_ACT_SET(CLM, CLASSIFICATION_ISDX_VAL, action->isdx_enable ? action->isdx : 0);
         FA_ACT_SET(CLM, CLASSIFICATION_RT_SEL, action->rt_sel);
-        FA_ACT_SET(CLM, CLASSIFICATION_FWD_DIS, action->port_action == VTSS_VCL_PORT_ACTION_FILTER);
+        FA_ACT_SET(CLM, CLASSIFICATION_FWD_DIS, filter);
         FA_ACT_SET(CLM, CLASSIFICATION_CPU_ENA, action->cpu ? 1 : 0);
         FA_ACT_SET(CLM, CLASSIFICATION_CPU_Q, action->cpu_queue);
         FA_ACT_SET(CLM, CLASSIFICATION_MIP_SEL, action->mip_enable ? 1 : 0);
@@ -2047,7 +2048,7 @@ static vtss_rc fa_clm_entry_add(vtss_state_t     *vtss_state,
         FA_ACT_SET(CLM, FULL_VLAN_POP_CNT, action->pop);
         FA_ACT_SET(CLM, FULL_ISDX_ADD_REPLACE_SEL, action->isdx_enable);
         FA_ACT_SET(CLM, FULL_ISDX_VAL, action->isdx_enable ? action->isdx : 0U);
-        if (action->port_action == VTSS_VCL_PORT_ACTION_FILTER) {
+        if (filter) {
             u = 1U; // AND_VLANMASK
         } else if (action->port_action == VTSS_VCL_PORT_ACTION_REDIR) {
             u = 3U; // REPLACE_ALL
@@ -2055,12 +2056,16 @@ static vtss_rc fa_clm_entry_add(vtss_state_t     *vtss_state,
             u = 0U; // OR_DSTMASK
         }
         FA_ACT_SET(CLM, FULL_MASK_MODE, u);
-        if (u > 0U) {
+        if (action->port_action != VTSS_VCL_PORT_ACTION_NONE) {
+            is1->flags |= (filter ? 0U : VTSS_IS1_FLAG_REDIR);
             offs = CLM_AO_FULL_PORT_MASK_0;
             for (port_no = 0U; port_no < vtss_state->port_count; port_no++) {
                 if (action->port_list[port_no]) {
-                    port = VTSS_CHIP_PORT(port_no);
-                    fa_act_set(data, offs + port, 1U, 1U);
+                    VTSS_PORT_BF_SET(is1->member, port_no, TRUE);
+                    if (filter || vtss_state->l2.tx_forward_aggr[port_no]) {
+                        port = VTSS_CHIP_PORT(port_no);
+                        fa_act_set(data, offs + port, 1U, 1U);
+                    }
                 }
             }
         }
@@ -2113,7 +2118,9 @@ vtss_rc vtss_cil_vcap_clm_entry_update(struct vtss_state_s *vtss_state,
                                        vtss_is1_data_t     *is1)
 {
     fa_vcap_data_t fa_data, *data = &fa_data;
-    u32            addr;
+    u32            addr, port, offs;
+    vtss_port_no_t port_no;
+    BOOL           member;
 
     data->vcap_type = type;
     data->tg = fa_vcap_key_type(type, idx->key_size);
@@ -2127,6 +2134,17 @@ vtss_rc vtss_cil_vcap_clm_entry_update(struct vtss_state_s *vtss_state,
 
     /* Update action fields based on ingress QoS mapping */
     fa_clm_action_update(vtss_state, data, is1);
+
+    // Update port action based on forwarding ports
+    if ((is1->flags & VTSS_IS1_FLAG_REDIR) > 0U) {
+        offs = CLM_AO_FULL_PORT_MASK_0;
+        for (port_no = 0U; port_no < vtss_state->port_count; port_no++) {
+            port = VTSS_CHIP_PORT(port_no);
+            member =
+                (VTSS_PORT_BF_GET(is1->member, port_no) && vtss_state->l2.tx_forward_aggr[port_no]);
+            fa_act_set(data, offs + port, 1U, member ? 1U : 0U);
+        }
+    }
 
     /* Write action */
     return fa_vcap_entry_cmd(vtss_state, data, addr, data->tg, FA_VCAP_CMD_WRITE,
@@ -2884,12 +2902,11 @@ static vtss_rc fa_is2_action_set(vtss_state_t       *vtss_state,
     u16            match_id, match_mask;
     u8             u;
     vtss_vid_mac_t vid_mac;
+    BOOL           redir = (act == VTSS_ACL_PORT_ACTION_REDIR || act == VTSS_ACL_PORT_ACTION_ADD);
 
     data->type = FA_VCAP_TG_X3;
-    FA_ACT_SET(IS2, BASE_TYPE_IS_INNER_ACL,
-               action->cpu && act == VTSS_ACL_PORT_ACTION_REDIR); /* CPU copy/redirect (e.g.
-                                                                     service policing/stats
-                                                                     still applied) */
+    // CPU copy/redirect (e.g. service policing/stats still applied)
+    FA_ACT_SET(IS2, BASE_TYPE_IS_INNER_ACL, action->cpu && redir);
     /* Unused: BASE_TYPE_PIPELINE_FORCE_ENA */
     /* Unused: BASE_TYPE_PIPELINE_PT */
     FA_ACT_SET(IS2, BASE_TYPE_HIT_ME_ONCE, action->cpu_once);
@@ -2903,19 +2920,24 @@ static vtss_rc fa_is2_action_set(vtss_state_t       *vtss_state,
             if (action->port_list[port_no]) {
                 discard = 0U;
                 port = VTSS_CHIP_PORT(port_no);
-                if (act != VTSS_ACL_PORT_ACTION_REDIR || vtss_state->l2.tx_forward_aggr[port_no]) {
+                if (!redir || vtss_state->l2.tx_forward_aggr[port_no]) {
                     offs = IS2_AO_BASE_TYPE_PORT_MASK_0;
                     fa_act_set(data, offs + port, 1U, 1U);
                 }
             }
         }
     }
-    u = ((u8)act == VTSS_ACL_PORT_ACTION_PGID ? 2U : /* REPLACE_PGID */
-             (act == VTSS_ACL_PORT_ACTION_REDIR || discard > 0U) ? 3U
-                                                                 : /* REPLACE_ALL */
-             act == VTSS_ACL_PORT_ACTION_FILTER ? 1U
-                                                : /* AND_VLANMASK */
-             0U);                                 /* OR_DSTMASK */
+    if ((u8)act == VTSS_ACL_PORT_ACTION_PGID) {
+        u = 2U; // REPLACE_PGID
+    } else if (act == VTSS_ACL_PORT_ACTION_ADD) {
+        u = 0U; // OR_DSTMASK
+    } else if (act == VTSS_ACL_PORT_ACTION_REDIR || discard > 0U) {
+        u = 3U; // REPLACE_ALL
+    } else if (act == VTSS_ACL_PORT_ACTION_FILTER) {
+        u = 1U; // AND_VLANMASK
+    } else {
+        u = 0U; // OR_DSTMASK
+    }
     FA_ACT_SET(IS2, BASE_TYPE_MASK_MODE, u);
     /* If forwarding disabled, avoid CPU copy and signal ACL drop */
     FA_ACT_SET(IS2, BASE_TYPE_CPU_DIS, discard > 0U || action->cpu_disable ? 1 : 0);
@@ -4789,7 +4811,8 @@ vtss_rc vtss_cil_vcap_hace_add(struct vtss_state_s     *vtss_state,
     e->type = type;
     e->ace = *hace;
     data.key_size = key_size;
-    if (hace->action.port_action == VTSS_ACL_PORT_ACTION_REDIR) {
+    if (hace->action.port_action == VTSS_ACL_PORT_ACTION_REDIR ||
+        hace->action.port_action == VTSS_ACL_PORT_ACTION_ADD) {
         is2->action.redir = TRUE;
         for (port_no = 0U; port_no < vtss_state->port_count; port_no++) {
             if (hace->action.port_list[port_no]) {

@@ -612,18 +612,20 @@ typedef struct {
 #define VTSS_IS1_FLAG_MAP_ID    0x01U /* Ingress map ID valid */
 #define VTSS_IS1_FLAG_MAP_INNER 0x02U /* Ingress map ID used for inner tag */
 #define VTSS_IS1_FLAG_TRI_VID   0x04U /* Use TRI_VID (JR2) */
+#define VTSS_IS1_FLAG_REDIR     0x08U // Port redirect/add flag
 
 typedef struct {
     u8                lookup; /* Lookup (Serval) or first flag (L26/JR) */
     u8                flags;  /* Flags, see above */
     u16               map_id; /* Ingress QoS map ID */
     u16               isdx;
-    u32               vid_range;   /* VID range */
-    u32               dscp_range;  /* DSCP range */
-    u32               sport_range; /* Source port range */
-    u32               dport_range; /* Destination port range */
-    vtss_port_no_t    port_no;     /* First ingress port number */
-    vtss_is1_entry_t *entry;       /* IS1 entry */
+    u32               vid_range;                 /* VID range */
+    u32               dscp_range;                /* DSCP range */
+    u32               sport_range;               /* Source port range */
+    u32               dport_range;               /* Destination port range */
+    vtss_port_no_t    port_no;                   /* First ingress port number */
+    u8                member[VTSS_PORT_BF_SIZE]; /* Port redirect list */
+    vtss_is1_entry_t *entry;                     /* IS1 entry */
 } vtss_is1_data_t;
 #endif /* VTSS_FEATURE_IS1/CLM */
 
