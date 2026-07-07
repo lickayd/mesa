@@ -5521,12 +5521,6 @@ static vtss_rc fa_port_init(vtss_state_t *vtss_state)
     for (port = 0U; port < RT_CHIP_PORTS; port++) {
         REG_WR(VTSS_DSM_DEV_TX_STOP_WM_CFG(port),
                VTSS_F_DSM_DEV_TX_STOP_WM_CFG_FAST_STARTUP_ENA(1));
-        REG_WR(VTSS_DSM_TX_START_WM_CFG(port), 0);
-        REG_WR(VTSS_ASM_PORT_CFG(port), 0);
-    }
-    REG_WR(VTSS_ASM_PORT_CFG(RT_CHIP_PORT_CPU), 0);
-    for (port = 0U; port < RT_CHIP_PORTS_ALL; port++) {
-        REG_WRM_CLR(VTSS_QFWD_SWITCH_PORT_MODE(port), VTSS_M_QFWD_SWITCH_PORT_MODE_PORT_ENA);
     }
 #if defined(VTSS_ARCH_SPARX5)
     for (port = 0U; port < 6U; port++) {
