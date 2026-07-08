@@ -585,3 +585,49 @@ test "pc-counters" do
     base, diff = ethtool_stat($ts, base, if_list)
     ethtool_show(if_list, diff)
 end
+
+test "ipmc-cpu-join" do
+    break
+    idx_tx = 0
+    idx_rx = 1
+    idx_npi = 2
+
+    # NPI port
+    c = $ts.dut.call("mesa_npi_conf_get")
+    c["enable"] = true
+    c["port_no"] = $ts.dut.p[idx_npi]
+    $ts.dut.call("mesa_npi_conf_set", c)
+    queue = 7
+    c = $ts.dut.call("mesa_packet_rx_conf_get")
+    c["queue"][queue]["npi"]["enable"] = true
+    $ts.dut.call("mesa_packet_rx_conf_set", c)
+
+    # ACL rule matching DIP, ignoring bit 23-27 like a MAC address entry
+    c = $ts.dut.call("mesa_ace_init", "MESA_ACE_TYPE_IPV4")
+    c["id"] = 1
+    c["port_list"] = "#{$ts.dut.p[idx_tx]}"
+    dip = c["frame"]["ipv4"]["dip"]
+    dip["value"] = 0xe0010203
+    dip["mask"] = 0xf07fffff
+    a = c["action"]
+    a["cpu"] = true
+    a["cpu_queue"] = queue
+    $ts.dut.call("mesa_ace_add", 0, c)
+
+    # IP multicast ASM/SSM forwarding entries
+    [0, 0x01020304].each do |sip|
+        $ts.dut.call("mesa_ipv4_mc_add", 1, sip, 0xe1010203, "#{$ts.dut.p[idx_rx]}")
+    end
+
+    # Frame test
+    ["1.2.3.4", "1.2.3.5"].each do |sip|
+        f = "eth dmac 01:00:5e:01:02:03 ipv4 sip #{sip} dip 225.1.2.3 data pattern cnt 26"
+        cmd = "ef name f1 #{f} name f2 "
+        cmd += cmd_rx_ifh_push({port_idx: idx_tx})
+        cmd += "#{f} "
+        cmd += "tx #{$ts.pc.p[idx_tx]} name f1 "
+        cmd += "rx #{$ts.pc.p[idx_rx]} name f1 "
+        cmd += "rx #{$ts.pc.p[idx_npi]} name f2 "
+        $ts.pc.try(cmd)
+    end
+end
