@@ -7,6 +7,8 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <linux/i2c-dev.h> // I2C support
 #include <errno.h>
 #include <microchip/ethernet/board/api.h>
@@ -444,6 +446,7 @@ enum internal_poe_port_status_t {
 };
 
 enum poe_controller_type_prod_t {
+    ePD77010_BT_SW = 0x00,
     ePD69200_PREBT = 22,
     ePD69200_BT = 24,
     ePD69210_PREBT = 27,
@@ -770,6 +773,33 @@ int meba_pd_i2c_adapter_open(const meba_poe_ctrl_inst_t *const inst,
         DEBUG(inst, MEBA_TRACE_LVL_WARNING, "cannot open %s! [%s]\n", filename, strerror(errno));
     }
     return file;
+}
+
+/**
+ * \brief Open a socket for communication with the PoE controller
+ *
+ * \param filename       [IN] Filename for the socket
+ *
+ * \return File descriptor for I2C driver
+ */
+int meba_pd_socket_adapter_open(const meba_poe_ctrl_inst_t *const inst, const char *filename)
+{
+    struct sockaddr_un remote;
+    remote.sun_family = AF_UNIX;
+    strncpy(remote.sun_path, filename, sizeof(remote.sun_path) - 1);
+    int s = socket(AF_UNIX, SOCK_STREAM, 0); // create socket
+    while (connect(s, (struct sockaddr *)&remote, sizeof(remote)) < 0) {
+        DEBUG(inst, MEBA_TRACE_LVL_ERROR, "Cannot open socket to PoE controller: %s",
+              strerror(errno));
+        sleep(5);
+    }
+
+    /* Ensure that read operations always are replied to */
+    struct timeval tv;
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
+    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+    return s;
 }
 
 // Function for reading data from the MicroSemi micro-controller.
@@ -1831,6 +1861,9 @@ static mesa_rc meba_poe_ctrl_pd_save_command(const meba_poe_ctrl_inst_t *const i
                                    DUMMY_BYTE,  DUMMY_BYTE,    DUMMY_BYTE, DUMMY_BYTE,
                                    DUMMY_BYTE,  DUMMY_BYTE,    DUMMY_BYTE};
 
+    if (inst->capabilities & MEBA_POE_CTRL_EMBEDDED) {
+        return MESA_RC_OK;
+    }
     char *fname = "SAVE COMMAND";
     MESA_RC(pd_tx_rx(inst, __FUNCTION__, __LINE__, buf, fname));
 
@@ -3725,7 +3758,8 @@ static mesa_bool_t is_gen7_firmware_version_identical(const meba_poe_ctrl_inst_t
     private_data->status.global.asic_patch_number = tSoftware_version.boot_version;
 
     switch (tSoftware_version.product_number) {
-    case ePD77010_BT: {
+    case ePD77010_BT_SW:
+    case ePD77010_BT:    {
         ePoE_detected_controller_type = MEBA_POE_PD77010_CONTROLLER_TYPE;
         private_data->status.global.eDetected_poe_firmware_type = MEBA_POE_FIRMWARE_TYPE_GEN7_BT;
         DEBUG(inst, MEBA_TRACE_LVL_INFO, "detected poe firmware: pd69210 GEN7 BT firmware");
@@ -3803,6 +3837,11 @@ static mesa_bool_t is_gen7_firmware_version_identical(const meba_poe_ctrl_inst_t
           private_data->status.global.poe_file.param_number,
           private_data->status.global.poe_file.build_H,
           private_data->status.global.poe_file.build_L);
+
+    if (inst->capabilities & MEBA_POE_CTRL_EMBEDDED) {
+        // Controller software is part of IStaX, so version match by definition
+        return true;
+    }
 
     if ((private_data->status.global.poe_file.sw_version_H == tSoftware_version.sw_version_H) &&
         (private_data->status.global.poe_file.sw_version_L == tSoftware_version.sw_version_L) &&
@@ -5055,7 +5094,8 @@ mesa_rc meba_poe_ctrl_pd_gen6_do_detection(const meba_poe_ctrl_inst_t *const ins
 
             break;
         }
-        case ePD77010_BT: {
+        case ePD77010_BT_SW:
+        case ePD77010_BT:    {
             private_data->status.global.eDetected_poe_firmware_type =
                 MEBA_POE_FIRMWARE_TYPE_GEN7_BT;
             DEBUG(inst, MEBA_TRACE_LVL_INFO, "poe mcu type detected: GEN7 BT firmware=%d",
@@ -5094,7 +5134,8 @@ mesa_rc meba_poe_ctrl_pd_gen6_do_detection(const meba_poe_ctrl_inst_t *const ins
             private_data->status.global.ePoE_controller_type = MEBA_POE_PD69200M_CONTROLLER_TYPE;
             break;
         }
-        case ePD77010_BT: {
+        case ePD77010_BT_SW:
+        case ePD77010_BT:    {
             private_data->status.global.ePoE_controller_type = MEBA_POE_PD77010_CONTROLLER_TYPE;
             break;
         }
@@ -5152,7 +5193,7 @@ mesa_rc meba_poe_ctrl_pd_gen7_do_detection(const meba_poe_ctrl_inst_t *const ins
     if (rc == MESA_RC_ERROR) {
         // This is where we end if there are no PoE board detected.
         DEBUG(inst, MEBA_TRACE_LVL_INFO, "No PoE chipset detected. Reason: rc: %d", rc);
-        return rc;
+        MESA_RC(meba_poe_pd77010_gen7_bt_get_bt_system_status(inst, &tBT_System_Status));
     }
 
     // now it can be on of the followed states:
@@ -5216,7 +5257,8 @@ mesa_rc meba_poe_ctrl_pd_gen7_do_detection(const meba_poe_ctrl_inst_t *const ins
     }
 
     switch (tSoftware_version.product_number) {
-    case ePD77010_BT: {
+    case ePD77010_BT_SW:
+    case ePD77010_BT:    {
         private_data->status.global.eDetected_poe_firmware_type = MEBA_POE_FIRMWARE_TYPE_GEN7_BT;
         DEBUG(inst, MEBA_TRACE_LVL_INFO, "poe mcu type detected: GEN7 BT firmware=0x%X",
               tSoftware_version.product_number);
@@ -5230,7 +5272,8 @@ mesa_rc meba_poe_ctrl_pd_gen7_do_detection(const meba_poe_ctrl_inst_t *const ins
     }
 
     switch (tSoftware_version.product_number) {
-    case ePD77010_BT: {
+    case ePD77010_BT_SW:
+    case ePD77010_BT:    {
         private_data->status.global.ePoE_controller_type = MEBA_POE_PD77010_CONTROLLER_TYPE;
         break;
     }
@@ -7499,16 +7542,22 @@ mesa_rc meba_poe_ctrl_pd_bt_port_cfg_set(const meba_poe_ctrl_inst_t *const inst,
                                                       BT_port_Operation_Mode,
                                                       Add_power_for_port_mode_dW, Priority));
 
-        VTSS_MSLEEP(500);
+        if (!(inst->capabilities & MEBA_POE_CTRL_EMBEDDED)) {
+            VTSS_MSLEEP(500);
+        }
 
         // read parameters from PoE
         MESA_RC(meba_poe_pd_bt_get_BT_port_parameters(inst, handle, port_cfg_POEMCU));
 
-        VTSS_MSLEEP(500);
+        if (!(inst->capabilities & MEBA_POE_CTRL_EMBEDDED)) {
+            VTSS_MSLEEP(500);
+        }
 
         MESA_RC(meba_poe_ctrl_pd_save_command(inst));
 
-        VTSS_MSLEEP(500);
+        if (!(inst->capabilities & MEBA_POE_CTRL_EMBEDDED)) {
+            VTSS_MSLEEP(500);
+        }
 
         DEBUG(inst, MEBA_TRACE_LVL_INFO, "Save PoE settings");
     }
@@ -9049,6 +9098,10 @@ void meba_pd_bt_driver_init(meba_poe_ctrl_inst_t       *inst,
     } else { // Assign Gen6 version
 
         is_firmware_version_identical = is_gen6_firmware_version_identical;
+    }
+
+    if (capabilities & MEBA_POE_CTRL_EMBEDDED) {
+        I2C_OPERATION_DELAY_MS = 0;
     }
 
     poe_driver_private_t *private_data = malloc(sizeof(poe_driver_private_t));

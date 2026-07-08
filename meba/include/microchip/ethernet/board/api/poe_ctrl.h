@@ -64,6 +64,9 @@ typedef enum {
 
     // Signals if the controller supports legacy
     MEBA_POE_CTRL_LEGACY_PD_CLASS_MODE = 0X20,
+
+    // Embedded controller (process running on main CPU)
+    MEBA_POE_CTRL_EMBEDDED = 0x40,
 } meba_poe_ctrl_cap_t;
 
 // PoE Controller Port capabilities (bitmask).
@@ -608,6 +611,9 @@ typedef struct {
 
     // poe controllers count from tag
     uint8_t poe_controllers_count_from_tag;
+
+    // When true, communicate through socket. Otherwise use I2C
+    mesa_bool_t poe_controller_embedded;
 } meba_poe_init_params_t;
 
 // PoE port pd version 3,4 data.

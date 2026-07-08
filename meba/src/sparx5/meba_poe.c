@@ -203,7 +203,7 @@ mesa_rc meba_poe_sparx5_pcb135_system_initialize(meba_inst_t             inst,
         T_I(inst, "controllers count default=%d", pd_system.controller_count);
     }
 
-    pd_system.controllers = malloc(sizeof(meba_poe_ctrl_inst_t) * pd_system.controller_count);
+    pd_system.controllers = calloc(pd_system.controller_count, sizeof(meba_poe_ctrl_inst_t));
 
     // overide tMeba_poe_init_params params if using H file parameters
     // overide meba power supply by appl init_params
@@ -291,21 +291,39 @@ mesa_rc meba_poe_sparx5_pcb135_system_initialize(meba_inst_t             inst,
                           poe_default_parameters.max_poe_ports);
 
         pd_system.controllers[0].index = 0;
-        meba_pd_bt_driver_init(&pd_system.controllers[0], "pd77010",
-                               meba_pd_i2c_adapter_open(&pd_system.controllers[0],
-                                                        sparx5_gen7_i2c_config[0].i2c_device,
-                                                        sparx5_gen7_i2c_config[0].i2c_address),
-                               sparx5_gen7_i2c_config[0].i2c_device,
-                               sparx5_gen7_i2c_config[0].i2c_address,
-                               MEBA_POE_CTRL_CAP_POWER_MANAGEMENT |
-                                   MEBA_POE_CTRL_INTERRUPTIBLE_POWER |
-                                   MEBA_POE_CTRL_PD_AUTO_CLASS_REQUEST,
-                               sparx5_pd69777_4pairs_port_map,
-                               sizeof(sparx5_pd69777_4pairs_port_map) /
-                                   sizeof(meba_poe_port_properties_t),
-                               sparx5_power_supplies,
-                               sizeof(sparx5_power_supplies) / sizeof(meba_poe_psu_input_prob_t),
-                               inst->iface.debug, poe_default_parameters);
+        if (tPoe_init_params->poe_controller_embedded) {
+            meba_pd_bt_driver_init(&pd_system.controllers[0], "ap77010",
+                                   meba_pd_socket_adapter_open(&pd_system.controllers[0],
+                                                               "/tmp/poe_socket_ipc"),
+                                   "", 0,
+                                   MEBA_POE_CTRL_CAP_POWER_MANAGEMENT |
+                                       MEBA_POE_CTRL_INTERRUPTIBLE_POWER |
+                                       MEBA_POE_CTRL_PD_AUTO_CLASS_REQUEST | MEBA_POE_CTRL_EMBEDDED,
+                                   sparx5_pd69777_4pairs_port_map,
+                                   sizeof(sparx5_pd69777_4pairs_port_map) /
+                                       sizeof(meba_poe_port_properties_t),
+                                   sparx5_power_supplies,
+                                   sizeof(sparx5_power_supplies) /
+                                       sizeof(meba_poe_psu_input_prob_t),
+                                   inst->iface.debug, poe_default_parameters);
+        } else {
+            meba_pd_bt_driver_init(&pd_system.controllers[0], "pd77010",
+                                   meba_pd_i2c_adapter_open(&pd_system.controllers[0],
+                                                            sparx5_gen7_i2c_config[0].i2c_device,
+                                                            sparx5_gen7_i2c_config[0].i2c_address),
+                                   sparx5_gen7_i2c_config[0].i2c_device,
+                                   sparx5_gen7_i2c_config[0].i2c_address,
+                                   MEBA_POE_CTRL_CAP_POWER_MANAGEMENT |
+                                       MEBA_POE_CTRL_INTERRUPTIBLE_POWER |
+                                       MEBA_POE_CTRL_PD_AUTO_CLASS_REQUEST,
+                                   sparx5_pd69777_4pairs_port_map,
+                                   sizeof(sparx5_pd69777_4pairs_port_map) /
+                                       sizeof(meba_poe_port_properties_t),
+                                   sparx5_power_supplies,
+                                   sizeof(sparx5_power_supplies) /
+                                       sizeof(meba_poe_psu_input_prob_t),
+                                   inst->iface.debug, poe_default_parameters);
+        }
     } else if (poe_default_parameters.eMeba_poe_firmware_type ==
                MEBA_POE_FIRMWARE_TYPE_GEN6_PREBT) {
         // overide tMeba_poe_init_params params if using H file parameters
@@ -537,7 +555,7 @@ mesa_rc meba_poe_laguna_pcb8398_system_initialize(meba_inst_t             inst,
     inst->iface.debug(MEBA_TRACE_LVL_NOISE, __FUNCTION__, __LINE__, "Called");
 
     pd_system.controller_count = 1; // laguna has 1 poe controller
-    pd_system.controllers = malloc(sizeof(meba_poe_ctrl_inst_t) * pd_system.controller_count);
+    pd_system.controllers = calloc(pd_system.controller_count, sizeof(meba_poe_ctrl_inst_t));
     poe_default_parameters.max_poe_ports = tPoe_init_params->max_poe_ports;
 
     if (tPoe_init_params->poe_type_from_tag > 0) {
@@ -605,21 +623,39 @@ mesa_rc meba_poe_laguna_pcb8398_system_initialize(meba_inst_t             inst,
                           poe_default_parameters.max_poe_ports);
 
         pd_system.controllers[0].index = 0;
-        meba_pd_bt_driver_init(&pd_system.controllers[0], "pd77010",
-                               meba_pd_i2c_adapter_open(&pd_system.controllers[0],
-                                                        laguna_gen7_i2c_config[0].i2c_device,
-                                                        laguna_gen7_i2c_config[0].i2c_address),
-                               laguna_gen7_i2c_config[0].i2c_device,
-                               laguna_gen7_i2c_config[0].i2c_address,
-                               MEBA_POE_CTRL_CAP_POWER_MANAGEMENT |
-                                   MEBA_POE_CTRL_INTERRUPTIBLE_POWER |
-                                   MEBA_POE_CTRL_PD_AUTO_CLASS_REQUEST,
-                               laguna_pd69777_4pairs_port_map,
-                               sizeof(laguna_pd69777_4pairs_port_map) /
-                                   sizeof(meba_poe_port_properties_t),
-                               laguna_power_supplies,
-                               sizeof(laguna_power_supplies) / sizeof(meba_poe_psu_input_prob_t),
-                               inst->iface.debug, poe_default_parameters);
+        if (tPoe_init_params->poe_controller_embedded) {
+            meba_pd_bt_driver_init(&pd_system.controllers[0], "ap77010",
+                                   meba_pd_socket_adapter_open(&pd_system.controllers[0],
+                                                               "/tmp/poe_socket_ipc"),
+                                   "", 0,
+                                   MEBA_POE_CTRL_CAP_POWER_MANAGEMENT |
+                                       MEBA_POE_CTRL_INTERRUPTIBLE_POWER |
+                                       MEBA_POE_CTRL_PD_AUTO_CLASS_REQUEST | MEBA_POE_CTRL_EMBEDDED,
+                                   laguna_pd69777_4pairs_port_map,
+                                   sizeof(laguna_pd69777_4pairs_port_map) /
+                                       sizeof(meba_poe_port_properties_t),
+                                   laguna_power_supplies,
+                                   sizeof(laguna_power_supplies) /
+                                       sizeof(meba_poe_psu_input_prob_t),
+                                   inst->iface.debug, poe_default_parameters);
+        } else {
+            meba_pd_bt_driver_init(&pd_system.controllers[0], "pd77010",
+                                   meba_pd_i2c_adapter_open(&pd_system.controllers[0],
+                                                            laguna_gen7_i2c_config[0].i2c_device,
+                                                            laguna_gen7_i2c_config[0].i2c_address),
+                                   laguna_gen7_i2c_config[0].i2c_device,
+                                   laguna_gen7_i2c_config[0].i2c_address,
+                                   MEBA_POE_CTRL_CAP_POWER_MANAGEMENT |
+                                       MEBA_POE_CTRL_INTERRUPTIBLE_POWER |
+                                       MEBA_POE_CTRL_PD_AUTO_CLASS_REQUEST,
+                                   laguna_pd69777_4pairs_port_map,
+                                   sizeof(laguna_pd69777_4pairs_port_map) /
+                                       sizeof(meba_poe_port_properties_t),
+                                   laguna_power_supplies,
+                                   sizeof(laguna_power_supplies) /
+                                       sizeof(meba_poe_psu_input_prob_t),
+                                   inst->iface.debug, poe_default_parameters);
+        }
     } else if (poe_default_parameters.eMeba_poe_firmware_type ==
                MEBA_POE_FIRMWARE_TYPE_GEN6_PREBT) {
         // overide tMeba_poe_init_params params if using H file parameters

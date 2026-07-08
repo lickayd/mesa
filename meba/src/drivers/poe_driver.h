@@ -128,6 +128,15 @@ int meba_pd_i2c_adapter_open(const meba_poe_ctrl_inst_t *const inst,
                              uint8_t                           i2c_addr);
 
 /**
+ * \brief Open a socket for communication with the PoE controller
+ *
+ * \param filename       [IN] Filename for the socket
+ *
+ * \return File descriptor for I2C driver
+ */
+int meba_pd_socket_adapter_open(const meba_poe_ctrl_inst_t *const inst, const char *filename);
+
+/**
  * \brief Initialize driver
  *
  * \param inst              [IN] MEBA instance.
