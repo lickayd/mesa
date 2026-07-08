@@ -318,8 +318,12 @@ static mepa_rc lan8814_rev_workaround(mepa_device_t *dev)
 
 static mepa_rc lan8814_workaround_after_reset(mepa_device_t *dev)
 {
+    lan8814_data_t *data = (lan8814_data_t *) dev->data;
+
     //737 Clause 14 UNH Fix
-    (void)EP_WR(dev, LAN8814_AFED_CONTROL, 0xe214);
+    if (data->dev.rev < LAN8814_REV_D) {
+        (void)EP_WR(dev, LAN8814_AFED_CONTROL, 0xe214);
+    }
     (void)EP_WR(dev, LAN8814_ANALOG_CONTROL_4, 0x81e0);
 
     //639 Clause 40 EEE Fix
