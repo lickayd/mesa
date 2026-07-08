@@ -16,6 +16,9 @@ LIST(APPEND C_FLAGS   "-Wall -Werror -Wno-unknown-pragmas -Wno-array-bounds -Wno
 LIST(REMOVE_ITEM C_FLAGS   "-Os")
 LIST(REMOVE_ITEM C_FLAGS   "-DNDEBUG")
 
+LIST(APPEND C_FLAGS   "-Wno-error=format-security")
+LIST(APPEND C_FLAGS   "-Wno-error=unused-result")
+
 option(BUILD_ASAN "Enable address sanatizer" OFF)
 
 if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
