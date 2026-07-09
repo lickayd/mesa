@@ -454,7 +454,7 @@ typedef struct {
     vtss_serdes_mode_t sd28_mode[VTSS_SD28_CNT];
     u32                cmu_enable_mask;
     BOOL               link[VTSS_PORT_ARRAY_SIZE];
-    BOOL               ctle_done[VTSS_PORT_ARRAY_SIZE];
+    u64                ctle_done;
     vtss_port_bulk_t   bulk_state;
     u64                bulk_port_mask;
 #endif

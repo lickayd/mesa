@@ -562,6 +562,15 @@ static vtss_rc fa_port_usxgmii_status_get(vtss_state_t                       *vt
     status->link = (VTSS_X_DEV10G_USXGMII_ANEG_STATUS_PAGE_RX_STICKY(aneg) == 0U &&
                     VTSS_X_DEV10G_USXGMII_ANEG_STATUS_LINK_DOWN_STATUS(aneg) == 0U);
 
+    /* CTLE tuned once at first link-up; channel is a fixed PCB trace so no re-tune needed */
+    if (status->link && (vtss_state->port.ctle_done &
+                         VTSS_BIT64(vtss_fa_sd_lane_indx(vtss_state, port_no))) == 0ULL) {
+        if (fa_serdes_ctle_adjust(vtss_state, NULL, port_no, FALSE, NULL, NULL, NULL) ==
+            VTSS_RC_OK) {
+            vtss_state->port.ctle_done |= VTSS_BIT64(vtss_fa_sd_lane_indx(vtss_state, port_no));
+        }
+    }
+
     return VTSS_RC_OK;
 }
 
@@ -4067,13 +4076,17 @@ vtss_rc vtss_cil_port_status_get(struct vtss_state_s      *vtss_state,
              * enabled */
             if (conf->speed == VTSS_SPEED_10G || conf->speed == VTSS_SPEED_25G) {
                 if (rx_link != VTSS_M_DEV10G_MAC_TX_MONITOR_STICKY_IDLE_STATE_STICKY) {
-                    vtss_state->port.ctle_done[port_no] = FALSE;
+                    vtss_state->port.ctle_done &=
+                        ~VTSS_BIT64(vtss_fa_sd_lane_indx(vtss_state, port_no));
                 }
-                if (status->link && !vtss_state->port.ctle_done[port_no]) {
+                if (status->link &&
+                    (vtss_state->port.ctle_done &
+                     VTSS_BIT64(vtss_fa_sd_lane_indx(vtss_state, port_no))) == 0ULL) {
                     if (vtss_cil_port_kr_ctle_adjust(vtss_state, port_no) == VTSS_RC_OK) {
                         VTSS_NSLEEP(300000); /* wait 300us while the link stabilize */
                         REG_WR(VTSS_DEV10G_MAC_TX_MONITOR_STICKY(tgt), 0xFFFFFFFFU);
-                        vtss_state->port.ctle_done[port_no] = TRUE;
+                        vtss_state->port.ctle_done |=
+                            VTSS_BIT64(vtss_fa_sd_lane_indx(vtss_state, port_no));
                     }
                 }
             }

@@ -4173,6 +4173,7 @@ vtss_rc vtss_fa_sd_cfg(vtss_state_t *vtss_state, vtss_port_no_t port_no, vtss_se
             VTSS_RC(vtss_fa_port2sd(vtss_state, p, &sd_indx, &sd_type));
             VTSS_RC(vtss_fa_sd_board_settings(vtss_state, p, sd_indx, sd_type));
             if (mode == VTSS_SERDES_MODE_QXGMII || mode == VTSS_SERDES_MODE_USXGMII) {
+                vtss_state->port.ctle_done &= ~VTSS_BIT64(vtss_fa_sd_lane_indx(vtss_state, p));
                 (void)vtss_cil_port_kr_ctle_adjust(vtss_state, p);
             }
         }
