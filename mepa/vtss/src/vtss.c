@@ -1653,8 +1653,8 @@ static uint32_t tesla_1g_capability(struct mepa_device *dev , uint32_t capabilit
 
 #if defined(VTSS_OPT_PHY_TIMESTAMP)
 out:
-    return c;
 #endif
+    return c;
 }
 
 // To get 1G capability
