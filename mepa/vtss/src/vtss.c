@@ -1626,6 +1626,8 @@ static uint32_t tesla_1g_capability(struct mepa_device *dev , uint32_t capabilit
         c = 1;
         break;
     case MEPA_CAP_TS_GEN_1:
+#if defined(VTSS_OPT_PHY_TIMESTAMP)
+        // Do not report TS capability when PHY timestamping is opt-out
         rc = vtss_phy_id_get(data->vtss_instance, data->port_no, &phy_id);
         if (rc != MESA_RC_OK) {
             goto out;
@@ -1635,6 +1637,7 @@ static uint32_t tesla_1g_capability(struct mepa_device *dev , uint32_t capabilit
             phy_id.part_number == VTSS_PHY_TYPE_8572) {
             c = 1;
         }
+#endif
         break;
     case MEPA_CAP_TS_NONE:
         if (!tesla_1g_capability(dev, MEPA_CAP_TS_GEN_1)) {

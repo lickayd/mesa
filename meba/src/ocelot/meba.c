@@ -1091,11 +1091,12 @@ static mesa_rc ocelot_reset(meba_inst_t inst, meba_reset_point_t reset)
             mepa_device_t *phy_dev;
             phy_dev = inst->phy_devices[port_no];
 
-            if (mepa_phy_info_get(phy_dev, &phy_info) == MESA_RC_OK &&
-                (phy_info.cap &
-                 (MEPA_CAP_TS_MASK_GEN_1 | MEPA_CAP_TS_MASK_GEN_2 | MEPA_CAP_TS_MASK_GEN_3))) {
-                board->port[port_no].ts_phy = true;
-
+            if (mepa_phy_info_get(phy_dev, &phy_info) == MESA_RC_OK) {
+                // If phy info can be read from MEPA, then trust the result
+                if (phy_info.cap &
+                    (MEPA_CAP_TS_MASK_GEN_1 | MEPA_CAP_TS_MASK_GEN_2 | MEPA_CAP_TS_MASK_GEN_3)) {
+                    board->port[port_no].ts_phy = true;
+                }
             } else { // This part can be removed after VTSS Phy API refactored
                 if (vtss_phy_id_get(PHY_INST, port_no, &phy_id) != MESA_RC_OK) {
                     continue;
