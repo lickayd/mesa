@@ -120,7 +120,7 @@ static mesa_bool_t cisco_sgmii_set(meba_inst_t meba_inst, mesa_port_no_t port_no
     for (int i = 0; i < 10; i++) {
         if (cisco_sgmii_phy_read(meba_inst, port_no, MII_REG_PHY_ID1, &reg2) == MESA_RC_OK &&
             cisco_sgmii_phy_read(meba_inst, port_no, MII_REG_PHY_ID2, &reg3) == MESA_RC_OK &&
-            !(reg2 == 0xFFFF && reg3 == 0xFFFF)) {
+            reg2 != 0xFFFF && reg3 != 0xFFFF) {
             phy_present = true;
             break;
         }
