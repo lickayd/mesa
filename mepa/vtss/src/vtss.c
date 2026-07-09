@@ -1616,10 +1616,12 @@ out:
 // To get Tesla capability
 static uint32_t tesla_1g_capability(struct mepa_device *dev , uint32_t capability)
 {
+#if defined(VTSS_OPT_PHY_TIMESTAMP)
     phy_data_t *data = (phy_data_t *)(dev->data);
     vtss_phy_type_t phy_id;
-    uint32_t c = 0;
     mesa_rc rc;
+#endif
+    uint32_t c = 0;
 
     switch(capability) {
     case MEPA_CAP_SPEED_1G:
@@ -1649,8 +1651,10 @@ static uint32_t tesla_1g_capability(struct mepa_device *dev , uint32_t capabilit
         break;
     }
 
+#if defined(VTSS_OPT_PHY_TIMESTAMP)
 out:
     return c;
+#endif
 }
 
 // To get 1G capability
