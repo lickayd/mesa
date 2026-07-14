@@ -104,6 +104,11 @@ static mesa_rc meba_synce_graph_get(meba_inst_t inst, const meba_synce_graph_t *
         synce_graph.graph = synce_graph_elements_8290_board;
         synce_graph.attr = attr_8290_board;
         synce_graph.attr_length = MEBA_ARRSZ(attr_8290_board);
+    } else if (board_type == VTSS_BOARD_LAN9668_EDS2_REF) {
+        synce_graph.graph_length = 0;
+        synce_graph.graph = NULL;
+        synce_graph.attr_length = 0;
+        synce_graph.attr = NULL;
     } else {
         T_E(inst, "Board type not yet implemented.");
         synce_graph.graph_length = 0;
