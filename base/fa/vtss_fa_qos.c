@@ -4150,6 +4150,8 @@ vtss_rc vtss_cil_qos_tas_port_conf_set(struct vtss_state_s *vtss_state,
             // this index to curr_list_idx
             gcl_state->trunk_list_idx = TAS_LIST_IDX_NONE;
             gcl_state->next_list_idx = TAS_LIST_IDX_NONE;
+            // Clear scheduled list because it has been cancelled
+            gcl_state->new_list_scheduled = FALSE;
         }
 
         /* Check if a list is currently running - must be stopped by a stop list
