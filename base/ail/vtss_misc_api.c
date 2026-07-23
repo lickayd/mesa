@@ -626,8 +626,6 @@ vtss_rc vtss_eee_port_conf_set(const vtss_inst_t                 inst,
 
 vtss_rc vtss_misc_inst_create(struct vtss_state_s *vtss_state)
 {
-    vtss_misc_state_t *state = &vtss_state->misc;
-
     if (vtss_state->create_pre) {
         // Preprocessing
         return VTSS_RC_OK;
@@ -635,6 +633,7 @@ vtss_rc vtss_misc_inst_create(struct vtss_state_s *vtss_state)
 
 #if defined(VTSS_FEATURE_SERIAL_GPIO)
     {
+        vtss_misc_state_t *state = &vtss_state->misc;
         vtss_sgpio_group_t group;
 
         for (group = 0U; group < VTSS_SGPIO_GROUPS; group++) {

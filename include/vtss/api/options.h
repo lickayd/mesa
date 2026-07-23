@@ -161,9 +161,11 @@
 #endif
 
 #if defined(VTSS_ARCH_FA)
-#define VTSS_FEATURE_10G                             /**< 10G ports */
-#define VTSS_FEATURE_MISC                            /**< Miscellaneous */
-#define VTSS_FEATURE_SERIAL_GPIO                     /**< Serial GPIO control */
+#define VTSS_FEATURE_10G  /**< 10G ports */
+#define VTSS_FEATURE_MISC /**< Miscellaneous */
+#if !defined(VTSS_ARCH_LAIKA)
+#define VTSS_FEATURE_SERIAL_GPIO /**< Serial GPIO control */
+#endif
 #define VTSS_FEATURE_PORT_CONTROL                    /**< Port control */
 #define VTSS_FEATURE_PORT_IFH                        /**< Port IFH control */
 #define VTSS_FEATURE_CLAUSE_37                       /**< IEEE 802.3 clause 37 auto-negotiation */

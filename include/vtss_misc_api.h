@@ -731,11 +731,6 @@ typedef vtss_rc (*vtss_gpio_func_info_get_t)(const vtss_inst_t            inst,
 #define VTSS_SGPIO_GROUPS 3U
 #endif /* VTSS_ARCH_SPARX5 */
 
-#if defined(VTSS_ARCH_LAIKA)
-/** \brief Number of serial GPIO groups */
-#define VTSS_SGPIO_GROUPS 0U
-#endif /* VTSS_ARCH_LAIKA */
-
 /** \brief Serial GPIO group */
 typedef u32 vtss_sgpio_group_t;
 
