@@ -1029,35 +1029,79 @@ mepa_rc lan80xx_ptp_block_preempt_conf(mepa_device_t *dev, mepa_port_no_t port_n
  *
  *   - PCS_RETIMER: LINE MAC not in datapath; setting is don't-care.
  *
+ *   - MACsec bypass with HOST-side 25G RS-FEC enabled: HOST MAC
+ *     DISABLE_DIC = 0 (LINE MAC stays 1). The ingress FC buffer has no DIC,
+ *     so the HOST MAC DIC is the only stage maintaining the gap toward the
+ *     SoC; host RS-FEC's CWM_RADAPT borrows idle from that gap, and with DIC
+ *     off the gap collapses and RS-FEC corrupts frame boundaries (Rx Symbol/
+ *     Jabber).
+ *
  * Flow control is NOT a factor per design doc. Do not add it back
  * (Case 01729503 / MEPA-1345).
  */
 mepa_rc lan80xx_dic_config(const mepa_device_t *dev, mepa_port_no_t port_no)
 {
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
+    u32 host_rsfec_cfg = 0;
+    mepa_bool_t host_rs_fec_ena;
 
     if (data->port_state.port_mode.oper_mode == PCS_RETIMER ||
         data->macsec_conf.glb.init.enable) {
-        /* DISABLE_DIC = 0 */
+        /* DISABLE_DIC = 0 on both MACs */
         LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_MAC_HOST_MAC_MAC_MODE_CFG, 0,
                         LAN80XX_M_HOST_MAC_HOST_MAC_MAC_MODE_CFG_DISABLE_DIC);
 
         LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_MAC_LINE_MAC_MAC_MODE_CFG, 0,
                         LAN80XX_M_LINE_MAC_LINE_MAC_MAC_MODE_CFG_DISABLE_DIC);
-    } else {
-        /* DISABLE_DIC = 1 */
-        LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_MAC_HOST_MAC_MAC_MODE_CFG,
-                        LAN80XX_M_HOST_MAC_HOST_MAC_MAC_MODE_CFG_DISABLE_DIC,
-                        LAN80XX_M_HOST_MAC_HOST_MAC_MAC_MODE_CFG_DISABLE_DIC);
+        return MEPA_RC_OK;
+    }
 
-        LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_MAC_LINE_MAC_MAC_MODE_CFG,
-                        LAN80XX_M_LINE_MAC_LINE_MAC_MAC_MODE_CFG_DISABLE_DIC,
-                        LAN80XX_M_LINE_MAC_LINE_MAC_MAC_MODE_CFG_DISABLE_DIC);
+    /* MAC_RETIMER + MACsec bypass */
 
-        /* Configure TX_FRM_GAP_COMP to disable DIC in FC buffer */
-        LAN80XX_CSR_WRM(port_no, LAN80XX_MAC_FC_BUFFER_MAC_FC_BUFFER_TX_FRM_GAP_COMP,
-                        LAN80XX_F_MAC_FC_BUFFER_MAC_FC_BUFFER_TX_FRM_GAP_COMP_TX_FRM_GAP_COMP(LAN80XX_TX_FRM_GAP_COMP_MACSEC_BYPASS),
-                        LAN80XX_M_MAC_FC_BUFFER_MAC_FC_BUFFER_TX_FRM_GAP_COMP_TX_FRM_GAP_COMP);
+    /* LINE MAC (egress): keep MAC DIC off, egress FC buffer already does DIC */
+    LAN80XX_CSR_WRM(port_no, LAN80XX_LINE_MAC_LINE_MAC_MAC_MODE_CFG,
+                    LAN80XX_M_LINE_MAC_LINE_MAC_MAC_MODE_CFG_DISABLE_DIC,
+                    LAN80XX_M_LINE_MAC_LINE_MAC_MAC_MODE_CFG_DISABLE_DIC);
+
+    /* Configure TX_FRM_GAP_COMP to disable DIC in FC buffer (egress) */
+    LAN80XX_CSR_WRM(port_no, LAN80XX_MAC_FC_BUFFER_MAC_FC_BUFFER_TX_FRM_GAP_COMP,
+                    LAN80XX_F_MAC_FC_BUFFER_MAC_FC_BUFFER_TX_FRM_GAP_COMP_TX_FRM_GAP_COMP(LAN80XX_TX_FRM_GAP_COMP_MACSEC_BYPASS),
+                    LAN80XX_M_MAC_FC_BUFFER_MAC_FC_BUFFER_TX_FRM_GAP_COMP_TX_FRM_GAP_COMP);
+
+    /* HOST MAC (ingress): DIC stays enabled only when host-side RS-FEC is on */
+    LAN80XX_CSR_RD(dev, port_no, LAN80XX_HOST_PCS_CFG_PCS25G_RSFEC_CFG, &host_rsfec_cfg);
+    host_rs_fec_ena = (host_rsfec_cfg & LAN80XX_M_HOST_PCS_CFG_PCS25G_RSFEC_CFG_FEC91_ENA) ? 1 : 0;
+
+    LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_MAC_HOST_MAC_MAC_MODE_CFG,
+                    host_rs_fec_ena ? 0 : LAN80XX_M_HOST_MAC_HOST_MAC_MAC_MODE_CFG_DISABLE_DIC,
+                    LAN80XX_M_HOST_MAC_HOST_MAC_MAC_MODE_CFG_DISABLE_DIC);
+
+    return MEPA_RC_OK;
+}
+
+mepa_rc lan80xx_25g_fec_hw_get(const mepa_device_t *dev, mepa_port_no_t port_no,
+                               mepa_bool_t *host_rs_fec, mepa_bool_t *line_rs_fec,
+                               mepa_bool_t *host_base_r, mepa_bool_t *line_base_r)
+{
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
+    u32 host_rsfec = 0, line_rsfec = 0, host_br = 0, line_br = 0;
+
+    LAN80XX_CSR_RD(dev, port_no, LAN80XX_HOST_PCS_CFG_PCS25G_RSFEC_CFG, &host_rsfec);
+    LAN80XX_CSR_RD(dev, port_no, LAN80XX_LINE_PCS_CFG_PCS25G_RSFEC_CFG, &line_rsfec);
+    LAN80XX_CSR_RD(dev, port_no, LAN80XX_HOST_PCS_CFG_PCS25G_BASE_R_FEC_CONTROL, &host_br);
+    LAN80XX_CSR_RD(dev, port_no, LAN80XX_LINE_PCS_CFG_PCS25G_BASE_R_FEC_CONTROL, &line_br);
+
+    if (host_rs_fec != NULL) {
+        *host_rs_fec = (host_rsfec & LAN80XX_M_HOST_PCS_CFG_PCS25G_RSFEC_CFG_FEC91_ENA) ? TRUE : FALSE;
+    }
+    if (line_rs_fec != NULL) {
+        *line_rs_fec = (line_rsfec & LAN80XX_M_LINE_PCS_CFG_PCS25G_RSFEC_CFG_FEC91_ENA) ? TRUE : FALSE;
+    }
+    if (host_base_r != NULL) {
+        *host_base_r = (host_br & LAN80XX_M_HOST_PCS_CFG_PCS25G_BASE_R_FEC_CONTROL_FEC74_ENA_RX) ? TRUE : FALSE;
+    }
+    if (line_base_r != NULL) {
+        *line_base_r = (line_br & LAN80XX_M_LINE_PCS_CFG_PCS25G_BASE_R_FEC_CONTROL_FEC74_ENA_RX) ? TRUE : FALSE;
     }
     return MEPA_RC_OK;
 }
@@ -1130,10 +1174,13 @@ mepa_rc lan80xx_phy_mac_conf_set(const mepa_device_t  *dev, mepa_port_no_t port_
         tx_read_thresh = 0x6;
         rx_read_thresh = 0x6;
         break;
-    case SPEED_25G:
-        tx_read_thresh = data->conf.conf_25g.rs_fec_25g ? 0x10 : 0x6;
+    case SPEED_25G: {
+        mepa_bool_t host_rs_fec = FALSE, line_rs_fec = FALSE;
+        MEPA_RC(lan80xx_25g_fec_hw_get(dev, port_no, &host_rs_fec, &line_rs_fec, NULL, NULL));
+        tx_read_thresh = (host_rs_fec || line_rs_fec) ? 0x10 : 0x6;
         rx_read_thresh = 0x10;
         break;
+    }
     default:
         tx_read_thresh = 0x10;
         rx_read_thresh = 0x10;
@@ -2528,6 +2575,8 @@ static mepa_rc lan80xx_fec_configuration(mepa_device_t *dev, mepa_port_no_t port
                     LAN80XX_M_LINE_PCS_CFG_CWM_RADAPT_CFG_CWM_RADAPT_ADD_LVL |
                     LAN80XX_M_LINE_PCS_CFG_CWM_RADAPT_CFG_CWM_RADAPT_DROP_LVL);
 
+    MEPA_RC(lan80xx_dic_config(dev, port_no));
+
     if (!data->conf.conf_25g.rs_fec_25g) {
         return MEPA_RC_OK;
     }
@@ -2914,10 +2963,13 @@ static mepa_rc lan80xx_mode_set_init(mepa_device_t *dev, const mepa_port_no_t po
             tx_read_thresh = 0x6;
             rx_read_thresh = 0x6;
             break;
-        case LAN80XX_PHY_25G_LAN_MODE:
-            tx_read_thresh = data->conf.conf_25g.rs_fec_25g ? 0x10 : 0x6;
+        case LAN80XX_PHY_25G_LAN_MODE: {
+            mepa_bool_t host_rs_fec = FALSE, line_rs_fec = FALSE;
+            MEPA_RC(lan80xx_25g_fec_hw_get(dev, port_no, &host_rs_fec, &line_rs_fec, NULL, NULL));
+            tx_read_thresh = (host_rs_fec || line_rs_fec) ? 0x10 : 0x6;
             rx_read_thresh = 0x10;
             break;
+        }
         default:
             tx_read_thresh = 0x10;
             rx_read_thresh = 0x10;

@@ -61,10 +61,30 @@ static mepa_rc lan80xx_conf_get(mepa_device_t *const dev, mepa_conf_t *const con
 
     if (dev != NULL && config != NULL) {
         phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
+        mepa_bool_t host_rs = FALSE, line_rs = FALSE, host_br = FALSE, line_br = FALSE;
+        mepa_adv_side_t fec_side;
         MEPA_ENTER(dev);
+        /* Capture the caller-requested side before *config is overwritten. conf.conf_25g.rs_fec_25g /
+         * base_r_25gfec / base_r_10gfec are single shared flags that only reflect the last-configured
+         * side when the two sides use different FEC (e.g. host RS-FEC + line Base-R). To report the
+         * true per-side state, the caller selects the side via aneg.advertise_dir on the passed-in
+         * config (MEPA_ADV_SIDE_HOST -> host, anything else -> line) and we read that side's FEC back
+         * from the PCS. Base-R (FEC74) uses the same PCS register at 10G and 25G. */
+        fec_side = config->aneg.advertise_dir;
         *config = data->conf;
         config->conf_25g.channel_id = data->channel_id + 1;
         config->flow_control = data->flow_control_ena;
+        if ((data->port_state.speed == SPEED_25G || data->port_state.speed == SPEED_10G) &&
+            lan80xx_25g_fec_hw_get(dev, data->port_no, &host_rs, &line_rs, &host_br, &line_br) == MEPA_RC_OK) {
+            mepa_bool_t sel_rs = (fec_side == MEPA_ADV_SIDE_HOST) ? host_rs : line_rs;
+            mepa_bool_t sel_br = (fec_side == MEPA_ADV_SIDE_HOST) ? host_br : line_br;
+            if (data->port_state.speed == SPEED_25G) {
+                config->conf_25g.rs_fec_25g    = sel_rs;
+                config->conf_25g.base_r_25gfec = sel_br;
+            } else {
+                config->conf_25g.base_r_10gfec = sel_br;
+            }
+        }
         MEPA_EXIT(dev);
         rc = MEPA_RC_OK;
     }

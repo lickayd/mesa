@@ -238,6 +238,13 @@ mepa_rc _lan80xx_csr_read(const mepa_device_t *dev,
                           ioreg_blk                   *io_reg,
                           uint32_t                    *const value);
 
+/* Reads the actual per-side 25G FEC enables from the PCS registers. Any output pointer may be NULL.
+ * Use instead of the shared conf.conf_25g.rs_fec_25g / base_r_25gfec flags, which only reflect the
+ * last-configured side for asymmetric (host != line) FEC configurations. */
+mepa_rc lan80xx_25g_fec_hw_get(const mepa_device_t *dev, mepa_port_no_t port_no,
+                               mepa_bool_t *host_rs_fec, mepa_bool_t *line_rs_fec,
+                               mepa_bool_t *host_base_r, mepa_bool_t *line_base_r);
+
 mepa_rc _lan80xx_csr_rd_64(const mepa_device_t     *dev,
                            const mepa_port_no_t    port_no,
                            ioreg_blk               *reg,
