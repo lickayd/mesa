@@ -528,6 +528,9 @@ vtss_rc lk_init(vtss_state_t *vtss_state, u32 cpu_port)
     rc = lk_rx_init(vtss_state);
     rc = lk_setup_tx_cfg(vtss_state);
     rc = lk_setup_rx_cfg(vtss_state);
+    REG_WR(PIE_REG(PIE_0_INT, c), 0xFFFFFFFF);
+    REG_WR(PIE_REG(PIE_1_INT, c), 0xFFFFFFFF);
+    REG_WR(PIE_REG(PIE_2_INT, c), 0xFFFFFFFF);
     rc = lk_chn_traffic_enable(vtss_state);
     rc = lk_alloc_rx_bmem(vtss_state);
     rc = lk_alloc_tx_bmem(vtss_state);
