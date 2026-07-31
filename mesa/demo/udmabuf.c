@@ -7,8 +7,8 @@
 // dma buffers. It is used by mesa-demo to provide DMA buffer for MESA.
 //
 // The udmabuf module will search for the first available u-dma-buf instance (in
-// alphabetical order), open it with O_SYNC as to disable caches and use it to
-// allocate memory chunks requested with the VTSS_MEM_FLAGS_DMA flag.
+// alphabetical order), use it to allocate memory chunks requested with the
+// VTSS_MEM_FLAGS_DMA flag.
 //
 
 #include <dirent.h>
@@ -71,7 +71,9 @@ static mesa_rc udmabuf_find_dev(int maj, int min, int *fd)
             continue;
         }
 
-        *fd = open(path, O_RDWR | O_SYNC);
+        // Some platforms, such as PIC64-HPSC/HX, do not support non-coherent
+        // memory through u-dma-buf. Do not use O_SYNC for that reason.
+        *fd = open(path, O_RDWR);
         if (*fd == -1) {
             T_E("Failed to open: %s", path);
             continue;
