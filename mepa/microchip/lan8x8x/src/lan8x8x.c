@@ -2223,6 +2223,488 @@ static mepa_rc lan8x8x_poll(mepa_device_t *dev, mepa_status_t *status)
     return rc;
 }
 
+static uint8_t lan888x_cd_len(uint32_t location)
+{
+    uint32_t len_cm;
+
+    switch (location) {
+    case LAN8X8X_CD_LOC0:
+        len_cm = 0;
+        break;
+    case LAN8X8X_CD_LOC1:
+        len_cm = 150;
+        break;
+    case LAN8X8X_CD_LOC2:
+    case LAN8X8X_CD_LOC3:
+        len_cm = 300;
+        break;
+    case LAN8X8X_CD_LOC4:
+        len_cm = 450;
+        break;
+    case LAN8X8X_CD_LOC5:
+    case LAN8X8X_CD_LOC6:
+        len_cm = 600;
+        break;
+    case LAN8X8X_CD_LOC7:
+        len_cm = 750;
+        break;
+    case LAN8X8X_CD_LOC8:
+    case LAN8X8X_CD_LOC9:
+        len_cm = 900;
+        break;
+    case LAN8X8X_CD_LOC10:
+        len_cm = 1050;
+        break;
+    case LAN8X8X_CD_LOC11:
+        len_cm = 1200;
+        break;
+    case LAN8X8X_CD_LOC12:
+        len_cm = 1350;
+        break;
+    case LAN8X8X_CD_LOC13:
+    case LAN8X8X_CD_LOC14:
+        len_cm = 1500;
+        break;
+    default:
+        len_cm = 0;
+        break;
+    }
+
+    return (uint8_t)(len_cm / 100U);
+}
+
+static uint8_t lan878x_cd_len(uint32_t location)
+{
+    uint32_t len_cm;
+
+    switch (location) {
+    case LAN8X8X_CD_LOC0:
+        len_cm = 150;
+        break;
+    case LAN8X8X_CD_LOC1:
+        len_cm = 300;
+        break;
+    case LAN8X8X_CD_LOC2:
+        len_cm = 450;
+        break;
+    case LAN8X8X_CD_LOC3:
+        len_cm = 600;
+        break;
+    case LAN8X8X_CD_LOC4:
+        len_cm = 750;
+        break;
+    case LAN8X8X_CD_LOC5:
+        len_cm = 900;
+        break;
+    case LAN8X8X_CD_LOC6:
+        len_cm = 1050;
+        break;
+    case LAN8X8X_CD_LOC7:
+        len_cm = 1200;
+        break;
+    case LAN8X8X_CD_LOC8:
+        len_cm = 1350;
+        break;
+    case LAN8X8X_CD_LOC9:
+    case LAN8X8X_CD_LOC10:
+        len_cm = 1500;
+        break;
+    default:
+        len_cm = 0;
+        break;
+    }
+
+    return (uint8_t)(len_cm / 100U);
+}
+
+static mepa_rc lan8x8x_cable_test_report(mepa_device_t *dev,
+                                         mepa_cable_diag_result_t *res,
+                                         uint32_t cd_sts)
+{
+    uint32_t status = LAN8X8X_CD_STS_GET(cd_sts);
+    uint32_t location;
+
+    // Set status
+    switch (status) {
+    case LAN8X8X_CD_STS_NONE:
+    case LAN8X8X_LINK_UP:
+    case LAN8X8X_CBL_OK:
+        res->status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_OK;
+        break;
+    case LAN8X8X_CBL_SHORT:
+        res->status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_SHORT;
+        break;
+    case LAN8X8X_CBL_OPEN:
+        res->status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_OPEN;
+        break;
+    case LAN8X8X_TST_ACTIVE:
+        res->status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_RUNNING;
+        break;
+    default:
+        res->status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_UNKNOWN;
+        break;
+    }
+
+    if ((status == LAN8X8X_CBL_OPEN) ||
+        (status == LAN8X8X_CBL_SHORT)) {
+        if (IS_LAN888X(dev->drv->id) == ONE) {
+            location = LAN888X_CD_LOC(cd_sts);
+            res->length[LAN8X8X_PAIR_0] = lan888x_cd_len(location);
+        } else {
+            location = LAN878X_CD_LOC(cd_sts);
+            res->length[LAN8X8X_PAIR_0] = lan878x_cd_len(location);
+        }
+    }
+
+    return MEPA_RC_OK;
+}
+
+// Start cable-diag test without waiting for completion.
+static mepa_rc lan8x8x_cable_diag_async(mepa_device_t *dev)
+{
+    lan8x8x_data_t *const data = (lan8x8x_data_t *const)dev->data;
+    mepa_rc rc = MEPA_RC_INV_STATE;
+
+    if ((data->init_done) && (data->conf.admin.enable)) {
+        data->cd_res.status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_ABNORM;
+
+        if (IS_LAN878X(dev->drv->id) == ONE) {
+            return phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN878X_CD_CFG,
+                                     LAN878X_CD_EN, LAN878X_CD_EN);
+        }
+
+        rc = lan8x8x_phy_reset(dev);
+        if (rc != MEPA_RC_OK) {
+            return rc;
+        }
+
+        // DUT to master mode
+        rc = phy_mmd_reg_wr(dev, MDIO_MMD_PMAPMD, MDIO_PMA_PMD_BT1_CTRL,
+                            MDIO_PMA_PMD_BT1_CTRL_CFG_MST);
+        if (rc != MEPA_RC_OK) {
+            return rc;
+        }
+
+        rc = phy_mmd_reg_wr32(dev, MDIO_MMD_PMAPMD, T1_1G_TOP_CTRL_CONFIG,
+                              T1_1G_TOP_CTRL_CONFIG_DONE);
+        if (rc != MEPA_RC_OK) {
+            return rc;
+        }
+
+        LAN8X8X_NSLEEP(10000U);
+
+        // Enable CD
+        rc = phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS,
+                               LAN888X_CD_ACTIVE, LAN888X_CD_ENABLE);
+        if (rc != MEPA_RC_OK) {
+            return rc;
+        }
+    }
+
+    return rc;
+}
+
+static mepa_rc lan8x8x_cable_diag_poll_int(mepa_device_t *dev)
+{
+    lan8x8x_data_t *const data = (lan8x8x_data_t *const)dev->data;
+    uint32_t cd_sts = 0U;
+    mepa_bool_t done;
+    mepa_rc rc;
+
+    if (IS_LAN878X(dev->drv->id) == ONE) {
+        rc = phy_mmd_reg_rd32(dev, MDIO_MMD_PMAPMD, LAN878X_CD_CFG, &cd_sts);
+        done = ((cd_sts & LAN878X_CD_DONE) == LAN878X_CD_DONE);
+    } else {
+        rc = phy_mmd_reg_rd32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS, &cd_sts);
+        done = LAN8X8X_CD_TEST_DONE(cd_sts);
+    }
+
+    if (rc != MEPA_RC_OK) {
+        return rc;
+    }
+
+    if (!done) {
+        return MEPA_RC_INCOMPLETE;
+    }
+
+    if (IS_LAN878X(dev->drv->id) == ONE) {
+        rc = phy_mmd_reg_rd32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS, &cd_sts);
+        if (rc != MEPA_RC_OK) {
+            return rc;
+        }
+    }
+
+    // Stop cable diag
+    if (IS_LAN878X(dev->drv->id) == ONE) {
+        (void) phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN878X_CD_CFG,
+                                 LAN878X_CD_DIS, LAN878X_CD_DIS);
+    } else {
+        (void) phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS,
+                                 LAN888X_CD_ACTIVE, LAN888X_CD_DISABLE);
+    }
+
+    // Restore configuration and record cable diag report
+    (void) lan8x8x_phy_setup(dev);
+
+    return lan8x8x_cable_test_report(dev, &data->cd_res, cd_sts);
+}
+
+static mepa_rc lan8x8x_phy_cable_diag_start(mepa_device_t *dev)
+{
+    lan8x8x_data_t *const data = (lan8x8x_data_t *const)dev->data;
+    mepa_rc rc = MEPA_RC_INV_STATE;
+
+    if ((data->init_done) && (data->conf.admin.enable)) {
+        uint32_t cd_sts;
+
+        mepa_cable_diag_result_t *res = (mepa_cable_diag_result_t *const) & (data->cd_res);
+
+        res->status[0] = MESA_VERIPHY_STATUS_ABNORM;
+
+        if (IS_LAN878X(dev->drv->id) == ONE) {
+            rc = phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN878X_CD_CFG,
+                                   LAN878X_CD_EN, LAN878X_CD_EN);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+
+            rc = phy_mmd_reg_poll32(dev, MDIO_MMD_PMAPMD, LAN878X_CD_CFG,
+                                    LAN878X_CD_DONE, LAN878X_CD_DONE,
+                                    1U, 4000U, &cd_sts);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+
+            rc = phy_mmd_reg_rd32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS, &cd_sts);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+
+            rc = phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN878X_CD_CFG,
+                                   LAN878X_CD_DIS, LAN878X_CD_DIS);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+        } else {
+            // Soft Reset
+            rc = lan8x8x_phy_reset(dev);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+
+            // DUT to master mode
+            rc = phy_mmd_reg_wr(dev, MDIO_MMD_PMAPMD, MDIO_PMA_PMD_BT1_CTRL,
+                                MDIO_PMA_PMD_BT1_CTRL_CFG_MST);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+
+            // Config done set
+            rc = phy_mmd_reg_wr32(dev, MDIO_MMD_PMAPMD, T1_1G_TOP_CTRL_CONFIG,
+                                  T1_1G_TOP_CTRL_CONFIG_DONE);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+
+            LAN8X8X_NSLEEP(10000U);
+
+            // Enable CD
+            rc = phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS,
+                                   LAN888X_CD_ACTIVE, LAN888X_CD_ENABLE);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+
+            // Poll until the TDR test is no longer active (test done)
+            rc = phy_mmd_reg_poll32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS,
+                                    (LAN8X8X_TST_ACTIVE << 4), LAN8X8X_CD_STS_MASK,
+                                    0U, 4000U, &cd_sts);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+
+            //Stop cable diag
+            rc = phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS,
+                                   LAN888X_CD_ACTIVE, LAN888X_CD_DISABLE);
+            if (rc != MEPA_RC_OK) {
+                return rc;
+            }
+        }
+
+        //Re-store configuration
+        (void) lan8x8x_phy_setup(dev);
+
+        //cable diag report
+        rc = lan8x8x_cable_test_report(dev, res, cd_sts);
+        if (rc != MEPA_RC_OK) {
+            return rc;
+        }
+    }
+
+    return rc;
+}
+
+static mepa_rc lan8x8x_cable_diag_start_int(mepa_device_t *dev)
+{
+    lan8x8x_data_t *const data = (lan8x8x_data_t *const)dev->data;
+    mepa_status_t link_status = { 0 };
+    mepa_rc rc;
+
+    rc = lan8x8x_poll_int(dev, &link_status);
+    if (rc != MEPA_RC_OK) {
+        return rc;
+    }
+
+    data->cd_res.link = data->link_status;
+    data->cd_res.length[LAN8X8X_PAIR_0] = 0U;
+    data->cd_res.status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_UNKNOWN;
+
+    if (data->link_status == PHY_LINKUP) {
+        rc = MEPA_RC_OK;
+        data->cd_res.status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_OK;
+    } else {
+        rc = lan8x8x_phy_cable_diag_start(dev);
+        if (rc != MEPA_RC_OK) {
+            return rc;
+        }
+    }
+
+    return rc;
+}
+
+static mepa_rc lan8x8x_cable_diag_start(mepa_device_t *dev, int32_t mode)
+{
+    mepa_rc rc = MEPA_RC_ERROR;
+    (void)mode;
+
+    if (dev != NULL) {
+        MEPA_ENTER(dev);
+        rc = lan8x8x_cable_diag_start_int(dev);
+        MEPA_EXIT(dev);
+    }
+
+    return rc;
+}
+
+static mepa_rc lan8x8x_cable_diag_start_async(mepa_device_t *dev, int32_t mode)
+{
+    mepa_rc rc = MEPA_RC_ERROR;
+    (void)mode;
+
+    if (dev != NULL) {
+        lan8x8x_data_t *const data = (lan8x8x_data_t *const)dev->data;
+        mepa_status_t link_status = { 0 };
+
+        MEPA_ENTER(dev);
+
+        if (data->cd_state == LAN8X8X_CD_RUNNING) {
+            // Async cable diag already in progress - do not restart it
+            rc = MEPA_RC_OK;
+        } else {
+            rc = lan8x8x_poll_int(dev, &link_status);
+            if (rc == MEPA_RC_OK) {
+                data->cd_res.link = data->link_status;
+                data->cd_res.length[LAN8X8X_PAIR_0] = 0U;
+                data->cd_res.status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_UNKNOWN;
+
+                if (data->link_status == PHY_LINKUP) {
+                    data->cd_res.status[LAN8X8X_PAIR_0] =
+                        MESA_VERIPHY_STATUS_OK;
+                    data->cd_state = LAN8X8X_CD_DONE;
+                } else {
+                    rc = lan8x8x_cable_diag_async(dev);
+                    data->cd_state = (rc == MEPA_RC_OK) ? LAN8X8X_CD_RUNNING : LAN8X8X_CD_IDLE;
+                }
+            }
+        }
+
+        MEPA_EXIT(dev);
+    }
+
+    return rc;
+}
+
+static mepa_rc lan8x8x_cable_diag_poll(mepa_device_t *dev)
+{
+    mepa_rc rc = MEPA_RC_ERROR;
+
+    if (dev != NULL) {
+        lan8x8x_data_t *const data = (lan8x8x_data_t *const)dev->data;
+
+        MEPA_ENTER(dev);
+
+        if (data->cd_state == LAN8X8X_CD_IDLE) {
+            rc = MEPA_RC_ERROR;
+        } else if (data->cd_state == LAN8X8X_CD_DONE) {
+            rc = MEPA_RC_OK;
+            data->cd_state = LAN8X8X_CD_IDLE;
+        } else {
+            rc = lan8x8x_cable_diag_poll_int(dev);
+            if (rc != MEPA_RC_INCOMPLETE) {
+                data->cd_state = LAN8X8X_CD_IDLE;
+            }
+        }
+
+        MEPA_EXIT(dev);
+    }
+
+    return rc;
+}
+
+static mepa_rc lan8x8x_cable_diag_stop_async(mepa_device_t *dev)
+{
+    mepa_rc rc = MEPA_RC_ERROR;
+
+    if (dev != NULL) {
+        lan8x8x_data_t *const data = (lan8x8x_data_t *const)dev->data;
+
+        MEPA_ENTER(dev);
+
+        if (data->cd_state != LAN8X8X_CD_RUNNING) {
+            // No async cable diag pending - nothing to stop
+            rc = MEPA_RC_OK;
+        } else {
+            // Stop cable diagnostic test
+            if (IS_LAN878X(dev->drv->id) == ONE) {
+                rc = phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN878X_CD_CFG,
+                                       LAN878X_CD_DIS, LAN878X_CD_DIS);
+            } else {
+                rc = phy_mmd_reg_mod32(dev, MDIO_MMD_PMAPMD, LAN8X8X_CD_STS,
+                                       LAN888X_CD_ACTIVE, LAN888X_CD_DISABLE);
+            }
+
+            // Restore configuration after cable diagnostics
+            (void) lan8x8x_phy_setup(dev);
+
+            // Clear the stored cable diag result
+            data->cd_res.length[LAN8X8X_PAIR_0] = 0U;
+            data->cd_res.status[LAN8X8X_PAIR_0] = MESA_VERIPHY_STATUS_UNKNOWN;
+            data->cd_state = LAN8X8X_CD_IDLE;
+        }
+
+        MEPA_EXIT(dev);
+    }
+
+    return rc;
+}
+
+static mepa_rc lan8x8x_cable_diag_get(mepa_device_t *dev, mepa_cable_diag_result_t *res)
+{
+    mepa_rc rc = MEPA_RC_ERROR;
+
+    if ((dev != NULL) && (res != NULL)) {
+        lan8x8x_data_t *const data = (lan8x8x_data_t *const)dev->data;
+
+        rc = MEPA_RC_OK;
+
+        MEPA_ENTER(dev);
+        *res = data->cd_res;
+        MEPA_EXIT(dev);
+    }
+
+    return rc;
+}
+
 static void fill_driver_info(uint32_t id, uint32_t mask, mepa_driver_t *drv_inst)
 {
     T_D(MEPA_TRACE_GRP_GEN,   "Fill driver info for phy_id=0x%x\n", id);
@@ -2258,6 +2740,11 @@ static void fill_driver_info(uint32_t id, uint32_t mask, mepa_driver_t *drv_inst
     drv_inst->mepa_driver_event_enable_set   = &lan8x8x_event_enable_set;
     drv_inst->mepa_driver_event_enable_get   = &lan8x8x_event_enable_get;
     drv_inst->mepa_driver_event_poll         = &lan8x8x_event_status_poll;
+    drv_inst->mepa_driver_cable_diag_start       = &lan8x8x_cable_diag_start;
+    drv_inst->mepa_driver_cable_diag_get         = &lan8x8x_cable_diag_get;
+    drv_inst->mepa_driver_cable_diag_start_async = &lan8x8x_cable_diag_start_async;
+    drv_inst->mepa_driver_cable_diag_stop_async  = &lan8x8x_cable_diag_stop_async;
+    drv_inst->mepa_driver_cable_diag_poll        = &lan8x8x_cable_diag_poll;
 }
 
 mepa_drivers_t mepa_lan8x8x_driver_init(void)

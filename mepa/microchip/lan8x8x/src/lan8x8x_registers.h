@@ -168,50 +168,35 @@ static inline uint32_t LAN8X8X_SQI_GET(uint32_t v)
 #define OTP_STRAP_AUTO_NEG_EN           BIT(1)
 #define OTP_STRAP_MST_SLV_SEL           BIT(0)
 
-#define TC12_HDD_TDR            (T1_1G_TOP_CTRL + 0x30U)
-;
-//Cable diag length to fault
-#define TC12_HDD_TDR_CD_NO_ERR  (0x0U) //No Error
-#define TC12_HDD_TDR_CD_LOC1  (0x1U) // Error between 0-1.5 m away
-#define TC12_HDD_TDR_CD_LOC2  (0x3U) // Error between 1.5-3m away
-#define TC12_HDD_TDR_CD_LOC3  (0x4U) // Error between 3 -4.5m away
-#define TC12_HDD_TDR_CD_LOC4  (0x6U) // Error between 4.5 - 6m away
-#define TC12_HDD_TDR_CD_LOC5  (0x7U) // Error between 6 - 7.5m away
-#define TC12_HDD_TDR_CD_LOC6  (0x9U) // Error between 7.5-9m away
-#define TC12_HDD_TDR_CD_LOC7  (0xAU) // Error between 9 - 10.5m away
-#define TC12_HDD_TDR_CD_LOC8  (0xCU) // Error between 10.5 - 12m away
-#define TC12_HDD_TDR_CD_LOC9  (0xDU) // Error between 12 - 13.5m away
-#define TC12_HDD_TDR_CD_LOC10  (0xFU) // Error between 13.5 - 15m away
-#define TC12_HDD_TDR_CD_LOC11  (0x3FU) // Error about 15m
+// Cable Diagonistics Registers
+#define LAN878X_CD_CFG     (T1_1G_TOP_CTRL + 0x18U)
+#define LAN878X_CD_DONE    BIT(1)
+#define LAN878X_CD_EN      BIT(0)
+#define LAN878X_CD_DIS     LAN878X_CD_EN
 
-#define TC12_HDD_TDR_PAIR_0 (0U)
+#define LAN8X8X_CD_STS      (T1_1G_TOP_CTRL + 0x30U)
+#define LAN888X_CD_ACTIVE   GENMASK(0, 2)
+#define LAN888X_CD_ENABLE   BIT(1)
+#define LAN888X_CD_DISABLE  BIT(0)
 
-#define TC12_HDD_TDR_LEN_0_M  (0U)
-#define TC12_HDD_TDR_LEN_2_M  (2U)
-#define TC12_HDD_TDR_LEN_3_M  (3U)
-#define TC12_HDD_TDR_LEN_5_M  (5U)
-#define TC12_HDD_TDR_LEN_6_M  (6U)
-#define TC12_HDD_TDR_LEN_8_M  (8U)
-#define TC12_HDD_TDR_LEN_9_M  (9U)
-#define TC12_HDD_TDR_LEN_11_M (11U)
-#define TC12_HDD_TDR_LEN_12_M (12U)
-#define TC12_HDD_TDR_LEN_14_M (14U)
-#define TC12_HDD_TDR_LEN_15_M (15U)
-#define TC12_HDD_TDR_LEN_MAX_M  (16U)
+#define LAN8X8X_CD_TEST_DONE(x)       (LAN8X8X_CD_STS_GET(x) != LAN8X8X_TST_ACTIVE)
 
-#define TC12_HDD_TDR_STS        GENMASK(4, 8)
+#define LAN8X8X_CD_STS_MASK     GENMASK(4, 4)
+#define LAN888X_CD_LOC_MASK     GENMASK(8, 6)
+#define LAN878X_CD_LOC_MASK     GENMASK(8, 4)
 
-//Cable diag status
-#define TC12_HDD_TDR_LINK_UP      0xDU
-#define TC12_HDD_TDR_TST_ACTIVE   0x8U
-#define TC12_HDD_TDR_CBL_OK       0x7U
-#define TC12_HDD_TDR_CBL_OPEN     0x6U
-#define TC12_HDD_TDR_CBL_SHORT    0x3U
-
-#define TC12_HDD_TDR_STS_DONE       (TC12_HDD_TDR_TST_ACTIVE << 4U)
-
-#define TC12_HDD_TDR_ACTIVE     GENMASK(0, 2)
-#define TC12_HDD_TDR_DISABLE    BIT(0)
+static inline uint32_t LAN8X8X_CD_STS_GET(uint32_t v)
+{
+    return (((v) & LAN8X8X_CD_STS_MASK) >> 4U);
+}
+static inline uint32_t LAN888X_CD_LOC(uint32_t v)
+{
+    return (((v) & LAN888X_CD_LOC_MASK) >> 8U);
+}
+static inline uint32_t LAN878X_CD_LOC(uint32_t v)
+{
+    return (((v) & LAN878X_CD_LOC_MASK) >> 8U);
+}
 
 #define T1_1G_E100T1_PMD            0x8000U
 #define T1_1G_E100T1_PMD_ADPLL_CFG_0        (T1_1G_E100T1_PMD + 0x40U)
@@ -260,5 +245,32 @@ static inline uint32_t LAN8X8X_SQI_GET(uint32_t v)
 #define T1_BASE_FCB             0xF000U
 #define T1_BASE_HOST            0xF100U
 #define T1_BASE_LINE            0xF300U
+
+// Cable Diagonistics length to fault
+#define LAN8X8X_CD_LOC0  (0x0U)
+#define LAN8X8X_CD_LOC1  (0x1U)
+#define LAN8X8X_CD_LOC2  (0x2U)
+#define LAN8X8X_CD_LOC3  (0x3U)
+#define LAN8X8X_CD_LOC4  (0x4U)
+#define LAN8X8X_CD_LOC5  (0x5U)
+#define LAN8X8X_CD_LOC6  (0x6U)
+#define LAN8X8X_CD_LOC7  (0x7U)
+#define LAN8X8X_CD_LOC8  (0x8U)
+#define LAN8X8X_CD_LOC9  (0x9U)
+#define LAN8X8X_CD_LOC10 (0xAU)
+#define LAN8X8X_CD_LOC11 (0xCU)
+#define LAN8X8X_CD_LOC12 (0xBU)
+#define LAN8X8X_CD_LOC13 (0xFU)
+#define LAN8X8X_CD_LOC14 (0x3FU)
+
+#define LAN8X8X_PAIR_0 (0U)
+
+// Cable Diagonistics status
+#define LAN8X8X_CD_STS_NONE  0x0U
+#define LAN8X8X_LINK_UP      0xDU
+#define LAN8X8X_TST_ACTIVE   0x8U
+#define LAN8X8X_CBL_OK       0x7U
+#define LAN8X8X_CBL_OPEN     0x6U
+#define LAN8X8X_CBL_SHORT    0x3U
 
 #endif //LAN8X8X_REGISTERS_H

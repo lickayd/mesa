@@ -79,6 +79,12 @@ typedef struct {
     mepa_bool_t is_master_fault;
 } lan8x8x_dev_info_t;
 
+typedef enum {
+    LAN8X8X_CD_IDLE,    // No async cable diag started.
+    LAN8X8X_CD_RUNNING, // Async cable diag in progress.
+    LAN8X8X_CD_DONE,    // Async cable diag finished.
+} lan8x8x_cd_state_t;
+
 typedef struct {
     lan8x8x_otp_cap_t       t1_cap;
     mepa_bool_t             init_done;
@@ -92,6 +98,7 @@ typedef struct {
     lan8x8x_dev_info_t       dev;
     mepa_bool_t             ctx_status;
     mepa_cable_diag_result_t cd_res;
+    lan8x8x_cd_state_t      cd_state;
     mepa_gpio_conf_t        led_conf[4];
 } lan8x8x_data_t;
 
