@@ -181,13 +181,4 @@
 /* BASE-T1 PMA/PMD control register */
 #define MDIO_PMA_PMD_BT1_CTRL_CFG_MST   (0x4000U) /* MASTER-SLAVE config value */
 
-static inline uint32_t TC12_CD_STS(uint32_t v)
-{
-    return (((v) & GENMASK(4, 8)) >> 4U);
-}
-static inline uint32_t TC12_CD_LOC(uint32_t v)
-{
-    return (((v) & GENMASK(8, 6)) >> 8U);
-}
-
 #endif //PHY_DEFINES_H
