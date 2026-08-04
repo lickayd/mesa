@@ -800,8 +800,9 @@ static vtss_rc tas_list_free(vtss_state_t *vtss_state, u32 list_idx)
             /* Read the next GCL entry index */
             REG_RD(QSYS_TAS_GCL_CT_CFG2, &value);
             entry_idx = QSYS_TAS_GCL_CT_CFG2_NEXT_GCL_X(value);
+            ++entry_cnt;
         } while ((entry_idx != tas_lists[list_idx].entry_idx) &&
-                 (++entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
+                 (entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
     }
 
     if (!tas_lists[list_idx].inherit_profile) { /* Inherit profiles are not freed */
@@ -2058,7 +2059,8 @@ static vtss_rc debug_tas_conf_print(vtss_state_t *vtss_state,
 
             /* Read the next GCL entry index */
             entry_idx = QSYS_TAS_GCL_CT_CFG2_NEXT_GCL_X(value1);
-        } while ((entry_idx != entry_first) && (++entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
+            ++entry_cnt;
+        } while ((entry_idx != entry_first) && (entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
 
         pr("\n");
     }

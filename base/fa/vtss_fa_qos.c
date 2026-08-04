@@ -4872,7 +4872,8 @@ static vtss_rc debug_tas_conf_print(vtss_state_t *vtss_state,
         entry_cnt = 0;
         do {
             (void)debug_tas_entry_print(vtss_state, ss, &entry_idx);
-        } while ((entry_idx != entry_first) && (++entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
+            ++entry_cnt;
+        } while ((entry_idx != entry_first) && (entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
 #endif
         pr("\n");
     }
