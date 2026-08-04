@@ -775,7 +775,7 @@ static u32 tas_list_allocate(vtss_state_t *vtss_state, u32 length)
 
 static vtss_rc tas_list_free(vtss_state_t *vtss_state, u32 list_idx)
 {
-    u32                  entry_idx, value;
+    u32                  entry_idx, value, entry_cnt;
     vtss_tas_list_t     *tas_lists = vtss_state->qos.tas.tas_lists;
     vtss_tas_list_entry *entries = vtss_state->qos.tas.tas_entries;
 
@@ -789,6 +789,7 @@ static vtss_rc tas_list_free(vtss_state_t *vtss_state, u32 list_idx)
         VTSS_TAS_NUMBER_OF_ENTRIES) { /* Check if the list has entries */
         /* Mark all entries as unused */
         entry_idx = tas_lists[list_idx].entry_idx;
+        entry_cnt = 0;
         do {
             /* Select the list entry */
             REG_WRM(QSYS_TAS_CFG_CTRL, QSYS_TAS_CFG_CTRL_GCL_ENTRY_NUM(entry_idx),
@@ -799,7 +800,8 @@ static vtss_rc tas_list_free(vtss_state_t *vtss_state, u32 list_idx)
             /* Read the next GCL entry index */
             REG_RD(QSYS_TAS_GCL_CT_CFG2, &value);
             entry_idx = QSYS_TAS_GCL_CT_CFG2_NEXT_GCL_X(value);
-        } while (entry_idx != tas_lists[list_idx].entry_idx);
+        } while ((entry_idx != tas_lists[list_idx].entry_idx) &&
+                 (++entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
     }
 
     if (!tas_lists[list_idx].inherit_profile) { /* Inherit profiles are not freed */
@@ -1008,7 +1010,7 @@ static vtss_rc tas_current_port_conf_calc(vtss_state_t             *vtss_state,
         entry_idx = QSYS_TAS_GCL_CT_CFG2_NEXT_GCL_X(value);
 
         gcl_idx += 1;
-    } while (entry_idx != entry_first);
+    } while ((entry_idx != entry_first) && (gcl_idx < VTSS_QOS_TAS_GCL_LEN_MAX));
 
     /* Save list length */
     current_port_conf->gcl_length = gcl_idx;
@@ -1986,7 +1988,7 @@ static vtss_rc debug_tas_conf_print(vtss_state_t *vtss_state,
                                     u32           list_idx,
                                     BOOL          any_state)
 {
-    u32 j, value, value1, entry_first, state, entry_idx, profile_idx;
+    u32 j, value, value1, entry_first, state, entry_idx, profile_idx, entry_cnt;
 
     /* Select the list */
     REG_WRM(QSYS_TAS_CFG_CTRL, QSYS_TAS_CFG_CTRL_LIST_NUM(list_idx), QSYS_TAS_CFG_CTRL_LIST_NUM_M);
@@ -2016,6 +2018,7 @@ static vtss_rc debug_tas_conf_print(vtss_state_t *vtss_state,
         entry_first = entry_idx;
 
         /* Read the list elements */
+        entry_cnt = 0;
         do {
             pr("    Enty Index: %u\n", entry_idx);
             pr("    ----------------\n");
@@ -2055,7 +2058,7 @@ static vtss_rc debug_tas_conf_print(vtss_state_t *vtss_state,
 
             /* Read the next GCL entry index */
             entry_idx = QSYS_TAS_GCL_CT_CFG2_NEXT_GCL_X(value1);
-        } while (entry_idx != entry_first);
+        } while ((entry_idx != entry_first) && (++entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
 
         pr("\n");
     }

@@ -4775,6 +4775,7 @@ static vtss_rc debug_tas_conf_print(vtss_state_t *vtss_state,
     u32 i, value, state, entry_idx;
 #if defined(VTSS_FEATURE_QOS_TAS_LIST_LINKED)
     u32 entry_first;
+    u32 entry_cnt;
     u32 profile_idx;
 #else
     u32 gcl_length = 0U;
@@ -4868,9 +4869,10 @@ static vtss_rc debug_tas_conf_print(vtss_state_t *vtss_state,
 #else
         /* Read the list elements */
         entry_first = entry_idx;
+        entry_cnt = 0;
         do {
             (void)debug_tas_entry_print(vtss_state, ss, &entry_idx);
-        } while (entry_idx != entry_first);
+        } while ((entry_idx != entry_first) && (++entry_cnt < VTSS_TAS_NUMBER_OF_ENTRIES));
 #endif
         pr("\n");
     }
