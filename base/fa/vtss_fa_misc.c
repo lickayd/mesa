@@ -123,14 +123,12 @@ vtss_rc vtss_cil_eee_port_conf_set(vtss_state_t                     *vtss_state,
 vtss_rc vtss_cil_fan_controller_init(vtss_state_t *vtss_state, const vtss_fan_conf_t *const spec)
 {
     u32                    pwm_freq;
-    u32                    system_clock_freq = 625000000;
+    u32                    system_clock_freq;
     vtss_core_clock_freq_t freq = vtss_state->init_conf.core_clock.freq;
 
-    if (freq == VTSS_CORE_CLOCK_250MHZ) {
-        system_clock_freq = 250000000;
-    } else if (freq == VTSS_CORE_CLOCK_500MHZ) {
-        system_clock_freq = 500000000;
-    }
+    // Derive the frequency from the clock period so that all supported core
+    // clocks are covered, including the Laguna ones (328MHz and 180MHz).
+    system_clock_freq = (1000000U / vtss_fa_clk_period(freq)) * 1000000U;
 
     switch (spec->fan_pwm_freq) {
     case VTSS_FAN_PWM_FREQ_25KHZ: pwm_freq = 25000; break;
@@ -144,16 +142,22 @@ vtss_rc vtss_cil_fan_controller_init(vtss_state_t *vtss_state, const vtss_fan_co
     default:                      return VTSS_RC_ERROR;
     }
 
-    // TBD_FA_FAN
+#if defined(VTSS_ARCH_LAN969X)
+    // On LAN969X the PWM/TACHO pins are muxed by MEBA, which knows which of the
+    // two pin pairs offering the 'fan' function the board uses (GPIO_25/26 or
+    // GPIO_52/53). Note that the SPARX5 pins below must not be applied on
+    // LAN969X, where they belong to eMMC/SD.
+#else
     // TBD_FA_POE
     // GPIO initialization is currently done in the API, but it does not really
     // belong here as it is board specific. Furthermore, once we have also PoE
     // support for FA, there will be an overlap between FAN and PoE for GPIO_23
     // Therefore the GPIO configuration should be moved over to the kernel
-    // through device trees. Set GPIO alternate functions. PWM is GPIO_23,
-    // ALT_0. TACHO is GPIO_21, ALT_1.
+    // through device trees, as is already done for LAN969X above. Set GPIO
+    // alternate functions. PWM is GPIO_23, ALT_0. TACHO is GPIO_21, ALT_1.
     VTSS_RC(vtss_fa_gpio_mode(vtss_state, 0, 23, VTSS_GPIO_ALT_0));
     VTSS_RC(vtss_fa_gpio_mode(vtss_state, 0, 21, VTSS_GPIO_ALT_1));
+#endif
 
     // Set PWM frequency (System clock frequency)/(PWM frequency)/256)
     REG_WRM(VTSS_DEVCPU_GCB_PWM_FREQ,
@@ -225,16 +229,12 @@ vtss_rc vtss_cil_fan_rotation_get(vtss_state_t    *vtss_state,
 #if defined(VTSS_FEATURE_TEMP_SENSOR)
 vtss_rc vtss_cil_chip_temp_init(struct vtss_state_s *vtss_state, const BOOL enable)
 {
-    u32                    system_clock_freq_in_1us = 625U;
+    u32                    system_clock_freq_in_1us;
     vtss_core_clock_freq_t freq = vtss_state->init_conf.core_clock.freq;
 
-    if (freq == VTSS_CORE_CLOCK_250MHZ) {
-        system_clock_freq_in_1us = 250U;
-    } else if (freq == VTSS_CORE_CLOCK_500MHZ) {
-        system_clock_freq_in_1us = 500U;
-    } else {
-        // Empty on purpose
-    }
+    // Clock cycles per us, derived from the clock period so that all supported
+    // core clocks are covered, including the Laguna ones (328MHz and 180MHz).
+    system_clock_freq_in_1us = 1000000U / vtss_fa_clk_period(freq);
 
 #if defined(VTSS_ARCH_LAN969X)
     // Clock cycles per us

@@ -34,6 +34,14 @@ typedef struct {
     uint8_t                poe_port;
 } port_map_t;
 
+static const mesa_fan_conf_t lan969x_fan_spec = {
+    .fan_pwm_freq = MESA_FAN_PWM_FREQ_20HZ, // 20Hz - PWM gates the fan supply
+    .fan_low_pol = 0,                       // PWM is logic 1 when on
+    .fan_open_col = false,                  // Push-pull output
+    .type = MESA_FAN_3_WIRE_TYPE,           // 3-wire, tacho gated by PWM
+    .ppr = 2,                               // 2 PPR
+};
+
 static const meba_ptp_rs422_conf_t pcb8398_rs422_conf = {
     .gpio_rs422_1588_mstoen = 58,
     .gpio_rs422_1588_slvoen = 59,
@@ -370,15 +378,17 @@ static uint32_t lan969x_capability(meba_inst_t inst, int cap)
     meba_board_state_t *board = INST2BOARD(inst);
     T_N(inst, "Called - %d", cap);
     switch (cap) {
-    case MEBA_CAP_POE:                         return 1;
+    case MEBA_CAP_POE:                  return 1;
     case MEBA_CAP_1588_CLK_ADJ_DAC:
-    case MEBA_CAP_1588_REF_CLK_SEL:            return 0;
-    case MEBA_CAP_TEMP_SENSORS:                return 1;
+    case MEBA_CAP_1588_REF_CLK_SEL:     return 0;
+    case MEBA_CAP_TEMP_SENSORS:         return 1;
     case MEBA_CAP_BOARD_PORT_COUNT:
-    case MEBA_CAP_BOARD_PORT_MAP_COUNT:        return board->port_cnt;
+    case MEBA_CAP_BOARD_PORT_MAP_COUNT: return board->port_cnt;
     case MEBA_CAP_LED_MODES:
-    case MEBA_CAP_DYING_GASP:
-    case MEBA_CAP_FAN_SUPPORT:                 return 0;
+    case MEBA_CAP_DYING_GASP:           return 0;
+    case MEBA_CAP_FAN_SUPPORT:
+        // FAN_PWM (GPIO_25) and FAN_TACHO (GPIO_26) are muxed by the device tree
+        return board->type == BOARD_TYPE_LAGUNA_PCB8398 || board->type == BOARD_TYPE_LAGUNA_PCB8422;
     case MEBA_CAP_LED_DIM_SUPPORT:
     case MEBA_CAP_BOARD_HAS_PCB107_CPLD:
     case MEBA_CAP_PCB107_CPLD_CS_VIA_MUX:
@@ -678,8 +688,21 @@ static mesa_rc lan969x_reset(meba_inst_t inst, meba_reset_point_t reset)
             (void)vtss_phy_post_reset(PHY_INST, 0);
         }
         break;
-    case MEBA_FAN_INITIALIZE:       break;
-    case MEBA_SENSOR_INITIALIZE:    break;
+    case MEBA_FAN_INITIALIZE:
+        /* The 'fan' function is available on two pin pairs (GPIO_25/26 and
+           GPIO_52/53), so the pin mux belongs here in the board layer and not in
+           the chip layer. */
+        (void)mesa_gpio_mode_set(NULL, 0, 25, MESA_GPIO_ALT_0); // FAN_PWM
+        (void)mesa_gpio_mode_set(NULL, 0, 26, MESA_GPIO_ALT_0); // FAN_TACHO
+
+        rc = mesa_fan_controller_init(NULL, board->fan_spec);
+        if (rc != MESA_RC_OK) {
+            T_E(inst, "Could not initialize fan controller");
+        }
+
+        mesa_fan_cool_lvl_set(NULL, 0xFF); // Set default level to maximum
+        break;
+    case MEBA_SENSOR_INITIALIZE:    (void)mesa_temp_sensor_init(NULL, true); break;
     case MEBA_INTERRUPT_INITIALIZE: break;
     case MEBA_POE_INITIALIZE:       break;
     case MEBA_PHY_INITIALIZE:
@@ -1109,6 +1132,24 @@ static mesa_rc lan969x_sensor_get(meba_inst_t inst, meba_sensor_t type, int six,
     return rc;
 }
 
+static mesa_rc lan969x_fan_param_get(meba_inst_t inst, meba_fan_param_t *param)
+{
+    T_N(inst, "Called");
+    param->start_time = 5;
+    param->start_level = 95;
+    param->min_pwm = 50;
+    return MESA_RC_OK;
+}
+
+static mesa_rc lan969x_fan_conf_get(meba_inst_t inst, mesa_fan_conf_t *conf)
+{
+    meba_board_state_t *board = INST2BOARD(inst);
+
+    T_N(inst, "Called");
+    *conf = *board->fan_spec;
+    return MESA_RC_OK;
+}
+
 meba_inst_t lan969x_initialize(meba_inst_t inst, const meba_board_interface_t *callouts)
 {
     meba_board_state_t *board;
@@ -1135,6 +1176,7 @@ meba_inst_t lan969x_initialize(meba_inst_t inst, const meba_board_interface_t *c
     board->type = (board_type_t)pcb;
     inst->props.board_type = board->type;
     inst->props.target = target;
+    board->fan_spec = &lan969x_fan_spec;
     board->port = (fa_port_info_t *)calloc(30, sizeof(fa_port_info_t));
     if (board->port == NULL) {
         fprintf(stderr, "Port table malloc failure\n");
@@ -1183,8 +1225,8 @@ meba_inst_t lan969x_initialize(meba_inst_t inst, const meba_board_interface_t *c
     inst->api.meba_port_admin_state_set = lan969x_port_admin_state_set;
     inst->api.meba_port_led_update = lan969x_port_led_update;
     inst->api.meba_led_intensity_set = NULL;
-    inst->api.meba_fan_param_get = NULL;
-    inst->api.meba_fan_conf_get = NULL;
+    inst->api.meba_fan_param_get = lan969x_fan_param_get;
+    inst->api.meba_fan_conf_get = lan969x_fan_conf_get;
     inst->api.meba_status_led_set = lan969x_status_led_set;
     inst->api.meba_irq_handler = lan969x_irq_handler;
     inst->api.meba_irq_requested = lan969x_irq_requested;
