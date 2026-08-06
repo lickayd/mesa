@@ -909,7 +909,14 @@ static vtss_rc fa_ptp_action_to_ifh(vtss_packet_ptp_action_t ptp_action,
         break;
     }
 
+#if defined(VTSS_ARCH_LAN969X)
+    // Laguna rewrites the PDU sequence number on a two-step transmission in a non-zero TOD domain.
+    if (ptp_action != VTSS_PACKET_PTP_ACTION_TWO_STEP) {
+        *result = *result | ((u32)ptp_domain << 6U);
+    }
+#else
     *result = *result | ((u32)ptp_domain << 6U);
+#endif
 
     return rc;
 }
