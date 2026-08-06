@@ -8,7 +8,7 @@ require_relative 'libeasy/et'
 DUT_TEST_RATE = 330000
 
 def qos_tas_equal_interval_3_prio_1_port_test(eg, ig, it_vid = 0, ot_vid = 0, ot = false)
-    test "Time aware scheduling with equal time slots test from #{$ts.dut.p[ig[0]]},#{$ts.dut.p[ig[1]]},#{$ts.dut.p[ig[2]]} to #{$ts.dut.p[eg]}  OT #{ot}" do
+    t_i("Time aware scheduling with equal time slots test from #{$ts.dut.p[ig[0]]},#{$ts.dut.p[ig[1]]},#{$ts.dut.p[ig[2]]} to #{$ts.dut.p[eg]}  OT #{ot}")
 
     frame_size = 500
     frame_tx_time_nano = (frame_size+20)*8    # One bit takes one nano sec to transmit at 1G
@@ -18,7 +18,6 @@ def qos_tas_equal_interval_3_prio_1_port_test(eg, ig, it_vid = 0, ot_vid = 0, ot
     max_sdu = frame_size + (frame_size/2)
 
     t_i ("Create GCL")
-
     gcl = [{"gate_operation":"MESA_QOS_TAS_GCO_SET_GATE_STATES",
             "gate_open":[true,false,false,false,false,false,false,false],
             "time_interval":time_interval},
@@ -90,13 +89,17 @@ def qos_tas_equal_interval_3_prio_1_port_test(eg, ig, it_vid = 0, ot_vid = 0, ot
 
     if ($cap_family != chip_family_to_id("MESA_CHIP_FAMILY_SPARX5"))
         t_i"Check that too large frames are discarded"
-       #measure(ig, eg, size,        sec=1, frame_rate=false, data_rate=false, erate=[1000000000],  etolerance=[1], with_pre_tx=false, pcp=[],  cycle_time=[])
-        measure(ig, eg, max_sdu + 1, 2,     false,            false,           [0,0,0],             [5,5,5],        true,              [0,3,7], [cycle_time,cycle_time,cycle_time])
+        check_rate({
+            ig: ig, eg: eg, size: max_sdu + 1, sec: 2, erate: [0,0,0], etolerance: [5,5,5],
+            with_pre_tx: true, pcp: [0,3,7], cycle_time: [cycle_time,cycle_time,cycle_time]
+        })
     end
 
     erate = (DUT_TEST_RATE*1000)/3
-   #measure(ig, eg, size,       sec=1, frame_rate=false, data_rate=false, erate=[1000000000],  etolerance=[1], with_pre_tx=false, pcp=[],  cycle_time=[])
-    measure(ig, eg, frame_size, 2,     false,            false,           [erate,erate,erate], [5,5,5],        true,              [0,3,7], [cycle_time,cycle_time,cycle_time])
+    check_rate({
+        ig: ig, eg: eg, size: frame_size, sec: 2, erate: [erate,erate,erate], etolerance: [5,5,5],
+        with_pre_tx: true, pcp: [0,3,7], cycle_time: [cycle_time,cycle_time,cycle_time]
+    })
 
     t_i ("Stop GCL")
     conf = $ts.dut.call("mesa_qos_tas_port_conf_get", $ts.dut.p[eg])
@@ -147,13 +150,14 @@ def qos_tas_equal_interval_3_prio_1_port_test(eg, ig, it_vid = 0, ot_vid = 0, ot
     $ts.dut.run("mesa-cmd mac flush")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ctag vid #{it_vid} ipv4 dscp 0")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ctag vid #{ot_vid} ipv4 dscp 0")
-   #measure(ig, eg, size,       sec=1, frame_rate=false, data_rate=false, erate=1000000000, tolerance=1,      with_pre_tx=false, pcp=MEASURE_PCP_NONE)
-    measure(ig, eg, 600, 1,     false,            false,           [0,0,(DUT_TEST_RATE*1000)],  [pcp0,pcp3,pcp7], true,              [0,3,7]) # On SparX-5 some lower priority frames are slipping through
+    check_rate({
+        ig: ig, eg: eg, size: 600, erate: [0,0,(DUT_TEST_RATE*1000)], etolerance: [pcp0,pcp3,pcp7],
+        with_pre_tx: true, pcp: [0,3,7]
+    }) # On SparX-5 some lower priority frames are slipping through
 
     t_i ("Stop dummy GCL")
     conf = $ts.dut.call("mesa_qos_tas_port_conf_get", $ts.dut.p[ig[0]])
     conf["gate_enabled"] = false
     conf["config_change"] = false
     conf = $ts.dut.call("mesa_qos_tas_port_conf_set", $ts.dut.p[ig[0]], conf)
-    end
 end
