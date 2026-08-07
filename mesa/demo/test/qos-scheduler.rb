@@ -19,7 +19,11 @@ test_table =
         txt: "strict-scheduling",
         cfg: {},
         chk: {erate: [0, 0, 1000000000], pcp: [0, 3, 7]},
-        # On some platforms, some low priority frames are slipping through
+        # Bound the leak by pcp7's own shortfall + slack, not by a fixed frame
+        # count that host tx jitter trips on a fast bench.
+        sp: {slack: 300},
+        # On some platforms, some low priority frames are slipping through.
+        # With :sp set only index 2 (pcp7, percent) is used.
         tol: {ca: [220, 305, 2],
               oc: [340, 380, 2],
               ma: [260, 500, 1.1],
@@ -133,6 +137,11 @@ def run_test(t)
     c[:erate] = erate
     c[:etolerance] = etol
     c[:pcp] = chk[:pcp]
+    sp = fld_get(t, :sp, nil)
+    if (sp != nil)
+        c[:strict_priority] = true
+        c[:sp_slack] = fld_get(sp, :slack, 0)
+    end
     check_rate(c)
 end
 
