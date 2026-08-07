@@ -11,11 +11,7 @@
 #include "vtss_lk_packet.h"
 #endif
 
-#if defined(VTSS_ARCH_LAIKA)
-#define FA_PACKET_CPU_PORT RT_CHIP_PORT_CPU_0
-#else
 #define FA_PACKET_CPU_PORT RT_CHIP_PORT_CPU_1
-#endif
 
 /* - CIL functions ------------------------------------------------- */
 
