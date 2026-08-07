@@ -2219,7 +2219,7 @@ static uint32_t lan887x_capability_priv(mepa_device_t *dev, uint32_t capability)
         (data->t1_cap.cap.dis_1000 == PHY_FALSE)) {
         c = ONE;
     } else if (capability == (uint32_t)MEPA_CAP_TS_NONE) {
-        c = (data->conf.speed != MESA_SPEED_100M) ? 1U : 0U;
+        c = ONE;
     } else {
         c = 0U;
     }
