@@ -172,7 +172,7 @@ class EtXML < ::Ox::Sax
                 pr "#{e[:data].to_s} NOT-OK: #{a[:msg]}", "AST".bg_red
 
                 if stack_include(:check_capability)
-                  junit_skipped()
+                  junit_skipped(a[:msg])
                 else
                   junit_failure()
                 end
@@ -367,9 +367,13 @@ class EtXML < ::Ox::Sax
         @junit[:failed] = true
     end
 
-    def junit_skipped
+    def junit_skipped reason = nil
         return if @junit.nil?
         @junit[:skipped] = true
+        # Keep the first reason seen -- the capability assert that triggered the
+        # skip fires before the script's clean exit, so it wins over any later
+        # generic marker.
+        @junit[:skip_reason] ||= reason if reason
     end
 
     def pr_brief lable, msg
@@ -439,6 +443,7 @@ class EtXML < ::Ox::Sax
             # stack-trace or error messages seen).
             :failed => false,
             :skipped => false,
+            :skip_reason => nil,
 
             # Track if the test has explicitly reported ok
             :test_status_ok => false,
@@ -475,7 +480,8 @@ class EtXML < ::Ox::Sax
                 j.puts "  <testcase name=\"#{tc[:name]}\">"
 
                 if junit_tc_skipped tc
-                    j.puts "    <skipped message=\"test skipped\" />"
+                    reason = tc[:skip_reason] || "test skipped"
+                    j.puts "    <skipped message=#{reason.encode(:xml => :attr)} />"
                 elsif not junit_tc_is_ok tc
                     j.puts "    <failure message=\"test failed\" />"
                 end
