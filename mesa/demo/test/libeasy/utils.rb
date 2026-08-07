@@ -636,6 +636,8 @@ def check_rate(cfg)
     size_array = fld_get(cfg, :size_array, [])
     dmac = fld_get(cfg, :dmac, "00:00:00:00:01:01")
     streams = fld_get(cfg, :streams, 1)   # Parallel/Multiple Easyframe transmitter per ingress port
+    strict_priority = fld_get(cfg, :strict_priority, false)
+    sp_slack = fld_get(cfg, :sp_slack, 0)
 
     pre_tx = with_pre_tx ? 1 : 0    # Calculate the possible pre tx time in seconds
     # The transmitters must outlive the counter window, which extends past the capture by the serial counter reads. They are always killed below
@@ -776,7 +778,8 @@ def check_rate(cfg)
             end
             expected_tolerance << "#{tolerance},"
         end
-        res = $ts.pc.try("pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle} #{fname}")
+        sp_opt = strict_priority ? " --strict-priority --sp-slack #{sp_slack}" : ""
+        res = $ts.pc.try("pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle}#{sp_opt} #{fname}")
     else
         sec_count_in = 1000000000/8/(20+size)    # Calculate frames per second at line speed. The ef tx function can only run at line speed. The 'size' parameter is the requested frame size inclusive checksum
         sec_count_out = 1000000000/8/((data_rate ? 0 : 20)+size)  # This is the theoretical full rate number of outgoing frames per sec. 'size' is requested frame size inclusive checksum
@@ -797,8 +800,8 @@ def check_rate(cfg)
     return counters
 end
 
-def measure(ig, eg, size, sec=1, frame_rate=false, data_rate=false, erate=[1000000000], etolerance=[1], with_pre_tx=false, pcp=[], cycle_time=[], size_array=[])
-    test "measure  ig: #{ig}  eg: #{eg}  size: #{size}  sec: #{sec}  frame_rate #{frame_rate}  data_rate #{data_rate}  erate #{erate}  etolerance #{etolerance}  with_pre_tx: #{with_pre_tx}  pcp #{pcp}  cycle_time #{cycle_time}" do
+def measure(ig, eg, size, sec=1, frame_rate=false, data_rate=false, erate=[1000000000], etolerance=[1], with_pre_tx=false, pcp=[], cycle_time=[], size_array=[], strict_priority: false, sp_slack: 0)
+    test "measure  ig: #{ig}  eg: #{eg}  size: #{size}  sec: #{sec}  frame_rate #{frame_rate}  data_rate #{data_rate}  erate #{erate}  etolerance #{etolerance}  with_pre_tx: #{with_pre_tx}  pcp #{pcp}  cycle_time #{cycle_time}#{strict_priority ? "  strict_priority sp_slack: #{sp_slack}" : ""}" do
         cfg = {}
         cfg[:ig] = ig
         cfg[:eg] = eg
@@ -812,6 +815,8 @@ def measure(ig, eg, size, sec=1, frame_rate=false, data_rate=false, erate=[10000
         cfg[:pcp] = pcp
         cfg[:cycle_time] = cycle_time
         cfg[:size_array] = size_array
+        cfg[:strict_priority] = strict_priority
+        cfg[:sp_slack] = sp_slack
         check_rate(cfg)
     end # test
 end

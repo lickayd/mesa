@@ -43,6 +43,14 @@ OptionParser.new do |opts|
     opts.on("--exp-cycle microsec", "Expected TAS cycle time") do |cyc|
         $options[:exp_cycle] = cyc.to_i
     end
+
+    opts.on("--strict-priority", "Strict-priority invariant instead of per-PCP tolerances: the highest-rate PCP must keep the egress (within its --exp-tolerance) and the combined count of the zero-expected PCPs (the 'leak') must not exceed the highest PCP's shortfall (+ --sp-slack). Robust to host tx jitter that briefly gaps the highest-priority stream.") do
+        $options[:strict_priority] = true
+    end
+
+    opts.on("--sp-slack N", "Extra frames of slack on the strict-priority leak<=shortfall check (counting-window edge effects)") do |n|
+        $options[:sp_slack] = n.to_i
+    end
 end.parse!
 
 if $options[:frame_count].nil?
@@ -252,6 +260,45 @@ if ($options[:frame_count] == :all)
     end
 
     analyze_exit("------Analyze succeeded.  off #{off}------")
+end
+
+if ($options[:frame_count] == :pcp && $options[:strict_priority])
+    # Strict-priority invariant, robust to host tx jitter. The highest-rate PCP
+    # (largest exp-count) must carry the egress within its tolerance; the
+    # combined "leak" of the zero-expected PCPs must not exceed the highest
+    # PCP's shortfall (+ slack). This tolerates a work-conserving scheduler
+    # handing an idle egress slot to the next queue when the highest stream
+    # momentarily gaps, but still fails a real bug (highest under-delivering
+    # below its tolerance, or a leak larger than the egress the highest left).
+    exp = $options[:exp_count].map { |x| x.to_i }
+    exp_high = exp.max
+    high_idx = exp.index(exp_high)
+    if (exp_high == 0)
+        $stderr.puts "Analyze failed (strict-priority): no highest-rate PCP (all exp-count are zero)"
+        exit 7
+    end
+    counted_high = pcp_count[high_idx]
+    high_tol = exp_tolerance[high_idx].to_i
+    shortfall = exp_high - counted_high
+    slack = ($options[:sp_slack] != nil) ? $options[:sp_slack] : 0
+    leak = 0
+    exp.each_with_index { |e, i| leak += pcp_count[i] if (e == 0) }
+    high_pcp = $options[:pcp_values][high_idx]
+    problem = false
+    if (counted_high < (exp_high - high_tol))
+        $stderr.puts "Analyze failed (strict-priority): highest PCP #{high_pcp} under-delivered. Counted: #{counted_high}  Expected: #{exp_high}  Tolerance: #{high_tol}"
+        problem = true
+    end
+    if (leak > (shortfall + slack))
+        $stderr.puts "Analyze failed (strict-priority): low-priority leak #{leak} exceeds PCP #{high_pcp} shortfall #{shortfall} + slack #{slack}"
+        problem = true
+    end
+    if (problem)
+        save_pcap_file
+        exit 7
+    end
+    puts "------strict-priority OK. highest PCP #{high_pcp} #{counted_high}/#{exp_high} (tol #{high_tol})  shortfall #{shortfall}  leak #{leak} (slack #{slack})  counts #{pcp_count}------"
+    exit 0
 end
 
 if ($options[:frame_count] == :pcp)
