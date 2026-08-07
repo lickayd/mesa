@@ -24,7 +24,7 @@ systems:
     image: arm64/mesa/demo/arm64_vsc7558TSN.itb
   - system: dk-t34-4
     dut: fireant
-    branch: master
+    branch: master.asa-nightly-tests-3
     image: arm64/mesa/demo/arm64_vsc7558TSN.itb
   - system: dk-t34-5
     dut: fireant
