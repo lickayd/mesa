@@ -515,9 +515,50 @@ def run_ef_tx_rx_cmd ts, tx_idx, rx_idx_list, frame
         end
     end
 
-    ts.pc.run "sudo #{cmd}"
+    begin
+        ts.pc.run "sudo #{cmd}"
+    rescue => e
+        # On an ef RX-check failure (expected 'f1' NO-RX, or an excluded port
+        # RX'd), capture port state before propagating. Fully rescued so the
+        # diagnostic never changes the test verdict.
+        begin
+            ef_rx_diag(ts, tx_idx, rx_idx_list)
+        rescue => de
+            t_i "ef_rx_diag error: #{de}"
+        end
+        raise e
+    end
 end
 
+# Read-only diagnostic for run_ef_tx_rx_cmd failures: dump each test port's PC
+# interface state (link/promisc/subinterface, speed/duplex/auto-neg, IPv6
+# multicast groups) and the DUT port status. Every probe is individually
+# rescued so a missing tool or an unreachable port never masks the original
+# failure. Added to capture evidence for the dk-t36-3 MLD idx2 multicast NO-RX
+# that only reproduces in the full nightly suite.
+def ef_rx_diag ts, tx_idx, rx_idx_list
+    t_i "==== EF-RX-DIAG tx=#{tx_idx} expect-rx=#{rx_idx_list.inspect} ===="
+    ts.pc.p.each_index do |idx|
+        ifc = ts.pc.p[idx]
+        ["ip -d link show #{ifc}", "ethtool #{ifc}",
+         "ip -6 maddr show dev #{ifc}"].each do |c|
+            begin
+                ts.pc.run c
+            rescue => e
+                t_i "diag '#{c}' failed: #{e}"
+            end
+        end
+    end
+    ts.dut.p.each_index do |idx|
+        begin
+            st = ts.dut.call "mesa_port_status_get", ts.dut.p[idx]
+            t_i "DUT idx #{idx} port #{ts.dut.p[idx]}: #{st.inspect}"
+        rescue => e
+            t_i "DUT idx #{idx} status read failed: #{e}"
+        end
+    end
+    t_i "==== END EF-RX-DIAG ===="
+end
 
 def console msg
     xml_tag "console", msg, {"ts" => xml_ts(Time.now)}
