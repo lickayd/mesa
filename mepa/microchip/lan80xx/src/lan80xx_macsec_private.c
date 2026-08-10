@@ -2102,6 +2102,20 @@ static mepa_rc lan80xx_macsec_sa_tcam_key_mask_set(mepa_device_t *dev,
                         LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_MASK4_ETHERTYPE_MASK(LAN80XX_MACSEC_TCAM_ETHTYPE_MASK)));
     }
 
+    /* KEY0 NUM_TAGS is  (1 << tag_bypass). MASK0 must enable compare on those
+     * bits (0x7F); without it tag count is don't-care and the highest-priority rule
+     * (untagged) wins every frame.
+     */
+    if ((pattern->match & (MEPA_MACSEC_MATCH_HAS_VLAN | MEPA_MACSEC_MATCH_HAS_VLAN_INNER)) &&
+        !(pattern->match & MEPA_MACSEC_MATCH_DISABLE)) {
+
+        LAN80XX_CSR_WRM(port_no,
+                        (page1 ? LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_KEY_MASK_PAGE1_TCAM_MASK0(record - LAN80XX_MACSEC_XFORM_REC_NUM_PAGE0)) :
+                         LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_MASK0(record))),
+                        LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_MASK0_NUM_TAGS(LAN80XX_MACSEC_TCAM_NUM_VLAN_TAGS)),
+                        LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_MASK0_NUM_TAGS(LAN80XX_MACSEC_TCAM_NUM_VLAN_TAGS)));
+    }
+
     if ((pattern->match & MEPA_MACSEC_MATCH_VLAN_ID) && (pattern->match & MEPA_MACSEC_MATCH_HAS_VLAN)) {
         LAN80XX_CSR_WRM(port_no, (page1 ? LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_KEY_MASK_PAGE1_TCAM_MASK4(record - LAN80XX_MACSEC_XFORM_REC_NUM_PAGE0)) :
                                   LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_MASK4(record))),
@@ -2139,12 +2153,18 @@ static mepa_rc lan80xx_macsec_sa_tcam_key_mask_set(mepa_device_t *dev,
         T_E(MEPA_TRACE_GRP_GEN, "Pattern priority should be less than 15");
         return MEPA_RC_ERROR;
     }
+
+    /* PRIO is 3 bits wide (0-7). "15 - priority" overflows for MEPA levels 0 and 4,
+     * collapsing them onto levels 8 and 12. Shift by 1 to map all five defined MEPA
+     * levels {0,4,8,12,15} onto distinct 3-bit values {7,5,3,1,0}. */
+
+    u32 tcam_prio = 7U - (pattern->priority >> 1);
     /* TCAM_POLICY VPORT_INDEX must match FLOW_CTRL index */
     LAN80XX_CSR_WR(dev, port_no,
                    (page1 ? LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_POLICY_PAGE1_TCAM_POLICY(record - LAN80XX_MACSEC_XFORM_REC_NUM_PAGE0)) :
                     LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_POLICY_PAGE0_TCAM_POLICY(record))),
                    LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_POLICY_PAGE0_TCAM_POLICY_VPORT_INDEX(sc)) |
-                   LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_POLICY_PAGE0_TCAM_POLICY_PRIO(15 - pattern->priority)));
+                   LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_POLICY_PAGE0_TCAM_POLICY_PRIO(tcam_prio)));
 
     return MEPA_RC_OK;
 }
