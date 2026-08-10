@@ -1828,7 +1828,7 @@ uint32_t mesa_capability(mesa_inst_t inst, mesa_cap_t cap)
 
     case MESA_CAP_TS_PPS_VIA_CONFIGURABLE_IO_PINS:
 #if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5) || defined(VTSS_ARCH_LAN966X) ||      \
-    defined(VTSS_ARCH_LAN969X) /* TBD_henrikb */
+    defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_OCELOT) /* TBD_henrikb */
         c = 1U;
 #endif
         break;
