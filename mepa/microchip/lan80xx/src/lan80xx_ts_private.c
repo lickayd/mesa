@@ -13,12 +13,19 @@
  * CLK_PER_CFG_0 represents the LSB 32-bit
  * CLK_PER_CFG_1 represents the MSB 32-bit
  *
- * LTC Clock Frequency = 318.309886158 MHz, so the Time period is 3.1415926538443369637994679176244 ns
- * 5.59 fixed point representation of 3.1415926538443369637994679176244 ns will be 0x1921fb547f9eae35 which is spilited into two
- * 32-bit values (5 + 59 = 64-bit) and configured in CLK_PER_CFG_1 and CLK_PER_CFG_0 register 
+ * The LTC PLL output frequency differs by clock source; CLK_PER must match the actual frequency.
+ *
+ * SYSREFCLK (REF=156.25 MHz, DIVR=25, DIVFI=50, DIVFF=0xEDF912, DIVQ=8):
+ *   LTC = 318.3098860085010528564453125 MHz, period = 3.14159265531983243... ns
+ *   5.59 fixed-point: 0x1921FB547F9EAE35
+ *
+ * LSC_clock / all external sources (125/50/25/10 MHz all yield the same output via scaled DIVR):
+ *   LTC = 318.309886157512664794921875 MHz, period = 3.14159265384914676... ns
+ *   5.59 fixed-point: 0x1921FB544D166482
  */
-#define LAN80XX_PTP_LTC_CLK_PER_CFG_1     (0x1921fb54)
-#define LAN80XX_PTP_LTC_CLK_PER_CFG_0     (0x7f9eae35)
+#define LAN80XX_PTP_LTC_CLK_PER_CFG_1          (0x1921fb54)
+#define LAN80XX_PTP_LTC_CLK_PER_CFG_0_SYSREF   (0x7f9eae35)
+#define LAN80XX_PTP_LTC_CLK_PER_CFG_0_EXTERNAL (0x4d166482)
 
 static lan80xx_phy_ts_pll_map_t phy25g_ts_pll_map[] = {
     [LAN80XX_PHY_TS_CLOCK_SRC_SYSREFCLK] = {
@@ -568,6 +575,11 @@ static mepa_rc ltcpll_configure_and_lock(const mepa_device_t *dev,
                     LAN80XX_F_CLK_CFG_LTCPLL_CMD_REG_LTCPLL_UPDATE(1),
                     LAN80XX_M_CLK_CFG_LTCPLL_CMD_REG_LTCPLL_UPDATE);
 
+    /* Allow hardware to process UPDATE and deassert LTCPLL_STS before polling.
+     * Without this delay, a prior lock's STS=1 can produce a false-positive on
+     * the first read, causing the PLL to appear locked before it actually is. */
+    MEPA_MSLEEP(1);
+
     while (1) {
         LAN80XX_CSR_RD(dev, base_port, LAN80XX_CLK_CFG_LTCPLL_STS_REG, &value);
         if (value & LAN80XX_M_CLK_CFG_LTCPLL_STS_REG_LTCPLL_STS) {
@@ -624,9 +636,12 @@ static mepa_rc lan80xx_ts_block_init(const mepa_device_t  *dev)
 
         base_data->ptp_shared_ltc_pll_init = TRUE;
 
-        /* setting the clock value */
+        /* CLK_PER must match the actual LTC clock frequency, which differs by reference source:
+         * SYSREFCLK → 318.309886009 MHz, all LSC/external → 318.309886158 MHz. */
         LAN80XX_CSR_WR(dev, base_port, LAN80XX_PTP_LTC_CLK_PER_CFG(1), LAN80XX_PTP_LTC_CLK_PER_CFG_1);
-        LAN80XX_CSR_WR(dev, base_port, LAN80XX_PTP_LTC_CLK_PER_CFG(0), LAN80XX_PTP_LTC_CLK_PER_CFG_0);
+        LAN80XX_CSR_WR(dev, base_port, LAN80XX_PTP_LTC_CLK_PER_CFG(0),
+                       external ? LAN80XX_PTP_LTC_CLK_PER_CFG_0_EXTERNAL
+                                : LAN80XX_PTP_LTC_CLK_PER_CFG_0_SYSREF);
 
         if (!base_data-> ptp_shared_ltc_resource) {
             value = 0x802B;
