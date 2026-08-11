@@ -204,7 +204,7 @@ typedef struct {
                                                      for a policed frame */
 #endif                                            /* VTSS_FEATURE_QOS_PORT_POLICER_EXT_TTM_V2 */
     BOOL flow_control;                            /**< Flow control is enabled */
-    BOOL service_bypass;                          /**< Frames with ISDX != 0 bypass the port policer */    
+    BOOL service_bypass; /**< Frames with ISDX != 0 bypass the port policer */
 } vtss_policer_ext_t;
 
 typedef enum {

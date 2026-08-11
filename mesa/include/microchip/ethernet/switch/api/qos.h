@@ -163,8 +163,8 @@ typedef struct {
         CAP(QOS_PORT_POLICER_EXT_TTM); // Remove the CPU ports from the
                                        // destination set for a policed frame
 
-    mesa_bool_t flow_control; // Flow control is enabled
-    mesa_bool_t service_bypass; // Frames with ISDX != 0 bypass this port policer    
+    mesa_bool_t flow_control;   // Flow control is enabled
+    mesa_bool_t service_bypass; // Frames with ISDX != 0 bypass this port policer
 } mesa_qos_port_policer_conf_t;
 
 // Get port policer configuration
