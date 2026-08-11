@@ -481,6 +481,7 @@ mesa_rc mesa_qos_port_policer_conf_get(const mesa_inst_t                   inst,
         pol->limit_cpu_traffic = pol_ext->limit_cpu_traffic;
 #endif
         pol->flow_control = pol_ext->flow_control;
+        pol->service_bypass = pol_ext->service_bypass;
     }
     return VTSS_RC_OK;
 #else
@@ -523,6 +524,7 @@ mesa_rc mesa_qos_port_policer_conf_set(const mesa_inst_t                        
         pol_ext->limit_cpu_traffic = pol->limit_cpu_traffic;
 #endif
         pol_ext->flow_control = pol->flow_control;
+        pol_ext->service_bypass = pol->service_bypass;
     }
     return vtss_qos_port_conf_set((const vtss_inst_t)inst, port_no, &vtss_conf);
 #else

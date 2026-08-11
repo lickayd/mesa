@@ -1324,6 +1324,7 @@ vtss_rc vtss_qos_inst_create(struct vtss_state_s *vtss_state)
 #endif /* VTSS_FEATURE_QOS_PORT_POLICER_EXT_TTM ||                                                 \
           VTSS_FEATURE_QOS_PORT_POLICER_EXT_TTM_V2 */
             qos->policer_ext_port[i].flow_control = FALSE;
+            qos->policer_ext_port[i].service_bypass = TRUE;            
         }
 
         for (i = VTSS_QUEUE_START; i < VTSS_QUEUE_END; i++) {
