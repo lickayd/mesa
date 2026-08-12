@@ -549,7 +549,11 @@ class MesaDut
         if res[:res] > 0
             o = {}
         else
-            j = JSON.parse(res[:out])
+            # Extract the outermost {...} object in case stray output got glued onto the reply.
+            json_start = res[:out].index("{")
+            json_end = res[:out].rindex("}")
+            raise "No JSON object found in reply: #{res[:out]}" if json_start.nil? || json_end.nil?
+            j = JSON.parse(res[:out][json_start..json_end])
             o = j["result"].reject{|x| x.nil? }
         end
 
