@@ -3810,7 +3810,23 @@ vtss_rc vtss_fa_port2sd(vtss_state_t *vtss_state, vtss_port_no_t port_no, u32 *s
         }
         break;
     default:
-        if (p < 12U) {
+        if ((p <= 47U) && (vtss_state->port.serdes_mode[port_no] == VTSS_SERDES_MODE_QSGMII)) {
+            *sd_indx = (p - p % 4U) / 4U;
+            *sd_type = FA_SERDES_TYPE_10G;
+            VTSS_N("(shared quad SD10G_LANE) p:%d SD10G_LANE index: %d", p, *sd_indx);
+        } else if ((p <= 63U) &&
+                   (vtss_state->port.serdes_mode[port_no] == VTSS_SERDES_MODE_QXGMII)) {
+            u32 R = (p < 16U) ? p : (p < 32U) ? p - 16U : (p < 48U) ? p - 32U : p - 48U;
+
+            if (R < 8U) {
+                *sd_indx = R + 4U;
+                *sd_type = FA_SERDES_TYPE_10G;
+            } else {
+                *sd_indx = R - 8U;
+                *sd_type = FA_SERDES_TYPE_25G;
+            }
+            VTSS_N("(shared quad SD lane) p:%d index: %d type: %d", p, *sd_indx, *sd_type);
+        } else if (p < 12U) {
             *sd_indx = p + 1U;
             *sd_type = FA_SERDES_TYPE_6G;
             VTSS_N("Single Serdes p:%d SD6G_LANE index: %d", p, *sd_indx);
@@ -3873,6 +3889,10 @@ vtss_rc vtss_fa_port2sd(vtss_state_t *vtss_state, vtss_port_no_t port_no, u32 *s
         } else if (p > 24U && p < 28U) {
             *sd_indx = 6U + p - 24U;
             VTSS_N("Single Serdes p:%d SD10_LANE index: %d", p, *sd_indx);
+        } else if (p < 24U && (vtss_state->port.serdes_mode[port_no] == VTSS_SERDES_MODE_QSGMII ||
+                               vtss_state->port.serdes_mode[port_no] == VTSS_SERDES_MODE_QXGMII)) {
+            *sd_indx = p / 4U;
+            VTSS_N("(shared quad SD10G_LANE) p:%d SD10_LANE index: %d", p, *sd_indx);
         } else {
             return VTSS_RC_ERROR;
         }

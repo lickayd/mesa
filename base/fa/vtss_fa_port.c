@@ -2464,6 +2464,53 @@ static vtss_rc port_mux_set(vtss_state_t *vtss_state, const vtss_port_no_t port_
 #endif
 }
 
+/* Update port.serdes_mode[] for every port sharing port_no's physical serdes lane
+ * (all 4 members of a QSGMII/QXGMII quad), not just port_no itself, so a sibling
+ * that hasn't been individually configured yet still sees the lane's real mode. */
+static void fa_serdes_mode_propagate(vtss_state_t      *vtss_state,
+                                     vtss_port_no_t     port_no,
+                                     vtss_serdes_mode_t serdes_mode)
+{
+    vtss_port_no_t pn;
+
+#if defined(VTSS_ARCH_SPARX5)
+    if (serdes_mode == VTSS_SERDES_MODE_QSGMII) {
+        u32 p = (VTSS_CHIP_PORT(port_no) / 4U) * 4U;
+        for (u32 cnt = 0U; cnt < 4U; cnt++) {
+            for (pn = VTSS_PORT_NO_START; pn < vtss_state->port_count; pn++) {
+                if (p + cnt == VTSS_CHIP_PORT(pn)) {
+                    vtss_state->port.serdes_mode[pn] = VTSS_SERDES_MODE_QSGMII;
+                }
+            }
+        }
+    } else if (serdes_mode == VTSS_SERDES_MODE_QXGMII) {
+        u32 port = VTSS_CHIP_PORT(port_no) % 16U;
+        for (u32 cnt = 0U; cnt < 4U; cnt++) {
+            for (pn = VTSS_PORT_NO_START; pn < vtss_state->port_count; pn++) {
+                if (port + (cnt * 16U) == VTSS_CHIP_PORT(pn)) {
+                    vtss_state->port.serdes_mode[pn] = VTSS_SERDES_MODE_QXGMII;
+                }
+            }
+        }
+    } else {
+        vtss_state->port.serdes_mode[port_no] = serdes_mode;
+    }
+#else
+    if (serdes_mode == VTSS_SERDES_MODE_QSGMII || serdes_mode == VTSS_SERDES_MODE_QXGMII) {
+        u32 p = (VTSS_CHIP_PORT(port_no) / 4U) * 4U;
+        for (u32 cnt = 0U; cnt < 4U; cnt++) {
+            for (pn = VTSS_PORT_NO_START; pn < vtss_state->port_count; pn++) {
+                if (p + cnt == VTSS_CHIP_PORT(pn)) {
+                    vtss_state->port.serdes_mode[pn] = serdes_mode;
+                }
+            }
+        }
+    } else {
+        vtss_state->port.serdes_mode[port_no] = serdes_mode;
+    }
+#endif
+}
+
 static vtss_rc fa_serdes_set(vtss_state_t      *vtss_state,
                              vtss_port_no_t     port_no,
                              vtss_serdes_mode_t serdes_mode)
@@ -2473,7 +2520,7 @@ static vtss_rc fa_serdes_set(vtss_state_t      *vtss_state,
 
     if (vtss_state->port.bulk_state != VTSS_PORT_BULK_DISABLED) {
         vtss_state->port.sd28_mode[indx] = serdes_mode;
-        vtss_state->port.serdes_mode[port_no] = serdes_mode;
+        fa_serdes_mode_propagate(vtss_state, port_no, serdes_mode);
         return VTSS_RC_OK;
     }
     vtss_state->port.bulk_port_mask |= VTSS_BIT64(port_no);
@@ -2482,27 +2529,7 @@ static vtss_rc fa_serdes_set(vtss_state_t      *vtss_state,
     vtss_state->port.bulk_port_mask &= ~VTSS_BIT64(port_no);
 
     /* Also update the port.serdes_mode[port_no] - for backward compatability */
-    if (serdes_mode == VTSS_SERDES_MODE_QSGMII) {
-        u32 p = (VTSS_CHIP_PORT(port_no) / 4U) * 4U;
-        for (u32 cnt = 0U; cnt < 4U; cnt++) {
-            for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
-                if (p + cnt == VTSS_CHIP_PORT(port_no)) {
-                    vtss_state->port.serdes_mode[port_no] = VTSS_SERDES_MODE_QSGMII;
-                }
-            }
-        }
-    } else if (serdes_mode == VTSS_SERDES_MODE_QXGMII) {
-        u32 port = VTSS_CHIP_PORT(port_no) % 16U;
-        for (u32 cnt = 0U; cnt < 4U; cnt++) {
-            for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
-                if (port + (cnt * 16U) == VTSS_CHIP_PORT(port_no)) {
-                    vtss_state->port.serdes_mode[port_no] = VTSS_SERDES_MODE_QXGMII;
-                }
-            }
-        }
-    } else {
-        vtss_state->port.serdes_mode[port_no] = serdes_mode;
-    }
+    fa_serdes_mode_propagate(vtss_state, port_no, serdes_mode);
 
     return VTSS_RC_OK;
 }
@@ -2925,66 +2952,28 @@ static vtss_rc fa_sd_power_save(vtss_state_t        *vtss_state,
                                 const vtss_port_no_t port_no,
                                 BOOL                 power_down)
 {
-    u32  indx, type, sd_tgt, port = VTSS_CHIP_PORT(port_no), p;
-    BOOL pd_serdes = TRUE;
+    u32  indx, type, sd_tgt, p;
+    BOOL pd_serdes = (vtss_fa_port2sd(vtss_state, port_no, &indx, &type) == VTSS_RC_OK);
 
-    if (port_is_rgmii(vtss_state, port_no) ||
-        (vtss_state->port.conf[port_no].if_type == VTSS_PORT_INTERFACE_USGMII) ||
-        (vtss_state->port.conf[port_no].if_type == VTSS_PORT_INTERFACE_DXGMII_5G)) {
-        pd_serdes = FALSE; // Do not power down multi-port serdes
-    }
+    // Only power down a lane shared by several ports (e.g. a QSGMII/QXGMII/
+    // SGMII_CISCO quad) once every other active port using that same lane has
+    // also been powered down.
+    if (power_down && pd_serdes) {
+        for (p = VTSS_PORT_NO_START; p < vtss_state->port_count; p++) {
+            u32 p_indx, p_type;
 
-    // Only power down QSGMII/QXGMII serdes when all 4 port instances are powered down
-    if (power_down) {
-        if (vtss_state->port.conf[port_no].if_type == VTSS_PORT_INTERFACE_QSGMII) {
-            u32 base = (port / 4U) * 4U;
-            for (u32 cnt = 0U; cnt < 4U; cnt++) {
-                pd_serdes = TRUE;
-                for (p = VTSS_PORT_NO_START; p < vtss_state->port_count; p++) {
-                    if (p == port_no) {
-                        continue;
-                    }
-                    if (base + cnt == VTSS_CHIP_PORT(p)) {
-                        if (!vtss_state->port.conf[p].power_down) {
-                            pd_serdes = FALSE;
-                            break;
-                        }
-                    }
-                }
-                if (!pd_serdes) {
-                    break;
-                }
+            if (p == port_no || vtss_state->port.conf[p].power_down) {
+                continue;
             }
-        } else if (vtss_state->port.conf[port_no].if_type == VTSS_PORT_INTERFACE_QXGMII) {
-            u32 cnt = 0, this_indx = vtss_fa_sd_lane_indx(vtss_state, port_no);
-            pd_serdes = FALSE;
-            for (p = VTSS_PORT_NO_START; p < vtss_state->port_count; p++) {
-                if (vtss_state->port.conf[port_no].if_type != VTSS_PORT_INTERFACE_QXGMII) {
-                    continue;
-                }
-                indx = vtss_fa_sd_lane_indx(vtss_state, p);
-                if (indx != this_indx) {
-                    continue;
-                }
-                if (p == port_no) {
-                    cnt++;
-                } else if (vtss_state->port.conf[p].power_down) {
-                    cnt++;
-                } else {
-                    // Empty on purpose
-                }
-                if (cnt == 4U) {
-                    pd_serdes = TRUE;
-                    break;
-                }
+            if ((vtss_fa_port2sd(vtss_state, p, &p_indx, &p_type) == VTSS_RC_OK) &&
+                (p_indx == indx) && (p_type == type)) {
+                pd_serdes = FALSE;
+                break;
             }
-        } else {
-            // Empty on purpose
         }
     }
 
     if (pd_serdes) {
-        VTSS_RC(vtss_fa_port2sd(vtss_state, port_no, &indx, &type));
 #if !defined(VTSS_ARCH_LAIKA)
         if (type == FA_SERDES_TYPE_25G) {
 #if defined(VTSS_FEATURE_SD_25G)
@@ -3254,7 +3243,9 @@ static vtss_rc fa_port_conf_2g5_set(vtss_state_t *vtss_state, const vtss_port_no
         case VTSS_PORT_INTERFACE_SGMII_CISCO:
             serdes_mode = VTSS_SERDES_MODE_QSGMII; // Do not change the Serdes mode
             break;
-        default: break;
+        default:
+            // Empty on purpose
+            break;
         }
     }
 
