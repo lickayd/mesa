@@ -7,8 +7,11 @@ require_relative 'libeasy/et'
 
 DUT_TEST_RATE = 330000
 
-def qos_tas_equal_interval_3_prio_1_port_test(eg, ig, it_vid = 0, ot_vid = 0, ot = false)
+# custom_rate is the expected egress rate in kbps. Defaults to DUT_TEST_RATE when nil
+def qos_tas_equal_interval_3_prio_1_port_test(eg, ig, it_vid = 0, ot_vid = 0, ot = false, custom_rate: nil)
     t_i("Time aware scheduling with equal time slots test from #{$ts.dut.p[ig[0]]},#{$ts.dut.p[ig[1]]},#{$ts.dut.p[ig[2]]} to #{$ts.dut.p[eg]}  OT #{ot}")
+
+    test_rate = custom_rate.nil? ? DUT_TEST_RATE : custom_rate
 
     frame_size = 500
     frame_tx_time_nano = (frame_size+20)*8    # One bit takes one nano sec to transmit at 1G
@@ -95,7 +98,7 @@ def qos_tas_equal_interval_3_prio_1_port_test(eg, ig, it_vid = 0, ot_vid = 0, ot
         })
     end
 
-    erate = (DUT_TEST_RATE*1000)/3
+    erate = (test_rate*1000)/3
     check_rate({
         ig: ig, eg: eg, size: frame_size, sec: 2, erate: [erate,erate,erate], etolerance: [5,5,5],
         with_pre_tx: true, pcp: [0,3,7], cycle_time: [cycle_time,cycle_time,cycle_time]
@@ -151,7 +154,7 @@ def qos_tas_equal_interval_3_prio_1_port_test(eg, ig, it_vid = 0, ot_vid = 0, ot
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ctag vid #{it_vid} ipv4 dscp 0")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ctag vid #{ot_vid} ipv4 dscp 0")
     check_rate({
-        ig: ig, eg: eg, size: 600, erate: [0,0,(DUT_TEST_RATE*1000)], etolerance: [pcp0,pcp3,pcp7],
+        ig: ig, eg: eg, size: 600, erate: [0,0,(test_rate*1000)], etolerance: [pcp0,pcp3,pcp7],
         with_pre_tx: true, pcp: [0,3,7]
     }) # On SparX-5 some lower priority frames are slipping through
 
