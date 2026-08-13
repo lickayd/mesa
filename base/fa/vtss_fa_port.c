@@ -3215,11 +3215,7 @@ static vtss_rc fa_port_conf_2g5_set(vtss_state_t *vtss_state, const vtss_port_no
         rgmii = TRUE;
         break;
     case VTSS_PORT_INTERFACE_SGMII_CISCO:
-        if (vtss_state->port.serdes_mode[port_no] == VTSS_SERDES_MODE_QSGMII) {
-            serdes_mode = VTSS_SERDES_MODE_QSGMII; // Do not change the Serdes mode
-        } else {
-            serdes_mode = VTSS_SERDES_MODE_SGMII;
-        }
+        serdes_mode = VTSS_SERDES_MODE_SGMII;
         sgmii = TRUE;
         break;
     case VTSS_PORT_INTERFACE_100FX:
@@ -3250,6 +3246,16 @@ static vtss_rc fa_port_conf_2g5_set(vtss_state_t *vtss_state, const vtss_port_no
     case VTSS_SPEED_1G:    clk_spd = 2U; break;
     case VTSS_SPEED_2500M: clk_spd = pcs_usx ? 6U : 2U; break;
     default:               VTSS_E("Speed not supported"); break;
+    }
+
+    if (vtss_state->port.serdes_mode[port_no] == VTSS_SERDES_MODE_QSGMII) {
+        switch (conf->if_type) {
+        case VTSS_PORT_INTERFACE_SERDES:
+        case VTSS_PORT_INTERFACE_SGMII_CISCO:
+            serdes_mode = VTSS_SERDES_MODE_QSGMII; // Do not change the Serdes mode
+            break;
+        default: break;
+        }
     }
 
     /* Enable the Serdes if disabled */
