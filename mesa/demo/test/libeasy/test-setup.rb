@@ -785,6 +785,11 @@ class TestPCRemote
         @background_jobs[pid][:res]
     end
 
+    # Stderr received from the background job so far. No polling, it blocks when the job is idle
+    def bg_stderr pid
+        @background_jobs[pid][:err]
+    end
+
     def get name
         src_url = URI("http://#{@easytest_server}/ws/#{name}")
         res = Net::HTTP.get_response(src_url)
