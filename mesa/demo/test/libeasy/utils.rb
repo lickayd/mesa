@@ -776,7 +776,7 @@ def check_rate(cfg)
             end
             expected_tolerance << "#{tolerance},"
         end
-        $ts.pc.try("pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle} #{fname}")
+        res = $ts.pc.try("pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle} #{fname}")
     else
         sec_count_in = 1000000000/8/(20+size)    # Calculate frames per second at line speed. The ef tx function can only run at line speed. The 'size' parameter is the requested frame size inclusive checksum
         sec_count_out = 1000000000/8/((data_rate ? 0 : 20)+size)  # This is the theoretical full rate number of outgoing frames per sec. 'size' is requested frame size inclusive checksum
@@ -784,9 +784,15 @@ def check_rate(cfg)
         sec_count = (sec_count < sec_count_in) ? sec_count : sec_count_in   # Number of outgoing frames cannot be larger than the number of incomming. In case of data rate and line speed shaping this could be calculated
         expected_count = frame_rate ? sec*erate[0] : sec*sec_count
         expected_tolerance = ((expected_count * etolerance[0]) / 100) + ((((expected_count * etolerance[0]) % 100) != 0) ? 1 : 0)
-        $ts.pc.try("pcap_analyze.rb --frame-count all --pre-tx-sec #{pre_tx} --count-sec #{sec} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{fname}")
+        res = $ts.pc.try("pcap_analyze.rb --frame-count all --pre-tx-sec #{pre_tx} --count-sec #{sec} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{fname}")
     end
-    $ts.pc.run("rm -f #{fname}")
+
+    # pcap_analyze.rb saved a copy when it failed. Keep the analyzed file too, the next measurement removes it again
+    if (res[:res] == 0)
+        $ts.pc.run("rm -f #{fname}")
+    else
+        t_i("Analyze failed. The capture is kept in #{fname} on the PC")
+    end
 
     return counters
 end
