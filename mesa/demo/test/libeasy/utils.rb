@@ -566,7 +566,8 @@ def check_rate(cfg)
     streams = fld_get(cfg, :streams, 1)   # Parallel/Multiple Easyframe transmitter per ingress port
 
     pre_tx = with_pre_tx ? 1 : 0    # Calculate the possible pre tx time in seconds
-    time = (pre_tx+sec+5)     # Calculate the required seconds that the transmitter must at least (+100) be transmitting
+    # The transmitters must outlive the capture window. They are always killed below
+    time = (pre_tx+sec+100)
     pid_ef = []
     max_cnt = 50
     ig.each_with_index do |ig_value, ig_idx|
@@ -600,7 +601,8 @@ def check_rate(cfg)
     fname = "/tmp/#{$ts.pc.p[eg]}.pcap"
     $ts.pc.run("rm -f #{fname}")
     t_i("Start tcpdump logging on egress port: #{$ts.pc.p[eg]}")
-    pid_tcp = $ts.pc.bg("tcpdump", "tcpdump -i #{$ts.pc.p[eg]} -j adapter_unsynced -s22 -w #{fname}")
+    # -B sets to 32 MiB of buffer, a smaller one silently drops frames, which looks like missing traffic
+    pid_tcp = $ts.pc.bg("tcpdump", "tcpdump -i #{$ts.pc.p[eg]} -j adapter_unsynced -B 32768 -s22 -w #{fname}")
 
 #    t_i("Wait for necessary amount of frames to be transmitted")
 #    time1 = Time.now
