@@ -272,6 +272,10 @@ if ($options[:frame_count] == :pcp)
                       min_percent #{((exp_cycle_f - min) / exp_cycle_f) * 100}  max_percent #{((max - exp_cycle_f) / exp_cycle_f) * 100}"
                 puts "short #{short}  long #{long}  distance_count #{distance_count}  frame_time #{frame_time}"
             end
+            # No cycle at all was measured. Do not report an unchecked cycle time as expected
+            if (($options[:exp_count][pcp_idx].to_i != 0) && (($ok_cycle[pcp_idx] + short + long) == 0))
+                analyze_failed("Analyze failed.  No cycle measured. pcp #{pcp_value}  exp_cycle_f #{exp_cycle_f}  counted #{pcp_count[pcp_idx]}")
+            end
         end
         cycle_txt = "distance_count #{distance_count}  ok_cycle #{$ok_cycle}  short_cycle #{$short_cycle}  long_cycle #{$long_cycle}"
         # Print the statistics also when something failed
