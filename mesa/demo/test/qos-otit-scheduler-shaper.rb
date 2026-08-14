@@ -209,111 +209,6 @@ def it_scheduling_with_weighted_10_30_and_60_percent_test
 end
 
 ################################################
-# Unused Functions, kept for future/legacy
-################################################
-
-def ot_scheduling_strict_counter_test
-    # THIS FUNCTION IS CURRENTLY NOT IN USE!
-    t_i("OT scheduling strict counter test")
-    # Only expect frames in the highest priority queue when running strict scheduling
-    $ts.dut.run("mesa-cmd mac Agetime 3600")
-    results = Array.new(60, 0)
-    for i in 0..59
-        $ts.pc.run("sudo ef tx #{$ts.pc.p[$eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ctag vid #{$ot_vid} ipv4 dscp 0")
-        sleep 0.5
-        res = meas($ig, $eg, 1000, 7200, false, false, [0,0,990_000_000], [150,535,2], true, [0,3,7])
-        results[i] = res
-        if res > 100
-            t_e"+++++++++++++FAILED with res = #{res}"
-            t_i"Results = #{results}"
-            exit 7
-        end
-    end
-    t_i("Results = #{results}")
-end
-
-def meas(ig, eg, size, sec=1, frame_rate=false, data_rate=false, erate=[1_000_000_000], etolerance=[1], with_pre_tx=false, pcp=[], cycle_time=[])
-    # THIS FUNCTION IS CURRENTLY NOT IN USE!
-    res = 0
-    tx_prio3_0 = 0
-    tx_prio3_1 = 0
-    tx_prio3 = 0
-    diff_prio3 = 0
-
-    test "meas  ig: #{ig}  eg: #{eg}  size: #{size}  sec: #{sec}  frame_rate #{frame_rate}  data_rate #{data_rate}  erate #{erate}  etolerance #{etolerance}  with_pre_tx: #{with_pre_tx}  pcp #{pcp}  cycle_time #{cycle_time}" do
-
-    sec_count_in = 1_000_000_000 / (8 / (20+size))    # Calculate frames per second at line speed. The ef tx function can only run at line speed. The 'size' parameter is the requested frame size inclusive checksum
-    t_i("Calculated frames per sec at line speed: #{sec_count_in}")
-
-    $ts.dut.run("mesa-cmd port statis clear")
-
-    pre_tx = with_pre_tx ? 1 : 0    # Calculate the possible pre tx time in seconds
-    t_i("Start Easy Frame transmitting #{sec*sec_count_in} frames of size #{size} with #{pre_tx} sec of pre TX and 2 sec of post TX. Speed is 1 Gbps.")
-    time = (pre_tx+sec+100)     # Calculate the required seconds that the transmitter must at least (+100) be transmitting
-    rep = time*sec_count_in     # Convert the required transmission seconds to number of frames, as this is the parameter to ef tx function
-    pid_ef = []
-    max_cnt = 50
-    ig.each_with_index do |ig_value, ig_idx|
-        if (pcp != [])
-            pid_ef << $ts.pc.bg("ef tx #{pcp[ig_idx]}", "sudo ef tx #{$ts.pc.p[ig_value]} rep #{rep} eth dmac 00:00:00:00:01:01 smac 00:00:00:00:01:1#{ig_idx} ctag vid 0 pcp #{pcp[ig_idx]} data pattern cnt #{size - (6+6+4+2+4)}") # 'size' is requested frame size inclusive checksum
-        else
-            pid_ef << $ts.pc.bg("ef tx",                "sudo ef tx #{$ts.pc.p[ig_value]} rep #{rep} eth dmac 00:00:00:00:01:01 smac 00:00:00:00:01:1#{ig_idx} data pattern cnt #{size - (6+6+2+4)}") # 'size' is requested frame size inclusive checksum
-        end
-        max = 0
-        begin   # Check that transmitter is started
-            rx_cnt = counter_get("TX", $ts.pc.p[ig_value])
-            max = max + 1
-        end while (rx_cnt == counter_get("TX", $ts.pc.p[ig_value])) && (max < max_cnt)
-        if (max == max_cnt)
-            t_e("Easy Frame transmitting never started")
-        end
-    end
-
-    sleep 1
-    tx_prio3_0 = $ts.dut.call("mesa_port_counters_get", $ts.dut.p[$eg])["prio"][3]["tx"]
-    sleep 1
-    tx_prio3_1 = $ts.dut.call("mesa_port_counters_get", $ts.dut.p[$eg])["prio"][3]["tx"]
-    diff_prio3 = tx_prio3_1.to_i - tx_prio3_0.to_i
-    t_i"*****************diff_prio3 #{diff_prio3}"
-
-    #        $ts.dut.run("mesa-cmd deb sym read XQS:QLIMIT_SHR[0-3]")
-    #    if (diff_prio3) > 100
-    #        $ts.dut.run("mesa-cmd mac dump")
-    #        sleep 1
-    #        tx_prio3_0 = $ts.dut.call("mesa_port_counters_get", $ts.dut.p[$eg])["prio"][3]["tx"]
-    #        t_i "tx_prio3 #{tx_prio3_0.to_i}"
-    #        sleep 1
-    #        tx_prio3_1 = $ts.dut.call("mesa_port_counters_get", $ts.dut.p[$eg])["prio"][3]["tx"]
-    #        t_i "tx_prio3 #{tx_prio3_1.to_i}"
-    #        diff_prio3 = tx_prio3_1.to_i - tx_prio3_0.to_i
-    #        t_i"*****************diff_prio3 #{diff_prio3}"
-    #
-    #        if (diff_prio3) > 0
-    #            return diff_prio3
-    #        end
-    #        $ts.dut.run("mesa-cmd deb sym read XQS:QLIMIT_SHR[0-3]")
-    #    end
-
-    t_i("Kill Easy Frame transmitters")
-    pid_ef.each do |pid|
-        $ts.pc.run("kill -s SIGHUP #{pid}")
-    end
-
-    t_i("Wait for Easy Frame transmitters to stop")
-    max = 0
-    begin   # Check that all transmitters are stopping
-        rx_cnt = counter_get("RX", $ts.pc.p[eg])
-        max = max + 1
-    end while (rx_cnt != counter_get("RX", $ts.pc.p[eg])) && (max < max_cnt)
-    if (max == max_cnt)
-        t_e("Easy Frame transmitting never stopped")
-    end
-
-    end
-    return diff_prio3
-end
-
-################################################
 # Test Section
 ################################################
 test "conf" do
@@ -552,8 +447,6 @@ def ot_scheduling
     $ts.pc.run("sudo ef tx #{$ts.pc.p[$eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ctag vid #{$it_vid} ipv4 dscp 0")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[$eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ctag vid #{$ot_vid} ipv4 dscp 0")
 
-    # ot_scheduling_strict_counter_test
-
     t_i("Running a measurement test for OT Strict Scheduling")
     check_rate({
         ig: $ig, eg: $eg, size: 600, sec: 1, erate: [0,0,990_000_000], etolerance: [150,900,2],
@@ -590,15 +483,9 @@ end
 ################################################
 
 def test_runner(t)
-    cfg = fld_get(t, :cfg, {})
-    chk = fld_get(t, :chk, {})
     fun = fld_get(t, :fun, nil)
 
-    begin
-        fun.call(t) if (fun != nil)
-    ensure
-        # TODO: Consider adding test reset here between tests
-    end
+    fun.call(t) if (fun != nil)
 end
 
 # Run all or selected test
