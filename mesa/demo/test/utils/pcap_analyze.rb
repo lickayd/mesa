@@ -207,6 +207,23 @@ def save_pcap_file
     $pcap_saved = true
 end
 
+# Collect failures instead of exiting at the first one, so a failing check does not hide the hole and cycle statistics
+$analyze_failed = false
+def analyze_failed(msg)
+    $stderr.puts msg
+    $analyze_failed = true
+end
+
+# Keep a copy of the capture whatever failed. It is the only evidence left
+def analyze_exit(success_msg)
+    if ($analyze_failed)
+        save_pcap_file
+        exit 7
+    end
+    puts success_msg
+    exit 0
+end
+
 if (last_time < (pre_tx_time + count_sec))
     if ($options[:frame_count] == :all)
         puts "count_sec time has NOT elapsed. counted #{count}. pre_tx_time #{pre_tx_time} last_time #{last_time} count_sec #{count_sec}"
@@ -223,15 +240,10 @@ if ($options[:frame_count] == :all)
     off = 0.to_f
     off = (exp) ? (((count.to_f - exp) / exp) * 100).to_f : 99999
     if ((count > (exp + tolerance)) || (count < (exp - tolerance)))
-        $stderr.puts "Analyze failed. Not expected number of frames counted.  off #{off}  Counted: #{count}  Expected: #{exp}  Tolerance: #{tolerance}"
-        if ((exp != 0) && (count == 0))
-            save_pcap_file
-        end
-        exit 7
+        analyze_failed("Analyze failed. Not expected number of frames counted.  off #{off}  Counted: #{count}  Expected: #{exp}  Tolerance: #{tolerance}")
     end
 
-    puts "------Analyze succeeded.  off #{off}------"
-    exit 0
+    analyze_exit("------Analyze succeeded.  off #{off}------")
 end
 
 if ($options[:frame_count] == :pcp)
@@ -242,13 +254,10 @@ if ($options[:frame_count] == :pcp)
         off = 0.to_f
         off = (exp != 0) ? (((count.to_f - exp) / exp) * 100) : 99999
         if ((count > (exp + tolerance)) || (count < (exp - tolerance)))
-            $stderr.puts "Analyze failed. Not expected number of frames counted. pcp #{pcp_value}  off #{off}  Counted: #{count}  Expected: #{exp}  Tolerance: #{tolerance}"
-            if ((exp != 0) && (count == 0))
-                save_pcap_file
-            end
-            exit 7
+            analyze_failed("Analyze failed. Not expected number of frames counted. pcp #{pcp_value}  off #{off}  Counted: #{count}  Expected: #{exp}  Tolerance: #{tolerance}")
+        else
+            puts "------Expected number of frames counted. pcp #{pcp_value}  off #{off}------"
         end
-        puts "------Expected number of frames counted. pcp #{pcp_value}  off #{off}------"
     end
 
     if ($options[:exp_cycle] != nil)
@@ -258,17 +267,20 @@ if ($options[:frame_count] == :pcp)
             short = $short_cycle[pcp_idx]
             long = $long_cycle[pcp_idx]
             if ((short > 6) || (long > 8))
-                $stderr.puts "Analyze failed.  Cycle time is not as expected. pcp #{pcp_value}  exp_cycle_f #{exp_cycle_f}"
+                analyze_failed("Analyze failed.  Cycle time is not as expected. pcp #{pcp_value}  exp_cycle_f #{exp_cycle_f}")
                 puts "min #{min}  max #{max}  min_lim #{exp_cycle_f - max_diff}  max_lim #{exp_cycle_f + max_diff}\n\
                       min_percent #{((exp_cycle_f - min) / exp_cycle_f) * 100}  max_percent #{((max - exp_cycle_f) / exp_cycle_f) * 100}"
                 puts "short #{short}  long #{long}  distance_count #{distance_count}  frame_time #{frame_time}"
-                puts "ok_cycle #{$ok_cycle}  short_cycle #{$short_cycle}  long_cycle #{$long_cycle}"
-                exit 7
             end
         end
-        puts "------Expected cycle length measured. distance_count #{distance_count}  ok_cycle #{$ok_cycle}  short_cycle #{$short_cycle}  long_cycle #{$long_cycle}------"
+        cycle_txt = "distance_count #{distance_count}  ok_cycle #{$ok_cycle}  short_cycle #{$short_cycle}  long_cycle #{$long_cycle}"
+        # Print the statistics also when something failed
+        if ($analyze_failed)
+            puts "Cycle length measured. #{cycle_txt}"
+        else
+            puts "------Expected cycle length measured. #{cycle_txt}------"
+        end
     end
 
-    puts "------Analyze succeeded.------"
-    exit 0
+    analyze_exit("------Analyze succeeded.------")
 end
