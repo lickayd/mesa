@@ -110,7 +110,7 @@ $ts = 0
 $cap_tx_ifh_size = 0
 
 def vop_config(cpu_queue)
-    test "vop_config  cpu_queue #{cpu_queue}" do
+    t_i("vop_config  cpu_queue #{cpu_queue}")
 
     conf = $ts.dut.call("mesa_vop_conf_get")
 
@@ -127,13 +127,12 @@ def vop_config(cpu_queue)
     conf["mrp_queue"] = cpu_queue
 
     $ts.dut.call("mesa_vop_conf_set", conf)
-    end
 end
 
 def voe_alloc(type, port)
     $voe_idx = 0
 
-    test "voe_alloc  type: #{type}  port: #{port}" do
+    t_i("voe_alloc  type: #{type}  port: #{port}")
 
     conf = {"type"=>0, "port"=>0, "direction"=>0}
 
@@ -142,13 +141,12 @@ def voe_alloc(type, port)
     conf["port"] = port
 
     $voe_idx = $ts.dut.call("mesa_voe_alloc", conf)
-    end
 
-    $voe_idx
+    return ($voe_idx)
 end
 
 def voe_config(voe_idx, meg_level, iflow_id)
-    test "voe_config  voe_idx: #{voe_idx}  meg_level: #{meg_level}  iflow_id: #{iflow_id}" do
+    t_i("voe_config  voe_idx: #{voe_idx}  meg_level: #{meg_level}  iflow_id: #{iflow_id}")
 
     conf = $ts.dut.call("mesa_voe_conf_get", voe_idx)
 
@@ -162,11 +160,10 @@ def voe_config(voe_idx, meg_level, iflow_id)
     conf["block_mel_high"] = false
 
     $ts.dut.call("mesa_voe_conf_set", voe_idx, conf)
-    end
 end
 
 def voe_config_change(voe_idx, dmac_check, mel_high)
-    test "voe_config_change  voe_idx: #{voe_idx}  dmac_check: #{dmac_check}  mel_high: #{mel_high}" do
+    t_i("voe_config_change  voe_idx: #{voe_idx}  dmac_check: #{dmac_check}  mel_high: #{mel_high}")
 
     conf = $ts.dut.call("mesa_voe_conf_get", voe_idx)
 
@@ -174,13 +171,12 @@ def voe_config_change(voe_idx, dmac_check, mel_high)
     conf["block_mel_high"] = mel_high
 
     $ts.dut.call("mesa_voe_conf_set", voe_idx, conf)
-    end
 end
 
 def voi_alloc(direction, port)
     $voe_idx = 0
 
-    test "voi_alloc  direction: #{direction}  port: #{port}" do
+    t_i("voi_alloc  direction: #{direction}  port: #{port}")
 
     conf = {"direction"=>0, "port"=>0}
 
@@ -188,13 +184,12 @@ def voi_alloc(direction, port)
     conf["port"] = port
 
     $voe_idx = $ts.dut.call("mesa_voi_alloc", conf)
-    end
 
-    $voe_idx
+    return ($voe_idx)
 end
 
 def voi_config(voi_idx, meg_level)
-    test "voi_config  voi_idx: #{voi_idx}  meg_level: #{meg_level}" do
+    t_i("voi_config  voi_idx: #{voi_idx}  meg_level: #{meg_level}")
 
     conf = $ts.dut.call("mesa_voi_conf_get", voi_idx)
 
@@ -206,11 +201,10 @@ def voi_config(voi_idx, meg_level)
     conf["raps_handling"] = "MESA_OAM_RAPS_HANDLING_NONE"
 
     $ts.dut.call("mesa_voi_conf_set", voi_idx, conf)
-    end
 end
 
 def voe_cc_config(voe_idx, enable, peer_mepid, megid, prio, period, cpu_copy="MESA_OAM_CPU_COPY_ALL", seq_no=false, selected=false)
-    test "voe_cc_config  voe_idx: #{voe_idx}  enable: #{enable}  peer_mepid: #{peer_mepid}  megid: #{megid}  prio: #{prio}  period: #{period}  cpu_copy: #{cpu_copy}  seq_no: #{seq_no}  selected: #{selected}" do
+    t_i("voe_cc_config  voe_idx: #{voe_idx}  enable: #{enable}  peer_mepid: #{peer_mepid}  megid: #{megid}  prio: #{prio}  period: #{period}  cpu_copy: #{cpu_copy}  seq_no: #{seq_no}  selected: #{selected}")
 
     conf = $ts.dut.call("mesa_voe_cc_conf_get", voe_idx)
 
@@ -237,22 +231,20 @@ def voe_cc_config(voe_idx, enable, peer_mepid, megid, prio, period, cpu_copy="ME
 
     events = EVENT_MASK_ALL
     $ts.dut.call("mesa_voe_event_mask_set", voe_idx, events, enable)
-    end
 end
 
 def voe_cc_change(voe_idx, period)
-    test "voe_cc_change  voe_idx: #{voe_idx}  period: #{period}" do
+    t_i("voe_cc_change  voe_idx: #{voe_idx}  period: #{period}")
 
     conf = $ts.dut.call("mesa_voe_cc_conf_get", voe_idx)
 
     conf["expected_period"] = period
 
     $ts.dut.call("mesa_voe_cc_conf_set", voe_idx, conf)
-    end
 end
 
 def voe_laps_config(voe_idx, enable, count_as_selected)
-    test "voe_laps_config  voe_idx: #{voe_idx}  enable: #{enable}  count_as_selected: #{count_as_selected}" do
+    t_i("voe_laps_config  voe_idx: #{voe_idx}  enable: #{enable}  count_as_selected: #{count_as_selected}")
 
     conf = $ts.dut.call("mesa_voe_laps_conf_get", voe_idx)
 
@@ -263,11 +255,10 @@ def voe_laps_config(voe_idx, enable, count_as_selected)
     end
 
     $ts.dut.call("mesa_voe_laps_conf_set", voe_idx, conf)
-    end
 end
 
 def voe_lb_config(voe_idx, enable, count_as_selected, trans_id, lbm_copy = false)
-    test "voe_lb_config  voe_idx: #{voe_idx}  enable: #{enable}  count_as_selected: #{count_as_selected}  trans_id: #{trans_id}  lbm_copy: #{lbm_copy}" do
+    t_i("voe_lb_config  voe_idx: #{voe_idx}  enable: #{enable}  count_as_selected: #{count_as_selected}  trans_id: #{trans_id}  lbm_copy: #{lbm_copy}")
 
     conf = $ts.dut.call("mesa_voe_lb_conf_get", voe_idx)
 
@@ -280,11 +271,10 @@ def voe_lb_config(voe_idx, enable, count_as_selected, trans_id, lbm_copy = false
     end
 
     $ts.dut.call("mesa_voe_lb_conf_set", voe_idx, conf)
-    end
 end
 
 def voe_lt_config(voe_idx, enable, count_as_selected)
-    test "voe_lt_config  voe_idx: #{voe_idx}  enable: #{enable}  count_as_selected: #{count_as_selected}" do
+    t_i("voe_lt_config  voe_idx: #{voe_idx}  enable: #{enable}  count_as_selected: #{count_as_selected}")
 
     conf = $ts.dut.call("mesa_voe_lt_conf_get", voe_idx)
 
@@ -296,40 +286,36 @@ def voe_lt_config(voe_idx, enable, count_as_selected)
     end
 
     $ts.dut.call("mesa_voe_lt_conf_set", voe_idx, conf)
-    end
 end
 
 def voi_raps_config(voi_idx, handling)
-    test "voi_raps_config  voi_idx: #{voi_idx}  handling: #{handling}" do
+    t_i("voi_raps_config  voi_idx: #{voi_idx}  handling: #{handling}")
 
     conf = $ts.dut.call("mesa_voi_conf_get", voi_idx)
 
     conf["raps_handling"] = handling
 
     $ts.dut.call("mesa_voi_conf_set", voi_idx, conf)
-    end
 end
 
 def voi_lbm_config(voi_idx, redir)
-    test "voi_lbm_config  voi_idx: #{voi_idx}  redir: #{redir}" do
+    t_i("voi_lbm_config  voi_idx: #{voi_idx}  redir: #{redir}")
 
     conf = $ts.dut.call("mesa_voi_conf_get", voi_idx)
 
     conf["lbm_cpu_redir"] = redir
 
     $ts.dut.call("mesa_voi_conf_set", voi_idx, conf)
-    end
 end
 
 def voi_ltm_config(voi_idx, redir)
-    test "voi_ltm_config  voi_idx: #{voi_idx}  redir: #{redir}" do
+    t_i("voi_ltm_config  voi_idx: #{voi_idx}  redir: #{redir}")
 
     conf = $ts.dut.call("mesa_voi_conf_get", voi_idx)
 
     conf["ltm_cpu_redir"] = redir
 
     $ts.dut.call("mesa_voi_conf_set", voi_idx, conf)
-    end
 end
 
 def vce_level_mask(l_level, h_level)
@@ -339,18 +325,18 @@ def vce_level_mask(l_level, h_level)
     mask <<= l_level;                           # mask is rotated to cover levels
     mask = ~mask;                               # Mask is complimented as "don't care" is '0'
     mask = mask & 0xFF
-    mask
+    return (mask)
 end
 
 def vce_level_value(l_level)
     t_i("vce_level_value  l_level: #{l_level}")
 
     value = (0x01 << l_level) - 1;
-    value
+    return (value)
 end
 
 def vce_config(id, port_list, vid, level_val, level_mask, flow_id, oam_detect, before_id=VCE_ID_LAST)
-    test "vce_config  id: #{id}  port_list: #{port_list}  vid: #{vid}  level_val: #{level_val}  level_mask: #{level_mask}  flow_id: #{flow_id}  oam_detect: #{oam_detect}" do
+    t_i("vce_config  id: #{id}  port_list: #{port_list}  vid: #{vid}  level_val: #{level_val}  level_mask: #{level_mask}  flow_id: #{flow_id}  oam_detect: #{oam_detect}")
 
     vce = $ts.dut.call("mesa_vce_init", "MESA_VCE_TYPE_ETYPE")
 
@@ -379,11 +365,10 @@ def vce_config(id, port_list, vid, level_val, level_mask, flow_id, oam_detect, b
     action["oam_detect"] = oam_detect
 
     $ts.dut.call("mesa_vce_add", before_id, vce)
-    end
 end
 
 def tce_config(id, port, vid, iflow_id, eflow_id)
-    test "tce_config  id: #{id}  port: #{port}  vid: #{vid}  iflow_id: #{iflow_id}  eflow_id: #{eflow_id}" do
+    t_i("tce_config  id: #{id}  port: #{port}  vid: #{vid}  iflow_id: #{iflow_id}  eflow_id: #{eflow_id}")
 
     tce = $ts.dut.call("mesa_tce_init")
 
@@ -400,11 +385,10 @@ def tce_config(id, port, vid, iflow_id, eflow_id)
     action["tag"]["tpid"] = (vid != 0) ? "MESA_TPID_SEL_PORT" : "MESA_TPID_SEL_NONE"
 
     $ts.dut.call("mesa_tce_add", VCE_ID_LAST, tce)
-    end
 end
 
 def iflow_config(flow_id, voe_idx, voi_idx)
-    test "iflow_config  flow_id: #{flow_id}  voe_idx: #{voe_idx}  voi_idx: #{voi_idx}" do
+    t_i("iflow_config  flow_id: #{flow_id}  voe_idx: #{voe_idx}  voi_idx: #{voi_idx}")
 
     iflow = $ts.dut.call("mesa_iflow_conf_get", flow_id)
 
@@ -412,11 +396,10 @@ def iflow_config(flow_id, voe_idx, voi_idx)
     iflow["voi_idx"] = voi_idx
 
     $ts.dut.call("mesa_iflow_conf_set", flow_id, iflow)
-    end
 end
 
 def eflow_config(flow_id, voe_idx, voi_idx)
-    test "eflow_config  flow_id: #{flow_id}  voe_idx: #{voe_idx}  voi_idx: #{voi_idx}" do
+    t_i("eflow_config  flow_id: #{flow_id}  voe_idx: #{voe_idx}  voi_idx: #{voi_idx}")
 
     eflow = $ts.dut.call("mesa_eflow_conf_get", flow_id)
 
@@ -424,11 +407,10 @@ def eflow_config(flow_id, voe_idx, voi_idx)
     eflow["voi_idx"] = voi_idx
 
     $ts.dut.call("mesa_eflow_conf_set", flow_id, eflow)
-    end
 end
 
 def qos_port_config(port, def_qosid)
-    test "qos_port_config  def_qosid: #{def_qosid}" do
+    t_i("qos_port_config  def_qosid: #{def_qosid}")
 
     conf = $ts.dut.call("mesa_qos_port_conf_get", port)
 
@@ -439,7 +421,6 @@ def qos_port_config(port, def_qosid)
     conf["tag"]["pcp_dei_map"][0][0]["prio"] =  def_qosid
 
     $ts.dut.call("mesa_qos_port_conf_set", port, conf)
-    end
 end
 
 def frame_tx(frame, port, frame0, frame1, frame2, framenpi)
@@ -479,7 +460,7 @@ end
 def ccm_pdu_create(level, period, sequence, mepid, megid, rdi=0, version=0, tlv=TLV_NONE)
     $ccm_pdu = ""
 
-    test "ccm_pdu_create  level #{level}  period #{period}  sequence #{sequence}  mepid #{mepid}  megid #{megid}  rdi: #{rdi}  version: #{version}, tlv: #{tlv}" do
+    t_i("ccm_pdu_create  level #{level}  period #{period}  sequence #{sequence}  mepid #{mepid}  megid #{megid}  rdi: #{rdi}  version: #{version}, tlv: #{tlv}")
 
     peri = 0
     if (period == "MESA_VOE_CCM_PERIOD_3_3_MS")
@@ -488,7 +469,6 @@ def ccm_pdu_create(level, period, sequence, mepid, megid, rdi=0, version=0, tlv=
     if (period == "MESA_VOE_CCM_PERIOD_1_SEC")
         peri = 4
     end
-
 
     # MEG ID in CC PDU is a hex_octet element meaning that the 'megid' array of uint must be converted to a hexadecimal values separated by ':'
     megid_hex = ""
@@ -506,101 +486,94 @@ def ccm_pdu_create(level, period, sequence, mepid, megid, rdi=0, version=0, tlv=
     else
         $ccm_pdu = "oam-ccm mel #{level} version #{version} rdi #{rdi} period #{peri} seq_num #{sequence} mep_id #{mepid} meg_id #{megid_hex} end_tlv #{end_tlv}  tlv_length #{1} tlv_value #{2} "
     end
-    end
 
-    return $ccm_pdu
+    return ($ccm_pdu)
 end
 
 def mrp_tst_pdu_create(sequence=0)
+    # Function is not in use
     $pdu = ""
 
-    test "mrp_tst_pdu_create  sequence #{sequence}" do
+    t_i("mrp_tst_pdu_create sequence #{sequence}")
     $pdu = "mrp_tst c_seq_num #{sequence} "
-    end
 
-    return $pdu
+    return ($pdu)
 end
 
 def mrp_mrp_pdu_create(sequence=0)
+    # Function is not in use
     $pdu = ""
 
-    test "mrp_mrp_pdu_create" do
+    t_i("mrp_mrp_pdu_create")
     $pdu = "mrp_prop "
-    end
 
-    return $pdu
+    return ($pdu)
 end
 
 def unexpected_pdu_create(level, opcode, version=0)
     $lb_pdu = ""
 
-    test "unexpected_pdu_create  level #{level}  opcode #{opcode}  version #{version}" do
+    t_i("unexpected_pdu_create  level #{level}  opcode #{opcode}  version #{version}")
 
     $lb_pdu = "oam-lb mel #{level} version #{version} opcode #{opcode} "
-    end
 
-    return $lb_pdu
+    return ($lb_pdu)
 end
 
 def laps_pdu_create(level, request)
     $laps_pdu = ""
 
-    test "laps_pdu_create  level #{level}  request #{request}" do
+    t_i("laps_pdu_create  level #{level}  request #{request}")
 
     $laps_pdu = "oam-laps mel #{level} req_sta #{request} "
-    end
 
-    return $laps_pdu
+    return ($laps_pdu)
 end
 
 def raps_pdu_create(level, request)
     $raps_pdu
 
-    test "raps_pdu_create  level #{level}  request #{request}" do
+    t_i("raps_pdu_create  level #{level}  request #{request}")
 
     $raps_pdu = "oam-raps mel #{level} req_sta #{request} "
-    end
 
-    return $raps_pdu
+    return ($raps_pdu)
 end
 
 def lb_pdu_create(level, opcode, trans_id)
     $lb_pdu
 
-    test "lb_pdu_create  level #{level}  opcode #{opcode}  trans_id #{trans_id}" do
+    t_i("lb_pdu_create  level #{level}  opcode #{opcode}  trans_id #{trans_id}")
 
     $lb_pdu = "oam-lb mel #{level} opcode #{opcode} trans_id #{trans_id} "
-    end
 
-    return $lb_pdu
+    return ($lb_pdu)
 end
 
 def lbr_test_tlv_pdu_create(level, trans_id, error)
     $lbr_pdu
 
-    test "lbr_test_tlv_pdu_create  level #{level}  trans_id #{trans_id}  error #{error}" do
+    t_i("lbr_test_tlv_pdu_create  level #{level}  trans_id #{trans_id}  error #{error}")
 
     $lbr_pdu = "oam-lb mel #{level} opcode #{2} trans_id #{trans_id} type 32 tlv_length 12 pattern_type 1 crc32 #{error ? 0xb1cd85c8 : 0xb1cd85c7} "
-    end
 
-    return $lbr_pdu
+    return ($lbr_pdu)
 end
 
 def lt_pdu_create(level, opcode, trans_id)
     $lt_pdu
 
-    test "ltm_pdu_create  level #{level}  opcode #{opcode}  trans_id #{trans_id}" do
+    t_i("ltm_pdu_create  level #{level}  opcode #{opcode}  trans_id #{trans_id}")
 
     $lt_pdu = "oam-lt mel #{level} opcode #{opcode} tlv_off #{opcode == 5 ? 17 : 6} trans_id #{trans_id} "
-    end
 
-    return $lt_pdu
+    return ($lt_pdu)
 end
 
 def frame_create(dmac, smac, vid=0, pcp=0, type="oam")
     $frame = ""
 
-    test "frame_create.  dmac = #{dmac}  smac = #{smac}  vid = #{vid}  pcp = #{pcp}" do
+    t_i("frame_create.  dmac = #{dmac}  smac = #{smac}  vid = #{vid}  pcp = #{pcp}")
 
     $frame = "eth dmac #{dmac} smac #{smac}"
 
@@ -614,15 +587,14 @@ def frame_create(dmac, smac, vid=0, pcp=0, type="oam")
     if (type == "mrp")
         $frame += " et 0x88E3 "
     end
-    end
 
-    $frame
+    return ($frame)
 end
 
 def tx_ifh_create(vid, port = 0, oam_type = "MESA_PACKET_OAM_TYPE_NONE", voi = false, up = false, iflow = IFLOW_ID_NONE, pcp = 0)
     $tx_ifh = ""
 
-    test "tx_ifh_create.  vid = #{vid}  port = #{port}  oam_type = #{oam_type}  voi #{voi}  up #{up}  iflow #{iflow}  pcp #{pcp}" do
+    t_i("tx_ifh_create.  vid = #{vid}  port = #{port}  oam_type = #{oam_type}  voi #{voi}  up #{up}  iflow #{iflow}  pcp #{pcp}")
 
     tx_info = $ts.dut.call("mesa_packet_tx_info_init")
     if ($cap_family == chip_family_to_id("MESA_CHIP_FAMILY_SPARX5")) ||
@@ -651,15 +623,14 @@ def tx_ifh_create(vid, port = 0, oam_type = "MESA_PACKET_OAM_TYPE_NONE", voi = f
     end
 
     $tx_ifh = "sp-jr2 dmac ff:ff:ff:ff:ff:ff smac fe:ff:ff:ff:ff:ff id #{$cap_epid} data hex #{ifh[0].take(ifh[1]).pack("c*").unpack("H*").first} "   #sp-jr2 is the same as lp-oc1
-    end
 
-    $tx_ifh
+    return ($tx_ifh)
 end
 
 def rx_ifh_create(isdx=IGNORE, port=IGNORE)
     $ifh = ""
 
-    test "rx_ifh_create" do
+    t_i("rx_ifh_create")
 
     $ifh = "sp-jr2 ign id #{$cap_epid} "    #sp-jr2 is the same as lp-oc1
     if (($cap_family == FAMILY_SERVALT) || ($cap_family == FAMILY_JAGUAR2) || ($cap_family == FAMILY_SPARX5))
@@ -686,13 +657,12 @@ def rx_ifh_create(isdx=IGNORE, port=IGNORE)
             $ifh += "f-src-port #{$port_map[port]["chip_port"]} "
         end
     end
-    end
 
-    $ifh
+    return ($ifh)
 end
 
 def check_voe_event(voe_idx, events)
-    test "check_voe_event  voe_idx #{voe_idx}  events #{events}" do
+    t_i("check_voe_event  voe_idx #{voe_idx}  events #{events}")
 
     mask = $ts.dut.call("mesa_voe_event_get", voe_idx)
     t_i("mask #{mask}")
@@ -751,12 +721,11 @@ def check_voe_event(voe_idx, events)
             t_e("Unknown events")
         end
     end
-    end
 end
 
 
 def check_cc_status_values(voe_idx, rx_port, port_tlv, if_tlv)
-    test "check_cc_status_values  voe_idx: #{voe_idx}  rx_port: #{rx_port}  port_tlv: #{port_tlv}  if_tlv: #{if_tlv}" do
+    t_i("check_cc_status_values  voe_idx: #{voe_idx}  rx_port: #{rx_port}  port_tlv: #{port_tlv}  if_tlv: #{if_tlv}")
 
     status = $ts.dut.call("mesa_voe_cc_status_get", voe_idx)
 
@@ -771,11 +740,10 @@ def check_cc_status_values(voe_idx, rx_port, port_tlv, if_tlv)
             t_e("Unexpected if_status_tlv. expected #{if_tlv} received #{status["if_status_tlv"]}")
         end
     end
-    end
 end
 
 def check_cc_status(voe_idx, status)
-    test "check_cc_status  voe_idx: #{voe_idx}  status: #{status}" do
+    t_i("check_cc_status  voe_idx: #{voe_idx}  status: #{status}")
 
     cc_status = $ts.dut.call("mesa_voe_cc_status_get", voe_idx)
 
@@ -842,11 +810,10 @@ def check_cc_status(voe_idx, status)
             t_e("Unknown status")
         end
     end
-    end
 end
 
 def check_pdu_seen(voe_idx, pdu_type)
-    test "check_pdu_seen  voe_idx: #{voe_idx}  pdu_type: #{pdu_type}" do
+    t_i("check_pdu_seen  voe_idx: #{voe_idx}  pdu_type: #{pdu_type}")
 
     voe_status = $ts.dut.call("mesa_voe_status_get", voe_idx)
     cc_status = $ts.dut.call("mesa_voe_cc_status_get", voe_idx)
@@ -950,14 +917,14 @@ def check_pdu_seen(voe_idx, pdu_type)
             t_e("NONE pdu not found")
         end
     elsif pdu_type == PDU_CLEAR
+        # Intentional
     else
         t_e("Unknown pdu_type")
-    end
     end
 end
 
 def check_voe_counters(voe_idx, rx, tx, rx_sel, tx_sel, rx_discard, tx_discard)
-    test "check_voe_counters  voe_idx: #{voe_idx}  rx #{rx}  tx #{tx}  rx_sel #{rx_sel}  tx_sel #{tx_sel}  rx_discard #{rx_discard}  tx_discard #{tx_discard}" do
+    t_i("check_voe_counters  voe_idx: #{voe_idx}  rx #{rx}  tx #{tx}  rx_sel #{rx_sel}  tx_sel #{tx_sel}  rx_discard #{rx_discard}  tx_discard #{tx_discard}")
 
     status = $ts.dut.call("mesa_voe_counters_get", voe_idx)
 
@@ -981,11 +948,10 @@ def check_voe_counters(voe_idx, rx, tx, rx_sel, tx_sel, rx_discard, tx_discard)
     if ($cap_oam_v2 && (tx_discard != COUNTER_NONE) && status["tx_discard_counter"] != tx_discard)
         t_e("Unexpected Discard tx. expected #{tx_discard} counted #{status["tx_discard_counter"]}")
     end
-    end
 end
 
 def check_ccm_counters(voe_idx, ccm_rx_valid, ccm_rx_invalid, ccm_rx_seq, ccm_tx)
-    test "check_ccm_counters  voe_idx: #{voe_idx}  ccm_rx_valid: #{ccm_rx_valid}  ccm_rx_invalid: #{ccm_rx_invalid}  ccm_rx_seq: #{ccm_rx_seq}  ccm_tx: #{ccm_tx}" do
+    t_i("check_ccm_counters  voe_idx: #{voe_idx}  ccm_rx_valid: #{ccm_rx_valid}  ccm_rx_invalid: #{ccm_rx_invalid}  ccm_rx_seq: #{ccm_rx_seq}  ccm_tx: #{ccm_tx}")
 
     status = $ts.dut.call("mesa_voe_cc_counters_get", voe_idx)
 
@@ -1001,11 +967,10 @@ def check_ccm_counters(voe_idx, ccm_rx_valid, ccm_rx_invalid, ccm_rx_seq, ccm_tx
     if ((status["tx_counter"] != ccm_tx))
         t_e("Unexpected CCM tx.  Expected = #{ccm_tx}  counted = #{status["tx_counter"]}")
     end
-    end
 end
 
 def check_voe_lb_counters(voe_idx, rx_lbr, rx_oo, tx_lbr, tx_lbm, tx_trans=LBM_TRANSACTION_ID_NONE, rx_trans=LBM_TRANSACTION_ID_NONE, rx_crc=0)
-    test "check_voe_lb_counters  voe_idx: #{voe_idx}  rx_lbr: #{rx_lbr}  rx_oo: #{rx_oo}  tx_lbr: #{tx_lbr}  tx_lbm: #{tx_lbm}  tx_trans: #{tx_trans}  rx_trans: #{rx_trans}" do
+    t_i("check_voe_lb_counters  voe_idx: #{voe_idx}  rx_lbr: #{rx_lbr}  rx_oo: #{rx_oo}  tx_lbr: #{tx_lbr}  tx_lbm: #{tx_lbm}  tx_trans: #{tx_trans}  rx_trans: #{rx_trans}")
 
     status = $ts.dut.call("mesa_voe_lb_counters_get", voe_idx)
 
@@ -1033,17 +998,15 @@ def check_voe_lb_counters(voe_idx, rx_lbr, rx_oo, tx_lbr, tx_lbm, tx_trans=LBM_T
     if ((rx_trans != LBM_TRANSACTION_ID_NONE) && (status["rx_trans_id"] != rx_trans))
         t_e("Unexpected rx trans id.  Expected #{rx_trans}  Counted #{status["rx_trans_id"]}")
     end
-    end
 end
 
 def clear_all_counters(voe_idx, mask)
-    test "clear_all_counters  voe_idx: #{voe_idx}" do
+    t_i("clear_all_counters  voe_idx: #{voe_idx}")
 
     $ts.dut.call("mesa_voe_counters_clear", voe_idx)
     $ts.dut.call("mesa_voe_cc_counters_clear", voe_idx)
     if ($cap_vop_cfm)
         $ts.dut.call("mesa_voe_lb_counters_clear", voe_idx)
-    end
     end
 end
 
