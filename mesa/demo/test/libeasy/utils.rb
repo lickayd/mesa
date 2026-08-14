@@ -547,6 +547,59 @@ end
 
 MEASURE_PCP_NONE = 0xFFFF
 
+# Frame counters for the ports in a measurement. Returns nil if they cannot be read, a diagnostic must never break the measurement
+def measure_counters_get(ig, eg)
+    counters = {:ts => {}, :rx => {}, :tx => {}, :prio_tx => {}}
+    (ig + [eg]).uniq.each do |port|
+        ts = Time.now
+        cnt = $ts.dut.call("mesa_port_counters_get", $ts.dut.p[port])
+        # One timestamp per port, so a rate never depends on the read batches taking equal time
+        counters[:ts][port] = ts + ((Time.now - ts) / 2)
+        counters[:rx][port] = cnt["rmon"]["rx_etherStatsPkts"].to_i
+        counters[:tx][port] = cnt["rmon"]["tx_etherStatsPkts"].to_i
+        counters[:prio_tx][port] = (cnt["prio"] || []).map {|prio| prio["tx"].to_i}
+    end
+    return counters
+rescue => e
+    t_i("Could not read port counters: #{e}")
+    return nil
+end
+
+# Counter deltas over the capture. Returns nil when the counters could not be read
+def measure_counters_delta(before, after)
+    return nil if ((before == nil) || (after == nil))
+
+    delta = {:secs => {}, :rx => {}, :tx => {}, :prio_tx => {}}
+    after[:rx].each_key do |port|
+        secs = after[:ts][port] - before[:ts][port]
+        return nil if (secs <= 0)
+        delta[:secs][port] = secs
+        delta[:rx][port] = after[:rx][port] - before[:rx][port]
+        delta[:tx][port] = after[:tx][port] - before[:tx][port]
+        prio_before = before[:prio_tx][port]
+        delta[:prio_tx][port] = after[:prio_tx][port].each_with_index.map {|cnt, prio| cnt - prio_before.fetch(prio, cnt)}
+    end
+    return delta
+end
+
+# No verdict here, judging a rate needs the expected egress rate that only the caller knows
+def measure_counters_report(delta, ig, eg, line_rate_fps)
+    return if (delta == nil)
+
+    ig.each_with_index do |port, ig_idx|
+        rx = delta[:rx][port]
+        secs = delta[:secs][port]
+        fps = (rx / secs).to_i
+        exp_fps = line_rate_fps[ig_idx].to_i
+        percent = (exp_fps > 0) ? ((fps * 100) / exp_fps) : 0
+        t_i("Ingress port #{port} received #{rx} frames in #{'%.3f' % secs} sec: #{fps} fps, #{percent} % of the #{exp_fps} fps line rate")
+    end
+
+    tx = delta[:tx][eg]
+    secs = delta[:secs][eg]
+    t_i("Egress port #{eg} transmitted #{tx} frames in #{'%.3f' % secs} sec: #{(tx / secs).to_i} fps. Per prio #{delta[:prio_tx][eg]}")
+end
+
 # Drops in the NIC or its driver, before tcpdump. Not part of the 'dropped by kernel' statistic that tcpdump reports itself
 def pc_drop_counters_get(port)
     counters = {}
@@ -585,10 +638,11 @@ def check_rate(cfg)
     streams = fld_get(cfg, :streams, 1)   # Parallel/Multiple Easyframe transmitter per ingress port
 
     pre_tx = with_pre_tx ? 1 : 0    # Calculate the possible pre tx time in seconds
-    # The transmitters must outlive the capture window. They are always killed below
+    # The transmitters must outlive the counter window, which extends past the capture by the serial counter reads. They are always killed below
     time = (pre_tx+sec+100)
     pid_ef = []
     max_cnt = 50
+    line_rate_fps = []
     ig.each_with_index do |ig_value, ig_idx|
         if (size_array != [])
             size = size_array[ig_idx]
@@ -596,6 +650,7 @@ def check_rate(cfg)
 
         sec_count_in = 1000000000/8/(20+size)    # Calculate frames per second at line speed. The ef tx function can only run at line speed. The 'size' parameter is the requested frame size inclusive checksum
         rep = time*sec_count_in     # Convert the required transmission seconds to number of frames, as this is the parameter to ef tx function
+        line_rate_fps << sec_count_in
 
 #        t_i("Calculated frames per sec at line speed: #{sec_count_in}")
         t_i("Start #{streams} Easy Frame transmitter(s) of #{sec*sec_count_in} frames of size #{size} with #{pre_tx} sec of pre TX and 2 sec of post TX. Speed is 1 Gbps.")
@@ -619,6 +674,7 @@ def check_rate(cfg)
 
     fname = "/tmp/#{$ts.pc.p[eg]}.pcap"
     $ts.pc.run("rm -f #{fname}")
+    counters_before = measure_counters_get(ig, eg)
     pc_drops_before = pc_drop_counters_get($ts.pc.p[eg])
     t_i("Start tcpdump logging on egress port: #{$ts.pc.p[eg]}")
     # -B sets to 32 MiB of buffer, a smaller one silently drops frames, which looks like missing traffic
@@ -657,6 +713,8 @@ def check_rate(cfg)
         t_i("Kill the tcpdump process")
         $ts.pc.try_ignore("kill -s SIGHUP #{pid_tcp}")
 
+        # Read the counters here, so the window matches the capture. Waiting for tcpdump to flush includes the ef transmitters stopping one by one
+        counters_after = measure_counters_get(ig, eg)
         pc_drops_after = pc_drop_counters_get($ts.pc.p[eg])
 
         # Wait (bounded) for tcpdump to actually exit, polling from Ruby with a
@@ -688,6 +746,8 @@ def check_rate(cfg)
     dropped = $ts.pc.bg_stderr(pid_tcp)[/(\d+) packets dropped by kernel/, 1]
     t_i("tcpdump dropped #{dropped} frames. The capture is incomplete") if (dropped.to_i > 0)
 
+    counters = measure_counters_delta(counters_before, counters_after)
+    measure_counters_report(counters, ig, eg, line_rate_fps)
     pc_drop_counters_report(pc_drops_before, pc_drops_after, $ts.pc.p[eg])
 
     t_i("Analyze pcap file")
@@ -727,6 +787,8 @@ def check_rate(cfg)
         $ts.pc.try("pcap_analyze.rb --frame-count all --pre-tx-sec #{pre_tx} --count-sec #{sec} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{fname}")
     end
     $ts.pc.run("rm -f #{fname}")
+
+    return counters
 end
 
 def measure(ig, eg, size, sec=1, frame_rate=false, data_rate=false, erate=[1000000000], etolerance=[1], with_pre_tx=false, pcp=[], cycle_time=[], size_array=[])
