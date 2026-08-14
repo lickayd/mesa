@@ -95,9 +95,13 @@ end
 exp_cycle_f = 0.0
 max_diff_percent = 2.0
 max_diff_floor_sec = 0.000160
+new_interval_gap = 0.0
 if ($options[:exp_cycle] != nil)
     exp_cycle_f = $options[:exp_cycle].to_f / 1000000  # Convert expected cycle from micro seconds to floating point seconds
     max_diff = [((exp_cycle_f / 100) * max_diff_percent), max_diff_floor_sec].max
+    # A new gate interval is a PCP change or, when only one PCP is measured, a gap longer than this.
+    # Half a cycle is longer than any hole inside an open interval and shorter than a closed gate.
+    new_interval_gap = exp_cycle_f / 2
 end
 
 count_sec = $options[:count_sec]
@@ -115,6 +119,7 @@ frame_time = ((frame_size + 20) * 8).to_f / 1000000000
 $short_cycle = Array.new(8,0)
 $long_cycle = Array.new(8,0)
 $ok_cycle = Array.new(8,0)
+$hole_count = Array.new(8,0)
 curr_pcp = 8    # 8 is not a valid PCP
 distance_count = 0
 
@@ -157,15 +162,18 @@ Open3.popen2e("tcpdump -ttttt -en -r #{$pcap_file}") do |stdin, stdout, wait_thr
                     else                # Count the 'count_sec' seconds
                         pcp_count[pcp_idx] += 1
                         if ($options[:exp_cycle] != nil)  # Check if TAS cycle time must be checked
-                            if (old_last_time != 0) # Check for "large" frame distance
-                                distance = last_time - old_last_time
-                                if ((distance > (frame_time * 2)) && (distance < (frame_time * 50)))
-                                    distance_count += 1
-                                end
+                            distance = (old_last_time != 0) ? (last_time - old_last_time) : 0  # Distance to previous frame
+                            if ((distance > (frame_time * 2)) && (distance < (frame_time * 50)))
+                                distance_count += 1
+                            end
+                            if ((curr_pcp == pcp_value) && (distance > (frame_time * 50)) && (distance <= new_interval_gap))
+                                # A hole inside an open interval - not a new interval, most likely a lossy capture
+                                $hole_count[pcp_idx] += 1
+                                puts("hole  pcp_idx #{pcp_idx}  last_time #{last_time}  gap #{distance}") if ($hole_count.sum <= 10)
                             end
                             old_last_time = last_time
 
-                            if ((curr_pcp != pcp_value) || (distance > (frame_time * 50)))  # This is a new PCP or "long" time since last received - new SAT interval. Cycle time for this PCP can possibly be calculated
+                            if ((curr_pcp != pcp_value) || (distance > new_interval_gap))  # This is a new PCP or "long" time since last received - new SAT interval. Cycle time for this PCP can possibly be calculated
                                 if (rx_time[pcp_idx] != 1000.000000)    # A previous time for this PCP is valid - calculate the TAS cycle time
                                     cycle_time = last_time - rx_time[pcp_idx]  # Calculate cycle time
                                     if (cycle_time < (exp_cycle_f - max_diff)) # Count cycles too short
@@ -187,8 +195,8 @@ Open3.popen2e("tcpdump -ttttt -en -r #{$pcap_file}") do |stdin, stdout, wait_thr
                             puts "count_sec time has elapsed counted #{pcp_count} frames. Duration #{last_time - pre_tx_time} count_sec #{count_sec}"
                             break
                         end
-                        curr_pcp = pcp_value
                     end
+                    curr_pcp = pcp_value    # Also during 'pre-tx', so counting starting mid interval is not a new interval
                 end
             end
         end
@@ -277,8 +285,8 @@ if ($options[:frame_count] == :pcp)
                 analyze_failed("Analyze failed.  No cycle measured. pcp #{pcp_value}  exp_cycle_f #{exp_cycle_f}  counted #{pcp_count[pcp_idx]}")
             end
         end
-        cycle_txt = "distance_count #{distance_count}  ok_cycle #{$ok_cycle}  short_cycle #{$short_cycle}  long_cycle #{$long_cycle}"
-        # Print the statistics also when something failed
+        cycle_txt = "distance_count #{distance_count}  ok_cycle #{$ok_cycle}  short_cycle #{$short_cycle}  long_cycle #{$long_cycle}  hole_count #{$hole_count}"
+        # A hole is a gap inside an open gate interval. Print the statistics also when something failed
         if ($analyze_failed)
             puts "Cycle length measured. #{cycle_txt}"
         else
