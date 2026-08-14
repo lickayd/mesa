@@ -546,6 +546,25 @@ def counter_get(direction, port)
 end
 
 MEASURE_PCP_NONE = 0xFFFF
+
+# Drops in the NIC or its driver, before tcpdump. Not part of the 'dropped by kernel' statistic that tcpdump reports itself
+def pc_drop_counters_get(port)
+    counters = {}
+    res = $ts.pc.try_ignore("sh -c 'ethtool -S #{port} | grep -E \"drop|discard|missed|no_buffer|fifo\"'")
+    res[:out].to_s.each_line do |line|
+        name, value = line.split(":")       # ethtool prints one "  name: value" per line
+        counters[name.strip] = value.to_i if (value != nil)
+    end
+    return counters
+end
+
+def pc_drop_counters_report(before, after, port)
+    after.each do |name, value|
+        next if (value <= before.fetch(name, value))
+        t_i("WARNING: #{port} #{name} increased by #{value - before[name]} during the capture. The capture is incomplete")
+    end
+end
+
 # Wrapper function for measure() utilility
 # This takes a hash input and does not create a test block
 def check_rate(cfg)
@@ -600,6 +619,7 @@ def check_rate(cfg)
 
     fname = "/tmp/#{$ts.pc.p[eg]}.pcap"
     $ts.pc.run("rm -f #{fname}")
+    pc_drops_before = pc_drop_counters_get($ts.pc.p[eg])
     t_i("Start tcpdump logging on egress port: #{$ts.pc.p[eg]}")
     # -B sets to 32 MiB of buffer, a smaller one silently drops frames, which looks like missing traffic
     pid_tcp = $ts.pc.bg("tcpdump", "tcpdump -i #{$ts.pc.p[eg]} -j adapter_unsynced -B 32768 -s22 -w #{fname}")
@@ -637,6 +657,8 @@ def check_rate(cfg)
         t_i("Kill the tcpdump process")
         $ts.pc.try_ignore("kill -s SIGHUP #{pid_tcp}")
 
+        pc_drops_after = pc_drop_counters_get($ts.pc.p[eg])
+
         # Wait (bounded) for tcpdump to actually exit, polling from Ruby with a
         # single `kill -0` per iteration. 
         t_i("Wait for tcpdump process to terminate")
@@ -661,6 +683,12 @@ def check_rate(cfg)
     if (max == max_cnt)
         t_e("Easy Frame transmitting never stopped")
     end
+
+    # tcpdump reports its capture statistics when killed. Dropped frames leave holes in the capture
+    dropped = $ts.pc.bg_stderr(pid_tcp)[/(\d+) packets dropped by kernel/, 1]
+    t_i("tcpdump dropped #{dropped} frames. The capture is incomplete") if (dropped.to_i > 0)
+
+    pc_drop_counters_report(pc_drops_before, pc_drops_after, $ts.pc.p[eg])
 
     t_i("Analyze pcap file")
     expected_count = ""
