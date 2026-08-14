@@ -36,6 +36,8 @@ TAS_SHAPER_BURST_LEVEL = 36000
 # 63 units, so a shaper can bank slightly more credit than the level asked for.
 SHAPER_BURST_UNIT = 4096
 SHAPER_BURST_UNIT_CNT_MAX = 63
+# Max allowed spread between the number of frames transmitted from each equally gated prio
+TAS_EQUAL_PRIO_TX_PERCENT = 2
 $eg = 0
 $ig = [1, 2, 3]
 
@@ -159,6 +161,20 @@ def gate_erate_get(port, interval, cycle)
     return (([shaper_bits, line_bits].min * 1_000_000_000) / cycle)
 end
 
+# The gate opens for the same interval per prio, so the DUT must transmit the same number of frames from each.
+# Reads the DUT counters, an even split here with an uneven pcap means the capture lost frames
+def check_equal_prio_tx(counters, eg, prio_list)
+    return if (counters == nil)
+    tx = prio_list.map {|prio| counters[:prio_tx][eg].fetch(prio, 0)}
+    return if (tx.min <= 0)     # No prio counters on this family, nothing to compare
+
+    spread = ((tx.max - tx.min) * 100.0) / tx.max
+    t_i("Egress port #{eg} prio #{prio_list} transmitted #{tx}. Spread #{'%.2f' % spread} %")
+    if (spread > TAS_EQUAL_PRIO_TX_PERCENT)
+        t_e("Uneven prio tx from the gate. Spread #{'%.2f' % spread} % is above #{TAS_EQUAL_PRIO_TX_PERCENT} %  tx #{tx}")
+    end
+end
+
 def tas_reset
     stopped = []
     tas_port_list().each do |port|
@@ -242,10 +258,11 @@ def start_gcl(conf, eg, ig, frame_size, cycle_time, domain)
     $ts.dut.run("mesa-cmd mac flush")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ipv4 dscp 0")
     erate = (DUT_TEST_RATE*1000)/3
-    check_rate({
+    counters = check_rate({
         ig: ig, eg: eg, size: frame_size, sec: 2, erate: [erate,erate,erate], etolerance: [5,5,5],
         with_pre_tx: true, pcp: [0,3,7], cycle_time: [cycle_time,cycle_time,cycle_time]
     })
+    check_equal_prio_tx(counters, eg, [0,3,7])
 
     return base_time_seconds
 end
@@ -1300,10 +1317,11 @@ def equal_interval_gcl_reconfig_test
     $ts.dut.run("mesa-cmd mac flush")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ipv4 dscp 0")
     erate = (DUT_TEST_RATE*1000)/3
-    check_rate({
+    counters = check_rate({
         ig: ig, eg: eg, size: frame_size, sec: 2, erate: [erate,erate,erate], etolerance: [5,5,5],
         with_pre_tx: true, pcp: [0,3,7], cycle_time: [cycle_time,cycle_time,cycle_time]
     })
+    check_equal_prio_tx(counters, eg, [0,3,7])
 
     t_i("-----------Create new GCL with new interval time for cycle extension----------------")
     frame_tx_interval_count = 700                                # Number of frame transmitted in a GCL entry time interval
@@ -1356,10 +1374,11 @@ def equal_interval_gcl_reconfig_test
     $ts.dut.run("mesa-cmd mac flush")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ipv4 dscp 0")
     erate = (DUT_TEST_RATE*1000)/3
-    check_rate({
+    counters = check_rate({
         ig: ig, eg: eg, size: frame_size, sec: 2, erate: [erate,erate,erate], etolerance: [5,5,5],
         with_pre_tx: true, pcp: [0,3,7], cycle_time: [cycle_time_1,cycle_time_1,cycle_time_1]
     })
+    check_equal_prio_tx(counters, eg, [0,3,7])
 
     t_i("------------Create new GCL with new interval time for cycle truncation----------")
     frame_tx_interval_count = 400                                # Number of frame transmitted in a GCL entry time interval
@@ -1412,10 +1431,11 @@ def equal_interval_gcl_reconfig_test
     $ts.dut.run("mesa-cmd mac flush")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ipv4 dscp 0")
     erate = (DUT_TEST_RATE*1000)/3
-    check_rate({
+    counters = check_rate({
         ig: ig, eg: eg, size: frame_size, sec: 2, erate: [erate,erate,erate], etolerance: [5,5,5],
         with_pre_tx: true, pcp: [0,3,7], cycle_time: [cycle_time_2,cycle_time_2,cycle_time_2]
     })
+    check_equal_prio_tx(counters, eg, [0,3,7])
 
     t_i("Stop GCL")
     conf["gate_enabled"] = false
