@@ -32,6 +32,10 @@ MESA_VID_NULL = 0
 # full gate open interval from banked burst credit. Tests that measure a single
 # priority behind a gate therefore raise the burst level on the ports they measure.
 TAS_SHAPER_BURST_LEVEL = 36000
+# All families program the port shaper burst level in whole 4 kB units, capped at
+# 63 units, so a shaper can bank slightly more credit than the level asked for.
+SHAPER_BURST_UNIT = 4096
+SHAPER_BURST_UNIT_CNT_MAX = 63
 $eg = 0
 $ig = [1, 2, 3]
 
@@ -143,6 +147,16 @@ def tas_port_list
     port_list = $ts.dut.port_list
     port_list = port_list + $ts.dut.looped_port_list if (dut_looped_ports())
     return port_list
+end
+
+# Expected egress rate for a single priority gated open for interval of every
+# cycle, limited by the shaper on port unless it can supply a full interval.
+def gate_erate_get(port, interval, cycle)
+    shaper = $ts.dut.call("mesa_qos_port_conf_get", port)["shaper"]
+    burst_cnt = [(shaper["level"] + SHAPER_BURST_UNIT - 1) / SHAPER_BURST_UNIT, SHAPER_BURST_UNIT_CNT_MAX].min
+    shaper_bits = (burst_cnt * SHAPER_BURST_UNIT * 8) + ((shaper["rate"] * 1000 * interval) / 1_000_000_000)
+    line_bits = interval    # One bit takes one nano sec to transmit at 1G
+    return (([shaper_bits, line_bits].min * 1_000_000_000) / cycle)
 end
 
 def tas_reset
@@ -649,7 +663,8 @@ def max_sdu_bigger_than_frame_size
 
     $ts.dut.run("mesa-cmd mac flush")
     $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth dmac 00:00:00:00:01:02 smac 00:00:00:00:01:01 ipv4 dscp 0")
-    erate = 1000000000/3
+    # pcp 3 only owns one of the three intervals, so the shaper is idle two thirds of the cycle
+    erate = gate_erate_get($ts.dut.p[eg], time_interval, cycle_time)
     check_rate({
         ig: ig, eg: eg, size: frame_size, sec: 2, erate: [erate], etolerance: [5], with_pre_tx: true,
         pcp: [3], cycle_time: [cycle_time]
