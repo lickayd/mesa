@@ -11,6 +11,12 @@
 #include "vtss_lk_packet.h"
 #endif
 
+#if defined(VTSS_ARCH_LAIKA)
+#define FA_PACKET_CPU_PORT RT_CHIP_PORT_CPU_0
+#else
+#define FA_PACKET_CPU_PORT RT_CHIP_PORT_CPU_1
+#endif
+
 /* - CIL functions ------------------------------------------------- */
 
 #define FA_IFH_WORDS (VTSS_FA_RX_IFH_SIZE / 4U) /* 9 32-bit words in an IFH */
@@ -243,11 +249,8 @@ vtss_rc vtss_cil_packet_rx_conf_set(struct vtss_state_s *vtss_state)
     // Each CPU queue gets reserved extraction buffer space. No sharing at port
     // or buffer level
     offs = 2048U; // Egress/destination memory
-#if defined(VTSS_ARCH_LAIKA)
-    port = RT_CHIP_PORT_CPU_0;
-#else
-    port = RT_CHIP_PORT_CPU_1;
-#endif
+    port = FA_PACKET_CPU_PORT;
+
     for (queue = 0U; queue < vtss_state->packet.rx_queue_count; queue++) {
         i = conf->queue[queue].size / FA_BUFFER_CELL_SZ;
         REG_WR(VTSS_QRES_RES_CFG(offs + port * VTSS_PRIOS + queue), i);
@@ -371,11 +374,7 @@ static vtss_rc fa_packet_mode_update(vtss_state_t *vtss_state)
 #else
     byte_swap = 1U;
 #endif
-#if defined(VTSS_ARCH_LAIKA)
-    port = RT_CHIP_PORT_CPU_0;
-#else
-    port = RT_CHIP_PORT_CPU_1;
-#endif
+    port = FA_PACKET_CPU_PORT;
 
     (void)byte_swap;
     (void)grp;
@@ -1455,7 +1454,7 @@ static vtss_rc fa_packet_init(vtss_state_t *vtss_state)
     vtss_rc                rc = VTSS_RC_OK;
 
 #if defined(VTSS_ARCH_LAIKA)
-    rc = lk_init(vtss_state);
+    rc = lk_init(vtss_state, FA_PACKET_CPU_PORT);
 #endif
     // The extraction queues can be redirected to any port.
     // This is used to redirect selected queues to an NPI port, but also the

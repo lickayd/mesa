@@ -13,9 +13,7 @@
 #define PIE_BD_MASK   0x00FFFFFF
 #define MIN_FLEN      64
 
-#define PIE_BLOCK         0
-#define PIE_CHANNEL       0
-#define PIE_REG(reg_name) VTSS_PIE_CHN_##reg_name(lk_pie_tgt(PIE_BLOCK), PIE_CHANNEL)
+#define PIE_REG(reg_name, c) VTSS_PIE_CHN_##reg_name(lk_pie_tgt(c->cpu_port), c->chnl_id)
 
 #define PIE_DEFAULT_RX_DESCRIPTORS 4
 #define PIE_DEFAULT_TX_DESCRIPTORS 4
@@ -79,7 +77,7 @@ static inline u32 lk_pie_tgt(int i) { return (i == 0) ? VTSS_TO_PIE_CHN_0 : VTSS
 
 static inline vtss_lk_pie_chnl_t *lk_get_chnl(vtss_state_t *vtss_state)
 {
-    return &vtss_state->packet.lk.chnls[PIE_CHANNEL];
+    return &vtss_state->packet.lk.chnls[0];
 }
 
 static inline u64 lk_pie_bd_ptr2addr(uint32_t base, uint32_t ptr, bool base_msb)
@@ -130,94 +128,119 @@ static inline vtss_rc lk_pie_update(vtss_state_t *vtss_state, u64 addr, u32 reg,
 }
 
 // Reads
-static inline vtss_rc lk_edesc_write_ptr_read(vtss_state_t *vtss_state, u64 *addr)
+static inline vtss_rc lk_edesc_write_ptr_read(vtss_state_t       *vtss_state,
+                                              vtss_lk_pie_chnl_t *c,
+                                              u64                *addr)
 {
-    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_EDESC_STS0)), TRUE);
+    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_EDESC_STS0, c)), TRUE);
 }
-static inline vtss_rc lk_edesc_read_ptr_read(vtss_state_t *vtss_state, u64 *addr)
+static inline vtss_rc lk_edesc_read_ptr_read(vtss_state_t       *vtss_state,
+                                             vtss_lk_pie_chnl_t *c,
+                                             u64                *addr)
 {
-    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_EDESC_CFG6)), TRUE);
+    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_EDESC_CFG6, c)), TRUE);
 }
-static inline vtss_rc lk_rdesc_read_ptr_read(vtss_state_t *vtss_state, u64 *addr)
+static inline vtss_rc lk_rdesc_read_ptr_read(vtss_state_t       *vtss_state,
+                                             vtss_lk_pie_chnl_t *c,
+                                             u64                *addr)
 {
-    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_RDESC_STS0)), TRUE);
+    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_RDESC_STS0, c)), TRUE);
 }
-static inline vtss_rc lk_rdesc_write_ptr_read(vtss_state_t *vtss_state, u64 *addr)
+static inline vtss_rc lk_rdesc_write_ptr_read(vtss_state_t       *vtss_state,
+                                              vtss_lk_pie_chnl_t *c,
+                                              u64                *addr)
 {
-    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_RDESC_CFG6)), TRUE);
+    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_RDESC_CFG6, c)), TRUE);
 }
-static inline vtss_rc lk_idesc_read_ptr_read(vtss_state_t *vtss_state, u64 *addr)
+static inline vtss_rc lk_idesc_read_ptr_read(vtss_state_t       *vtss_state,
+                                             vtss_lk_pie_chnl_t *c,
+                                             u64                *addr)
 {
-    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PI_CB_DESC_STS0)), FALSE);
+    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PI_CB_DESC_STS0, c)), FALSE);
 }
-static inline vtss_rc lk_idesc_write_ptr_read(vtss_state_t *vtss_state, u64 *addr)
+static inline vtss_rc lk_idesc_write_ptr_read(vtss_state_t       *vtss_state,
+                                              vtss_lk_pie_chnl_t *c,
+                                              u64                *addr)
 {
-    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PI_CB_DESC_CFG6)), FALSE);
+    return lk_pie_rd(vtss_state, addr, REG_ADDR(PIE_REG(PI_CB_DESC_CFG6, c)), FALSE);
 }
 // Updates
-static inline vtss_rc lk_edesc_read_ptr_update(vtss_state_t *vtss_state, u64 addr)
+static inline vtss_rc lk_edesc_read_ptr_update(vtss_state_t       *vtss_state,
+                                               vtss_lk_pie_chnl_t *c,
+                                               u64                 addr)
 {
-    return lk_pie_update(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_EDESC_CFG6)), TRUE);
+    return lk_pie_update(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_EDESC_CFG6, c)), TRUE);
 }
-static inline vtss_rc lk_rdesc_write_ptr_update(vtss_state_t *vtss_state, u64 addr)
+static inline vtss_rc lk_rdesc_write_ptr_update(vtss_state_t       *vtss_state,
+                                                vtss_lk_pie_chnl_t *c,
+                                                u64                 addr)
 {
-    return lk_pie_update(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_RDESC_CFG6)), TRUE);
+    return lk_pie_update(vtss_state, addr, REG_ADDR(PIE_REG(PE_CB_RDESC_CFG6, c)), TRUE);
 }
-static inline vtss_rc lk_idesc_write_ptr_update(vtss_state_t *vtss_state, u64 addr)
+static inline vtss_rc lk_idesc_write_ptr_update(vtss_state_t       *vtss_state,
+                                                vtss_lk_pie_chnl_t *c,
+                                                u64                 addr)
 {
-    return lk_pie_update(vtss_state, addr, REG_ADDR(PIE_REG(PI_CB_DESC_CFG6)), FALSE);
+    return lk_pie_update(vtss_state, addr, REG_ADDR(PIE_REG(PI_CB_DESC_CFG6, c)), FALSE);
 }
 
-static inline vtss_rc lk_pi_desc_cfg(vtss_state_t *vtss_state, u64 start, u64 end)
+static inline vtss_rc lk_pi_desc_cfg(vtss_state_t       *vtss_state,
+                                     vtss_lk_pie_chnl_t *c,
+                                     u64                 start,
+                                     u64                 end)
 {
     u32 low, high;
     lk_u64_to_u32(&low, &high, start);
-    REG_WR(PIE_REG(PI_CB_DESC_CFG0), low);
-    REG_WR(PIE_REG(PI_CB_DESC_CFG1), high);
+    REG_WR(PIE_REG(PI_CB_DESC_CFG0, c), low);
+    REG_WR(PIE_REG(PI_CB_DESC_CFG1, c), high);
     lk_u64_to_u32(&low, &high, end);
-    REG_WR(PIE_REG(PI_CB_DESC_CFG2), low);
-    REG_WR(PIE_REG(PI_CB_DESC_CFG3), high);
+    REG_WR(PIE_REG(PI_CB_DESC_CFG2, c), low);
+    REG_WR(PIE_REG(PI_CB_DESC_CFG3, c), high);
     return VTSS_RC_OK;
 }
 
-static inline vtss_rc lk_pe_desc_cfg(vtss_state_t *vtss_state, u64 start, u64 end)
+static inline vtss_rc lk_pe_desc_cfg(vtss_state_t       *vtss_state,
+                                     vtss_lk_pie_chnl_t *c,
+                                     u64                 start,
+                                     u64                 end)
 {
     u32 low, high;
     lk_u64_to_u32(&low, &high, start);
-    REG_WR(PIE_REG(PE_CB_RDESC_CFG0), low);
-    REG_WR(PIE_REG(PE_CB_RDESC_CFG1), high);
-    REG_WR(PIE_REG(PE_CB_EDESC_CFG0), low);
-    REG_WR(PIE_REG(PE_CB_EDESC_CFG1), high);
+    REG_WR(PIE_REG(PE_CB_RDESC_CFG0, c), low);
+    REG_WR(PIE_REG(PE_CB_RDESC_CFG1, c), high);
+    REG_WR(PIE_REG(PE_CB_EDESC_CFG0, c), low);
+    REG_WR(PIE_REG(PE_CB_EDESC_CFG1, c), high);
     lk_u64_to_u32(&low, &high, end);
-    REG_WR(PIE_REG(PE_CB_RDESC_CFG2), low);
-    REG_WR(PIE_REG(PE_CB_RDESC_CFG3), high);
-    REG_WR(PIE_REG(PE_CB_EDESC_CFG2), low);
-    REG_WR(PIE_REG(PE_CB_EDESC_CFG3), high);
+    REG_WR(PIE_REG(PE_CB_RDESC_CFG2, c), low);
+    REG_WR(PIE_REG(PE_CB_RDESC_CFG3, c), high);
+    REG_WR(PIE_REG(PE_CB_EDESC_CFG2, c), low);
+    REG_WR(PIE_REG(PE_CB_EDESC_CFG3, c), high);
     return VTSS_RC_OK;
 }
 
 vtss_rc lk_debug_pkt(vtss_state_t *vtss_state, lmu_ss_t *ss, const vtss_debug_info_t *const info)
 {
-    u64 wptr, rptr;
+    u64                 wptr, rptr;
+    vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
 
-    pr("PIE CHANNEL %u\n", PIE_CHANNEL);
-    lk_idesc_write_ptr_read(vtss_state, &wptr);
-    lk_idesc_read_ptr_read(vtss_state, &rptr);
+    pr("PIE CHANNEL %u-%u\n", c->cpu_port, c->chnl_id);
+    lk_idesc_write_ptr_read(vtss_state, c, &wptr);
+    lk_idesc_read_ptr_read(vtss_state, c, &rptr);
     pr("%-33s SW_WR=0x%llx HW_RD=0x%llx\n", "PI DESC", wptr, rptr);
-    lk_rdesc_write_ptr_read(vtss_state, &wptr);
-    lk_rdesc_read_ptr_read(vtss_state, &rptr);
+    lk_rdesc_write_ptr_read(vtss_state, c, &wptr);
+    lk_rdesc_read_ptr_read(vtss_state, c, &rptr);
     pr("%-33s SW_WR=0x%llx HW_RD=0x%llx\n", "PE RDESC", wptr, rptr);
-    lk_edesc_write_ptr_read(vtss_state, &wptr);
-    lk_edesc_read_ptr_read(vtss_state, &rptr);
+    lk_edesc_write_ptr_read(vtss_state, c, &wptr);
+    lk_edesc_read_ptr_read(vtss_state, c, &rptr);
     pr("%-33s HW_WR=0x%llx SW_RD=0x%llx\n", "PE EDESC", wptr, rptr);
 
-    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(SRX_PIE_CTRL)), "SRX_PIE_CTRL");
-    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(STX_PIE_CTRL)), "STX_PIE_CTRL");
-    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(STX_AXIS_ERR_CTRL_PIE)),
+    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(SRX_PIE_CTRL, c)), "SRX_PIE_CTRL");
+    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(STX_PIE_CTRL, c)), "STX_PIE_CTRL");
+    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(STX_AXIS_ERR_CTRL_PIE, c)),
                       "STX_AXIS_ERR_CTRL_PIE");
-    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(PIE_0_INT)), "PIE_0_INT");
-    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(PIE_1_INT)), "PIE_1_INT");
-    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(PIE_2_INT)), "PIE_2_INT");
+    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(PIE_0_INT, c)), "PIE_0_INT");
+    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(PIE_1_INT, c)), "PIE_1_INT");
+    vtss_fa_debug_reg(vtss_state, ss, REG_ADDR(PIE_REG(PIE_2_INT, c)), "PIE_2_INT");
     pr("\n");
 
     return VTSS_RC_OK;
@@ -225,11 +248,13 @@ vtss_rc lk_debug_pkt(vtss_state_t *vtss_state, lmu_ss_t *ss, const vtss_debug_in
 
 static vtss_rc lk_chn_traffic_enable(vtss_state_t *vtss_state)
 {
-    REG_WRM(PIE_REG(SRX_PIE_CTRL), VTSS_F_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_CH_EN(1),
+    vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
+
+    REG_WRM(PIE_REG(SRX_PIE_CTRL, c), VTSS_F_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_CH_EN(1),
             VTSS_M_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_CH_EN);
-    REG_WRM(PIE_REG(STX_PIE_CTRL), VTSS_F_PIE_CHN_STX_PIE_CTRL_STX_PIE_CH_EN(1),
+    REG_WRM(PIE_REG(STX_PIE_CTRL, c), VTSS_F_PIE_CHN_STX_PIE_CTRL_STX_PIE_CH_EN(1),
             VTSS_M_PIE_CHN_STX_PIE_CTRL_STX_PIE_CH_EN);
-    REG_WRM(PIE_REG(PIE_GEN_CFG),
+    REG_WRM(PIE_REG(PIE_GEN_CFG, c),
             (VTSS_F_PIE_CHN_PIE_GEN_CFG_CHN_PI_EN(1) | VTSS_F_PIE_CHN_PIE_GEN_CFG_CHN_PE_EN(1)),
             (VTSS_M_PIE_CHN_PIE_GEN_CFG_CHN_PI_EN | VTSS_M_PIE_CHN_PIE_GEN_CFG_CHN_PE_EN));
     return VTSS_RC_OK;
@@ -237,40 +262,45 @@ static vtss_rc lk_chn_traffic_enable(vtss_state_t *vtss_state)
 
 static vtss_rc lk_chn_traffic_disable(vtss_state_t *vtss_state)
 {
-    REG_WRM(PIE_REG(PIE_GEN_CFG), 0,
+    vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
+
+    REG_WRM(PIE_REG(PIE_GEN_CFG, c), 0,
             (VTSS_M_PIE_CHN_PIE_GEN_CFG_CHN_PI_EN | VTSS_M_PIE_CHN_PIE_GEN_CFG_CHN_PE_EN));
-    REG_WRM(PIE_REG(STX_PIE_CTRL), 0, VTSS_M_PIE_CHN_STX_PIE_CTRL_STX_PIE_CH_EN);
-    REG_WRM(PIE_REG(SRX_PIE_CTRL), 0, VTSS_M_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_CH_EN);
+    REG_WRM(PIE_REG(STX_PIE_CTRL, c), 0, VTSS_M_PIE_CHN_STX_PIE_CTRL_STX_PIE_CH_EN);
+    REG_WRM(PIE_REG(SRX_PIE_CTRL, c), 0, VTSS_M_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_CH_EN);
     return VTSS_RC_OK;
 }
 
 static vtss_rc lk_setup_rx_cfg(vtss_state_t *vtss_state)
 {
-    u32 val, mask;
+    vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
+    u32                 val, mask;
+
     val = VTSS_F_PIE_CHN_SRX_TAXI_ERROR_CH_CTRL_PIE_SRX_PIE_ABORT_MISS_EOF(1) |
           VTSS_F_PIE_CHN_SRX_TAXI_ERROR_CH_CTRL_PIE_SRX_PIE_ABORT_WRONG_UB(1);
     mask = VTSS_M_PIE_CHN_SRX_TAXI_ERROR_CH_CTRL_PIE_SRX_PIE_ABORT_MISS_EOF |
            VTSS_M_PIE_CHN_SRX_TAXI_ERROR_CH_CTRL_PIE_SRX_PIE_ABORT_WRONG_UB;
-    REG_WRM(PIE_REG(SRX_TAXI_ERROR_CH_CTRL_PIE), val, mask);
+    REG_WRM(PIE_REG(SRX_TAXI_ERROR_CH_CTRL_PIE, c), val, mask);
 
     val = VTSS_F_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_REMOVE_FCS(1);
     mask = VTSS_M_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_REMOVE_ROFH |
            VTSS_M_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_REMOVE_FCS |
            VTSS_M_PIE_CHN_SRX_PIE_CTRL_SRX_PIE_PREPEND_ROFH;
-    REG_WRM(PIE_REG(SRX_PIE_CTRL), val, mask);
+    REG_WRM(PIE_REG(SRX_PIE_CTRL, c), val, mask);
 
-    REG_WR(PIE_REG(PE_CB_EDESC_CFG4), 0); // CHN_PE_CB_EDESC_HI_THLD
-    REG_WR(PIE_REG(PE_CB_EDESC_CFG5), 1); // CHN_PE_CB_EDESC_LO_THLD
-    REG_WR(PIE_REG(PE_CB_EDESC_CFG8), 1); // CHN_PE_CB_EDESC_TIMER
+    REG_WR(PIE_REG(PE_CB_EDESC_CFG4, c), 0); // CHN_PE_CB_EDESC_HI_THLD
+    REG_WR(PIE_REG(PE_CB_EDESC_CFG5, c), 1); // CHN_PE_CB_EDESC_LO_THLD
+    REG_WR(PIE_REG(PE_CB_EDESC_CFG8, c), 1); // CHN_PE_CB_EDESC_TIMER
 
     return VTSS_RC_OK;
 }
 
 static vtss_rc lk_setup_tx_cfg(vtss_state_t *vtss_state)
 {
-    u32 priority_mask = 0;
-    u32 dest_mask = 0;
-    u32 val, mask;
+    vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
+    u32                 priority_mask = 0;
+    u32                 dest_mask = 0;
+    u32                 val, mask;
 
     val = VTSS_F_PIE_CHN_STX_AXIS_ERR_CTRL_PIE_STX_PIE_SIZE_CTRL_ADJT_FH(1) |
           VTSS_F_PIE_CHN_STX_AXIS_ERR_CTRL_PIE_STX_PIE_SIZE_CTRL_ADJT_REM_FH(1);
@@ -280,7 +310,7 @@ static vtss_rc lk_setup_tx_cfg(vtss_state_t *vtss_state)
            VTSS_M_PIE_CHN_STX_AXIS_ERR_CTRL_PIE_STX_PIE_SIZE_CTRL_ADJT_FH |
            VTSS_M_PIE_CHN_STX_AXIS_ERR_CTRL_PIE_STX_PIE_SIZE_CTRL_ADJT_REM_FH;
 
-    REG_WRM(PIE_REG(STX_AXIS_ERR_CTRL_PIE), val, mask);
+    REG_WRM(PIE_REG(STX_AXIS_ERR_CTRL_PIE, c), val, mask);
 
     val = VTSS_F_PIE_CHN_STX_PIE_CTRL_STX_PIE_INS_FCS(1);
     mask = VTSS_M_PIE_CHN_STX_PIE_CTRL_STX_PIE_INS_FCS |
@@ -292,10 +322,10 @@ static vtss_rc lk_setup_tx_cfg(vtss_state_t *vtss_state)
            VTSS_M_PIE_CHN_STX_PIE_CTRL_STX_PIE_SIZE_CTRL_OSIZE_CH_EN |
            VTSS_M_PIE_CHN_STX_PIE_CTRL_STX_PIE_SIZE_CTRL_USIZE_CH_EN;
 
-    REG_WRM(PIE_REG(STX_PIE_CTRL), val, mask);
+    REG_WRM(PIE_REG(STX_PIE_CTRL, c), val, mask);
 
-    REG_WR(PIE_REG(GEN_CFG0), dest_mask);
-    REG_WR(PIE_REG(GEN_CFG1), priority_mask);
+    REG_WR(PIE_REG(GEN_CFG0, c), dest_mask);
+    REG_WR(PIE_REG(GEN_CFG1, c), priority_mask);
     return VTSS_RC_OK;
 }
 
@@ -376,6 +406,7 @@ static vtss_rc lk_alloc_rx_bmem(vtss_state_t *vtss_state)
 static vtss_rc lk_alloc_tx_bmem(vtss_state_t *vtss_state)
 {
     vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
+
     c->pc_tx_bmem = VTSS_OS_MALLOC((c->pc_buff_sz * lk_get_tx_ring_sz(c)), VTSS_MEM_FLAGS_DMA);
     if (!c->pc_tx_bmem) {
         VTSS_E("Failed memory Allocation TX ");
@@ -390,7 +421,8 @@ static vtss_rc lk_xmit_update(vtss_state_t *vtss_state)
     vtss_circ_ring_idx_t begin, end;
     u64                  current;
     vtss_lk_pie_chnl_t  *c = lk_get_chnl(vtss_state);
-    lk_idesc_read_ptr_read(vtss_state, &current);
+
+    lk_idesc_read_ptr_read(vtss_state, c, &current);
     end = (current - c->pc_tx_ring_mem_dma) / sizeof(lk_pie_tx_desc_t);
     begin = lk_crc_get_rd_idx(&c->pc_tx_ring_ctl);
     while (begin != end) {
@@ -404,6 +436,7 @@ static vtss_rc lk_tx_init(vtss_state_t *vtss_state)
 {
     vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
     size_t              size = sizeof(struct lk_pie_tx_desc_t) * PIE_DEFAULT_TX_DESCRIPTORS;
+
     lk_crc_init(&c->pc_tx_ring_ctl, PIE_DEFAULT_TX_DESCRIPTORS);
     c->pc_tx_ring_mem = VTSS_OS_MALLOC(size, VTSS_MEM_FLAGS_DMA);
     if (!c->pc_tx_ring_mem) {
@@ -416,8 +449,8 @@ static vtss_rc lk_tx_init(vtss_state_t *vtss_state)
     u64 start = c->pc_tx_ring_mem_dma; // init tx desc ring
     u64 end = c->pc_tx_ring_mem_dma +
               sizeof(struct lk_pie_tx_desc_t) * (lk_crc_size(&c->pc_tx_ring_ctl) - 1);
-    lk_pi_desc_cfg(vtss_state, start, end);
-    lk_idesc_write_ptr_update(vtss_state, start);
+    lk_pi_desc_cfg(vtss_state, c, start, end);
+    lk_idesc_write_ptr_update(vtss_state, c, start);
     return VTSS_RC_OK;
 }
 
@@ -451,7 +484,7 @@ static vtss_rc pie_rx_fill_bp(vtss_state_t *vtss_state)
         pd = &c->pc_rx_ring_mem[id];
     }
     if (update_hw) {
-        lk_rdesc_write_ptr_update(vtss_state,
+        lk_rdesc_write_ptr_update(vtss_state, c,
                                   c->pc_rx_ring_mem_dma + (sizeof(lk_pie_rx_desc_t) * id));
     }
     return VTSS_RC_OK;
@@ -461,6 +494,7 @@ static vtss_rc lk_rx_init(vtss_state_t *vtss_state)
 {
     vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
     size_t              size = sizeof(struct lk_pie_rx_desc_t) * PIE_DEFAULT_RX_DESCRIPTORS;
+
     lk_crc_init(&c->pc_rx_ring_ctl, PIE_DEFAULT_RX_DESCRIPTORS);
     c->pc_rx_ring_mem = VTSS_OS_MALLOC(size, VTSS_MEM_FLAGS_DMA);
     if (!c->pc_rx_ring_mem) {
@@ -473,19 +507,22 @@ static vtss_rc lk_rx_init(vtss_state_t *vtss_state)
     u64 start = c->pc_rx_ring_mem_dma;
     u64 end = c->pc_rx_ring_mem_dma +
               sizeof(struct lk_pie_rx_desc_t) * (lk_crc_size(&c->pc_rx_ring_ctl) - 1);
-    lk_edesc_read_ptr_update(vtss_state, start);
-    lk_rdesc_write_ptr_update(vtss_state, start);
-    lk_pe_desc_cfg(vtss_state, start, end);
+    lk_edesc_read_ptr_update(vtss_state, c, start);
+    lk_rdesc_write_ptr_update(vtss_state, c, start);
+    lk_pe_desc_cfg(vtss_state, c, start, end);
     return VTSS_RC_OK;
 }
 
-vtss_rc lk_init(vtss_state_t *vtss_state)
+vtss_rc lk_init(vtss_state_t *vtss_state, u32 cpu_port)
 {
     vtss_rc             rc = VTSS_RC_INCOMPLETE;
     vtss_lk_pie_chnl_t *c = lk_get_chnl(vtss_state);
     VTSS_MEMSET(c, 0, sizeof(*c));
 
+    c->cpu_port = (cpu_port == RT_CHIP_PORT_CPU_0) ? 0 : 1;
+    c->chnl_id = 0;
     c->pc_buff_sz = CEIL_ALIGN(MTU, P64H_PIE_BUFF_ALIGN);
+
     rc = lk_chn_traffic_disable(vtss_state);
     rc = lk_tx_init(vtss_state);
     rc = lk_rx_init(vtss_state);
@@ -527,7 +564,7 @@ vtss_rc lk_pie_chnl_rx(vtss_state_t *vtss_state, void *data, const u32 buflen, u
     vtss_rc              ret;
     vtss_lk_pie_chnl_t  *c = lk_get_chnl(vtss_state);
 
-    lk_edesc_write_ptr_read(vtss_state, &end);
+    lk_edesc_write_ptr_read(vtss_state, c, &end);
     endid = (end - c->pc_rx_ring_mem_dma) / sizeof(lk_pie_rx_desc_t);
     rxid = lk_crc_get_rd_idx(&c->pc_rx_ring_ctl);
     if (rxid == endid) {
@@ -567,7 +604,7 @@ vtss_rc lk_pie_chnl_rx(vtss_state_t *vtss_state, void *data, const u32 buflen, u
     // packet.
     rxid = lk_crc_rd_next(&c->pc_rx_ring_ctl);
     end = c->pc_rx_ring_mem_dma + rxid * sizeof(lk_pie_rx_desc_t);
-    lk_edesc_read_ptr_update(vtss_state, end);
+    lk_edesc_read_ptr_update(vtss_state, c, end);
     pie_rx_fill_bp(vtss_state);
     return ret;
 }
@@ -619,7 +656,7 @@ vtss_rc lk_pie_chnl_tx(vtss_state_t                     *vtss_state,
     c->pc_tx_ring_mem[txid] = tx_desc;
     txid = lk_crc_wr_next(&c->pc_tx_ring_ctl);
     end = c->pc_tx_ring_mem_dma + (sizeof(lk_pie_tx_desc_t) * txid);
-    lk_idesc_write_ptr_update(vtss_state, end);
+    lk_idesc_write_ptr_update(vtss_state, c, end);
     return VTSS_RC_OK;
 }
 

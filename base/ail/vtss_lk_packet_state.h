@@ -22,6 +22,8 @@ typedef struct lk_pie_rx_desc_t lk_pie_rx_desc_t;
 typedef struct lk_pie_tx_desc_t lk_pie_tx_desc_t;
 
 typedef struct {
+    u32                  cpu_port;
+    u32                  chnl_id;
     u32                  pc_buff_sz;
     vtss_circ_ring_ctl_t pc_rx_ring_ctl;
     vtss_circ_ring_ctl_t pc_tx_ring_ctl;

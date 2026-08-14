@@ -6,7 +6,7 @@
 
 #if defined(VTSS_ARCH_LAIKA)
 
-vtss_rc lk_init(vtss_state_t *vtss_state);
+vtss_rc lk_init(vtss_state_t *vtss_state, u32 cpu_port);
 vtss_rc lk_pie_chnl_rx(vtss_state_t *vtss_state, void *data, const u32 buflen, u8 *ifh, u32 *pktlen);
 vtss_rc lk_pie_chnl_tx(vtss_state_t                     *vtss_state,
                        const void *const                 frame,
