@@ -112,6 +112,14 @@ The following tables lists the supported HW in this release.
 | Molineaux   | LAN8870B
 | Molineaux   | LAN8871
 | Molineaux   | LAN8872
+| Ewood       | LAN8881
+| Ewood       | LAN8881M
+| Ewood       | LAN8882
+| Ewood       | LAN8882M
+| Ewood       | LAN8883
+| Ewood       | LAN8883M
+| Ewood       | LAN8884
+| Ewood       | LAN8884M
 |===
 
 === Third-Party PHYs
