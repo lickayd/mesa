@@ -293,9 +293,12 @@ static void mepa_initialize_libraries(void)
 #if defined(MEPA_HAS_LAN8X8X)
         MEPA_phy_lib[13] = mepa_lan8x8x_driver_init();
 #endif
+#if defined(MEPA_HAS_VSC8574)
+        MEPA_phy_lib[14] = mepa_vsc8574_driver_init();
+#endif
         // Shall be last
 #if defined(MEPA_HAS_VTSS)
-        MEPA_phy_lib[14] = mepa_default_phy_driver_init();
+        MEPA_phy_lib[15] = mepa_default_phy_driver_init();
 #endif
     }
 }

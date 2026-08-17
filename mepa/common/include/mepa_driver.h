@@ -1053,5 +1053,10 @@ mepa_drivers_t mepa_lan80xx_driver_init(void);
 mepa_drivers_t mepa_dummy_driver_init(void);
 #endif /* MEPA_HAS_DUMMY_PHY */
 
+#if defined(MEPA_HAS_VSC8574)
+/** \brief Returns drivers for mscc PHY */
+mepa_drivers_t mepa_vsc8574_driver_init(void);
+#endif
+
 #include <microchip/ethernet/hdr_end.h>
 #endif /**< MICROCHIP_ETHERNET_PHY_API_PHY_DRV_H */
