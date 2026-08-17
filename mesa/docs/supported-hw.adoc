@@ -139,6 +139,8 @@ The following tables lists the supported HW in this release.
 | Malibu25G   | LAN8064
 | Malibu25G   | LAN8063
 | Malibu25G   | LAN8062
+| KSZ9031     | KSZ9031MNX
+| KSZ9031     | KSZ9031RNX
 |===
 
 === Third-Party PHYs
