@@ -108,6 +108,10 @@ The following tables lists the supported HW in this release.
 | Cooperpoint | LAN8842
 | Cooperpoint | LAN8832
 | Pfieffer    | LAN8840
+| Molineaux   | LAN8870
+| Molineaux   | LAN8870B
+| Molineaux   | LAN8871
+| Molineaux   | LAN8872
 |===
 
 === Third-Party PHYs
