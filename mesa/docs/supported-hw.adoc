@@ -120,6 +120,10 @@ The following tables lists the supported HW in this release.
 | Ewood       | LAN8883M
 | Ewood       | LAN8884
 | Ewood       | LAN8884M
+| Goodinson   | LAN8781
+| Goodinson   | LAN8781M
+| Goodinson   | LAN8782
+| Goodinson   | LAN8782M
 |===
 
 === Third-Party PHYs
