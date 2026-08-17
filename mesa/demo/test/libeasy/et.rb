@@ -44,6 +44,43 @@ $global_aborted = false
 $stdout.sync = true
 $stderr.sync = true
 
+# --await (do_multi): block at the end of every test() until every peer DUT in the group
+# has also finished its current test(), so none of them starts the next one first. Enabled
+# per-run by a ".et-await" file do_multi drops in the DUT's cwd; absent by default, so this
+# is a no-op for ./do and for do_multi without --await.
+$await_cfg = nil
+if File.exist?(".et-await")
+    dir, tag, timeout, peers = File.readlines(".et-await").map(&:chomp)
+    $await_cfg = { dir: dir, tag: tag, timeout: timeout.to_i, peers: peers.split(","), step: 0 }
+end
+
+def _await_barrier
+    return unless $await_cfg
+    c = $await_cfg
+    c[:step] += 1
+    File.write("#{c[:dir]}/#{c[:tag]}.step", c[:step].to_s)
+    deadline = Time.now + c[:timeout]
+    loop do
+        ready = c[:peers].all? do |p|
+            f = "#{c[:dir]}/#{p}.step"
+            File.exist?(f) && File.read(f).to_i >= c[:step]
+        end
+        break if ready
+        if Time.now > deadline
+            $stderr.puts "await: timed out waiting for peers at step #{c[:step]}, continuing without them"
+            break
+        end
+        sleep 0.5
+    end
+end
+
+# Release any peer still waiting on this DUT once it exits, for any reason (normal finish,
+# crash, or the SIGTERM trap's exit(1) below) - called from the END block.
+def _await_release
+    return unless $await_cfg
+    File.write("#{$await_cfg[:dir]}/#{$await_cfg[:tag]}.step", "999999999")
+end
+
 # A suite killed mid-run (e.g. by the dispatch `timeout`, which sends SIGTERM)
 # must not be reported as passed.  Record the reason as a failed assert — so it
 # shows as a named failure in both reports, not just a bare not-ok — then exit
@@ -409,6 +446,7 @@ def test(name, summary = true)
         $test_stack.pop
 
         xml_tag_end "test"
+        _await_barrier
     end
 
     if $test_stack.size > 0 and do_abort
@@ -587,6 +625,8 @@ def check_poll sleep_time, cnt, msg = "NO-MESSAGE", &block
 end
 
 END {
+    _await_release
+
     ts_root_end = Time.now
     s = "ok"
     s = "not-ok" if $global_errors > 0 || $global_aborted

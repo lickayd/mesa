@@ -1,0 +1,524 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+
+set -e
+
+# Platform -> image/build-dir/display-name. Kept separate from ./do's single-DUT case
+# statement so this script can't regress that path; ts only matters for the fa/la name
+# split, since do_multi always gets an explicit ts.
+_multi_platform_info() {
+    local platform=$1 ts=$2
+    case $platform in
+        ca|ca2) _M_IMG=mipsel_vsc7429.mfi        ; _M_DIR=build-mipsel ; _M_NAME=Caracal-26-port ;;
+        ca1)    _M_IMG=mipsel_vsc7428.mfi        ; _M_DIR=build-mipsel ; _M_NAME=Caracal-10-port ;;
+        oc)     _M_IMG=mipsel_vsc7514_pcb123.mfi ; _M_DIR=build-mipsel ; _M_NAME=Ocelot-11-port ;;
+        st)     _M_IMG=mipsel_vsc7437.mfi        ; _M_DIR=build-mipsel ; _M_NAME=ServalT-9-port ;;
+        j2)     _M_IMG=mipsel_vsc7468_pcb110.mfi ; _M_DIR=build-mipsel ; _M_NAME=Jaguar2-29-port ;;
+        mr)     _M_IMG=armv7_lan9662.itb         ; _M_DIR=build-arm    ; _M_NAME=Maserati-4-port ;;
+        mc)     _M_IMG=armv7_lan966x.itb         ; _M_DIR=build-arm    ; _M_NAME=Maserati-4-port ;;
+        me|m8)  _M_IMG=armv7_lan966x.itb         ; _M_DIR=build-arm    ; _M_NAME=Maserati-8-port ;;
+        fa)
+            _M_IMG=arm64_vsc7558TSN.itb
+            _M_DIR=build-arm64
+            if [ "$ts" == dk-t34-3 ]; then
+                _M_NAME=FireAnt-57-port
+            else
+                _M_NAME=FireAnt-21-port
+            fi
+            ;;
+        la)
+            _M_IMG=arm64_lan9698RED.itb
+            _M_DIR=build-arm64
+            if [ "$ts" == dk-t37-0 ]; then
+                _M_NAME=Laguna-SFP-11-port
+            else
+                _M_NAME=Laguna-29-port
+            fi
+            ;;
+    esac
+}
+
+# Auto-detect a platform code from a bare <ts>, via the Family (and, for the one ambiguous
+# case, VSC) column `et status <ts>` already reports - independent of reservation state, so
+# this works whether the DUT is currently free or busy. Prints the platform code on stdout
+# and returns 0, or prints an error on stderr and returns 1 if the family is unmapped or
+# genuinely ambiguous (mr and mc are both "lan966x" at VSC 9662 - indistinguishable here).
+_multi_detect_platform() {
+    local ts=$1
+    local line family vsc
+    # A single-ts query prints the resolved server address in the Name column, not the
+    # short name given on the command line - so match on the table shape (skip the header
+    # and the dashes separator) rather than trying to match $ts against the Name field.
+    line=$(et status "$ts" 2>/dev/null | grep -vE '^Name\s|^-+\s' | head -n 1)
+    if [ -z "$line" ]; then
+        echo "Could not query 'et status $ts' to auto-detect its platform - use the explicit <platform> <ts> syntax for this DUT" >&2
+        return 1
+    fi
+    vsc=$(echo "$line" | awk '{print $7}')
+    family=$(echo "$line" | awk '{print $8}')
+    case "$family" in
+        luton26) echo ca ;;
+        luton10) echo ca1 ;;
+        ocelot)  echo oc ;;
+        servalt) echo st ;;
+        jr2)     echo j2 ;;
+        fireant) echo fa ;;
+        laguna)  echo la ;;
+        lan966x)
+            if [ "$vsc" == "9668" ]; then
+                echo m8
+            else
+                echo "Cannot auto-detect platform for $ts (family lan966x, VSC $vsc is mr or mc - indistinguishable) - use the explicit <platform> <ts> syntax for this DUT" >&2
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unknown/unsupported family '$family' for $ts - use the explicit <platform> <ts> syntax for this DUT" >&2
+            return 1
+            ;;
+    esac
+}
+
+# Render a live per-DUT/per-test status table by scanning each DUT's log for the TST
+# lines et.rb/xml2console.rb print on entering ("TST <name>") or failing ("TST Test
+# failed: <name>") a named test() block. A running test shows a dot animation that
+# advances with <tick> so the table visibly moves between polls.
+# Args: <tick> <n> <label>x n <logfile>x n.
+_multi_render_table() {
+    local tick=$1 n=$2; shift 2
+    ruby -e '
+        tick = ARGV[0].to_i
+        n = ARGV[1].to_i
+        labels = ARGV[2, n]
+        logs   = ARGV[2 + n, n]
+        run_label = "RUN" + ("." * ((tick % 4)))
+
+        def parse_log(path)
+            tests = []
+            return tests unless File.exist?(path)
+            cur = nil
+            File.foreach(path) do |line|
+                line = line.gsub(/\e\[[0-9;]*m/, "")
+                if line =~ /\bTST\b\s+Test failed: /
+                    tests[cur][1] = "FAIL" if cur
+                    cur = nil
+                elsif line =~ /\bT_I\b\s+test skipped\b/
+                    tests[cur][1] = "SKIP" if cur
+                elsif line =~ /\bTST\b\s+(.+?)\s*$/
+                    tests[cur][1] = "PASS" if cur && tests[cur][1] == "RUN"
+                    tests << [$1, "RUN"]
+                    cur = tests.length - 1
+                end
+            end
+            tests
+        end
+
+        data = logs.map { |l| parse_log(l) }
+
+        order = []
+        data.each { |tests| tests.each { |name, _| order << name unless order.include?(name) } }
+
+        # PASS/FAIL/SKIP render as a single emoji, which terminals draw 2 columns wide even
+        # though Ruby counts it as 1 char - pad on the real display width, not .length. Only
+        # use emoji that are wide on their own, without a U+FE0F variation selector.
+        icons = {"PASS" => "✅", "FAIL" => "❌", "SKIP" => "⏩"}
+        def cell_width(s, icons)
+            icons.value?(s) ? 2 : s.length
+        end
+        def pad(s, width, icons)
+            s + (" " * [width - cell_width(s, icons), 0].max)
+        end
+
+        name_w = ([4] + order.map(&:length)).max
+        col_w = labels.map { |l| [l.length, 6].max }
+
+        header = "Test".ljust(name_w)
+        labels.each_with_index { |l, i| header += "  " + l.ljust(col_w[i]) }
+        puts header
+
+        order.each do |name|
+            line = name.ljust(name_w)
+            data.each_with_index do |tests, i|
+                e = tests.find { |t| t[0] == name }
+                raw = e ? e[1] : "-"
+                cell = raw == "RUN" ? run_label : icons.fetch(raw, raw)
+                line += "  " + pad(cell, col_w[i], icons)
+            end
+            puts line
+        end
+    ' "$tick" "$n" "$@"
+}
+
+# True iff the log's final "TC OK/Not-OK: <file>" line says OK - that line, printed by
+# xml2console.rb's :test_run handler right as the script shuts down, is the real pass/fail
+# signal. The test script's own process exit code is always 0 even when individual test()
+# blocks failed - et.rb never calls exit(nonzero) for that, only for a SIGTERM abort - so it
+# cannot be used to tell PASS from FAIL.
+_multi_test_passed() {
+    ruby -e '
+        line = nil
+        File.foreach(ARGV[0]) do |l|
+            l = l.gsub(/\e\[[0-9;]*m/, "")
+            line = l if l =~ /\bTC\b\s+(OK|Not-OK): /
+        end
+        exit(line && line =~ /\bTC\b\s+OK: / ? 0 : 1)
+    ' "$1"
+}
+
+# Print the test_summary() block (Success/Failed/Skipped list + Total/Ok/Skipped/Errors)
+# straight out of a DUT's log, stripped of ANSI color codes.
+_multi_print_summary() {
+    ruby -e '
+        in_summary = false
+        File.foreach(ARGV[0]) do |line|
+            line = line.gsub(/\e\[[0-9;]*m/, "")
+            if line =~ /\bTST\b\s+summary\s*$/
+                in_summary = true
+                next
+            elsif line =~ /\bTST\b\s+/
+                in_summary = false
+            end
+            if in_summary && line =~ /\bT_I\b\s+(.*)/
+                puts "    #{$1.rstrip}"
+            end
+        end
+    ' "$1"
+}
+
+# On Ctrl+C (or being killed) mid-run: stop whatever's still in flight and release any DUT
+# that was actually reserved, instead of leaving it held with nothing left to release it.
+# Reads run_multi's own locals (base/tags/pids) via bash's dynamic scoping - this only ever
+# runs while run_multi is on the call stack, so they're always in scope (empty/unset and
+# harmless if the signal arrives before run_multi has gotten around to setting them).
+_multi_on_interrupt() {
+    echo
+    echo "=== Interrupted - releasing reserved DUTs"
+
+    local pid
+    for pid in "${pids[@]}"; do
+        kill "$pid" 2>/dev/null || true
+    done
+
+    if [ -n "$base" ] && [ -d "$base" ]; then
+        local tag
+        for tag in "${tags[@]}"; do
+            if [ "$(cat "$base/$tag.reserved" 2>/dev/null)" == "OK" ]; then
+                ( cd "$base/$tag" && et release ) >/dev/null 2>&1 || true
+                echo "    released ${tag}"
+            fi
+        done
+        rm -rf "$base" || true
+    fi
+
+    exit 130
+}
+
+# ./do_multi [<platform>] <ts> [[<platform>] <ts> ...] <test_script> [brief|clean|keep|short|skip|wait|--await|--await=N]
+#
+# <ts> alone auto-detects its platform from `et status <ts>` (see _multi_detect_platform);
+# give an explicit <platform> before a <ts> to override that, or when it's ambiguous (mr/mc).
+#
+# Builds once per required target, reserves+uploads+runs all listed DUTs in parallel (each
+# isolated in its own .multi-work/ directory so concurrent local EasyTest topology files don't
+# collide), and prints a pass/fail summary once every DUT has finished. Reservation is
+# all-or-nothing: if any DUT can't be reserved, whatever was reserved is released and nothing
+# is uploaded or run.
+run_multi() {
+    trap _multi_on_interrupt INT TERM
+
+    local REPO_ROOT
+    REPO_ROOT=$(cd ../../.. && pwd)
+
+    local await=0 await_timeout=60
+    local args=() a
+    for a in "$@"; do
+        case "$a" in
+            --await)   await=1 ;;
+            --await=*) await=1; await_timeout="${a#--await=}" ;;
+            *) args+=("$a") ;;
+        esac
+    done
+
+    local argc=${#args[@]}
+    local clean=0 skip=0 keep=0 wait=0
+
+    while (( argc > 0 )); do
+        case "${args[$((argc-1))]}" in
+            # brief/short control xml2console.rb's live terminal output, which do_multi never
+            # shows directly (it always parses the full log for the table/summary below) -
+            # accepted for compatibility with ./do's invocation, but otherwise no-ops.
+            brief) ;;
+            clean) clean=1 ;;
+            keep)  keep=1 ;;
+            short) ;;
+            skip)  skip=1 ;;
+            wait)  wait=300 ;;
+            *) break ;;
+        esac
+        ((argc--))
+    done
+    args=("${args[@]:0:argc}")
+
+    if (( argc < 2 )); then
+        echo "Usage: $0 [<platform>] <ts> [[<platform>] <ts> ...] <test_script> [brief|clean|keep|short|skip|wait|--await|--await=N]"
+        exit 1
+    fi
+
+    local file="${args[$((argc-1))]}"
+    args=("${args[@]:0:argc-1}")
+
+    if [ ! -f "$file" ]; then
+        echo "Test script not found: $file"
+        exit 1
+    fi
+
+    if (( ${#args[@]} == 0 )); then
+        echo "Expected at least one <ts> (or <platform> <ts>) before the test script $file"
+        exit 1
+    fi
+
+    # Each entry is either an explicit "<platform> <ts>" pair, or a bare "<ts>" whose
+    # platform is auto-detected from `et status <ts>`'s Family column (see
+    # _multi_detect_platform - mr/mc are the one case that still needs to be explicit,
+    # since they're indistinguishable from status alone).
+    local platforms=() tss=() tags=() imgs=() dirs=() names=()
+    local i=0 p t tag
+    while (( i < ${#args[@]} )); do
+        case "${args[$i]}" in
+            ca|ca1|ca2|oc|st|j2|mr|mc|m8|me|fa|la)
+                p="${args[$i]}"
+                if (( i + 1 >= ${#args[@]} )); then
+                    echo "Missing <ts> after platform $p"
+                    exit 1
+                fi
+                t="${args[$((i+1))]}"
+                i=$((i + 2))
+                ;;
+            *)
+                t="${args[$i]}"
+                p=$(_multi_detect_platform "$t") || exit 1
+                i=$((i + 1))
+                ;;
+        esac
+        _multi_platform_info "$p" "$t"
+        tag="${p}-${t//[:\/]/_}"
+        platforms+=("$p"); tss+=("$t"); tags+=("$tag")
+        imgs+=("$_M_IMG"); dirs+=("$_M_DIR"); names+=("$_M_NAME")
+    done
+
+    # Build phase: once per unique build dir, shared by every DUT that needs it.
+    local build_dirs d
+    build_dirs=$(printf "%s\n" "${dirs[@]}" | sort -u)
+    for d in $build_dirs; do
+        echo "=== Build: $d"
+        cd "$REPO_ROOT/$d"
+        if [ $clean == 1 ]; then
+            dr make clean
+        fi
+        dr make -j 10
+        cd - > /dev/null
+    done
+
+    if [ $skip == 1 ]; then
+        exit 0
+    fi
+
+    # Isolated workdir per DUT: a top-level symlink farm so relative requires/paths inside
+    # test scripts and libeasy/ still work, but each DUT gets its own local topology file.
+    local base=".multi-work"
+    mkdir -p "$base"
+    local f
+    for tag in "${tags[@]}"; do
+        rm -rf "$base/$tag"
+        mkdir -p "$base/$tag"
+        for f in * .[!.]*; do
+            [ "$f" == "$base" ] && continue
+            [ "$f" == ".mscc-libeasy-topology.yaml" ] && continue
+            [ -e "$f" ] || continue
+            ln -s "$PWD/$f" "$base/$tag/$f"
+        done
+    done
+
+    # --await: drop a config file in each DUT's workdir so libeasy/et.rb's test() blocks
+    # until every DUT in this group has reached the same step (see et.rb's _await_barrier).
+    if [ $await == 1 ]; then
+        rm -rf "$base/.await"
+        mkdir -p "$base/.await"
+        local await_dir="$PWD/$base/.await"
+        local all_tags
+        all_tags=$(IFS=,; echo "${tags[*]}")
+        for tag in "${tags[@]}"; do
+            printf '%s\n%s\n%s\n%s\n' "$await_dir" "$tag" "$await_timeout" "$all_tags" \
+                > "$base/$tag/.et-await"
+        done
+    fi
+
+    # First step: reserve every DUT before uploading/running anything.
+    local pids=()
+    for i in "${!tss[@]}"; do
+        t="${tss[$i]}"; tag="${tags[$i]}"
+        (
+            w=$wait
+            while true; do
+                if [[ $(et status "$t" | grep free) ]]; then
+                    break
+                elif (( w <= 0 )); then
+                    echo "BUSY" > "$base/$tag.reserved"
+                    exit 0
+                else
+                    echo "Busy, waiting"
+                    sleep 10
+                    w=$((w - 10))
+                fi
+            done
+            if ( cd "$base/$tag" && et -l reserve "$t" ); then
+                echo "OK" > "$base/$tag.reserved"
+            else
+                echo "FAIL" > "$base/$tag.reserved"
+            fi
+        ) > "$base/$tag.log" 2>&1 &
+        pids+=($!)
+    done
+    wait "${pids[@]}"
+
+    local reserve_failed=0
+    local status
+    for i in "${!tss[@]}"; do
+        tag="${tags[$i]}"
+        status=$(cat "$base/$tag.reserved" 2>/dev/null || echo FAIL)
+        [ "$status" != "OK" ] && reserve_failed=1
+    done
+
+    if [ $reserve_failed == 1 ]; then
+        echo "=== Could not reserve all requested DUTs:"
+        for i in "${!tss[@]}"; do
+            tag="${tags[$i]}"
+            echo "    ${platforms[$i]} (${tss[$i]}): $(cat "$base/$tag.reserved" 2>/dev/null || echo FAIL)"
+        done
+        echo "=== Releasing already-reserved DUTs"
+        for i in "${!tss[@]}"; do
+            tag="${tags[$i]}"
+            if [ "$(cat "$base/$tag.reserved" 2>/dev/null)" == "OK" ]; then
+                ( cd "$base/$tag" && et release ) >> "$base/$tag.log" 2>&1
+            fi
+        done
+        rm -rf "$base"
+        exit 1
+    fi
+
+    # One timestamp for the whole run, so every failing DUT's saved log in this invocation
+    # lands under the same ~/test_spam/<date>/<time>/ folder instead of drifting apart if
+    # the summary loop happens to cross a second boundary between DUTs.
+    local run_date run_time
+    run_date=$(date '+%Y%m%d')
+    run_time=$(date '+%H%M%S')
+
+    # Second step: upload + run in parallel, only reached once every DUT is reserved.
+    pids=()
+    for i in "${!tss[@]}"; do
+        tag="${tags[$i]}"
+        (
+            set +e
+            cd "$base/$tag"
+            et upload "$REPO_ROOT/${dirs[$i]}/mesa/demo/${imgs[$i]}"
+            dr "./$file | libeasy/xml2console.rb"
+            rc=$?
+            if [ $keep != 1 ]; then
+                et release
+            fi
+            echo "$rc" > "../$tag.result"
+        ) >> "$base/$tag.log" 2>&1 &
+        pids+=($!)
+    done
+
+    # Live table while the runs are in flight: redraw in place on a real terminal,
+    # otherwise print a fresh timestamped block each tick (safe when piped/logged).
+    local labels=() logs=()
+    for i in "${!tss[@]}"; do
+        labels+=("${platforms[$i]} (${tss[$i]})")
+        logs+=("$base/${tags[$i]}.log")
+    done
+
+    local interactive=0
+    [ -t 1 ] && interactive=1
+    local tick=0 prev_lines=0 out alive pid
+    while true; do
+        out=$(_multi_render_table "$tick" "${#labels[@]}" "${labels[@]}" "${logs[@]}")
+
+        if (( interactive == 1 )); then
+            if (( prev_lines > 0 )); then
+                tput cuu "$prev_lines" 2>/dev/null || true
+                tput ed 2>/dev/null || true
+            fi
+            echo "$out"
+            prev_lines=$(wc -l <<< "$out")
+        else
+            echo "=== Live status ($(date '+%H:%M:%S')) ==="
+            echo "$out"
+        fi
+
+        alive=0
+        for pid in "${pids[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                alive=1
+            fi
+        done
+        (( alive == 0 )) && break
+        tick=$((tick + 1))
+        sleep 2
+    done
+    wait "${pids[@]}"
+
+    # Summary
+    local overall_rc=0 rc
+    for i in "${!tss[@]}"; do
+        tag="${tags[$i]}"
+        rc=$(cat "$base/$tag.result" 2>/dev/null || true)
+        if [ "$rc" == "0" ] && [ -f "$base/$tag.log" ] && _multi_test_passed "$base/$tag.log"; then
+            status="PASS"
+        else
+            status="FAIL"
+            overall_rc=1
+        fi
+        [ $keep == 1 ] && status="$status (kept)"
+        echo "=== ${platforms[$i]} (${tss[$i]}) [${names[$i]}]: $status"
+        if [ -f "$base/$tag.log" ]; then
+            _multi_print_summary "$base/$tag.log"
+        fi
+        # Save every DUT's full raw dr/xml2console output, pass or fail, so it can be
+        # reviewed later - the summary above only shows the test_summary() digest.
+        if [ -f "$base/$tag.log" ]; then
+            local spam_dir="$HOME/test_spam/$run_date/$run_time"
+            mkdir -p "$spam_dir"
+            local spam_file="$spam_dir/${tag}-$(basename "$file" .rb).log"
+            cp "$base/$tag.log" "$spam_file"
+            echo "    full log saved: $spam_file"
+        fi
+        if [ $keep == 1 ]; then
+            echo "    reservation kept - workdir: $PWD/$base/$tag"
+        else
+            rm -rf "$base/$tag"
+        fi
+        rm -f "$base/$tag.log" "$base/$tag.reserved" "$base/$tag.result"
+    done
+    rmdir "$base" 2>/dev/null || true
+
+    if [ $keep != 1 ]; then
+        local released=""
+        for i in "${!tss[@]}"; do
+            released+="${platforms[$i]} ${tss[$i]}, "
+        done
+        echo "=== Released DUTs: ${released%, }"
+    fi
+
+    exit $overall_rc
+}
+
+if (( $# < 2 )); then
+    echo "Usage: $0 [<platform>] <ts> [[<platform>] <ts> ...] <test_script> [brief|clean|keep|short|skip|wait|--await|--await=N]"
+    exit 1
+fi
+
+run_multi "$@"
