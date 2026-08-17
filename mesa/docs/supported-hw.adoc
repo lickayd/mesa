@@ -127,6 +127,18 @@ The following tables lists the supported HW in this release.
 | Watson      | LAN8670
 | Watson      | LAN8671
 | Watson      | LAN8672
+| Malibu25G   | LAN8044
+| Malibu25G   | LAN8043
+| Malibu25G   | LAN8042
+| Malibu25G   | LAN8024
+| Malibu25G   | LAN8023
+| Malibu25G   | LAN8022
+| Malibu25G   | LAN8068
+| Malibu25G   | LAN8067
+| Malibu25G   | LAN8066
+| Malibu25G   | LAN8064
+| Malibu25G   | LAN8063
+| Malibu25G   | LAN8062
 |===
 
 === Third-Party PHYs
