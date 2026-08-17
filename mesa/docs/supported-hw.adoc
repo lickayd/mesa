@@ -124,6 +124,9 @@ The following tables lists the supported HW in this release.
 | Goodinson   | LAN8781M
 | Goodinson   | LAN8782
 | Goodinson   | LAN8782M
+| Watson      | LAN8670
+| Watson      | LAN8671
+| Watson      | LAN8672
 |===
 
 === Third-Party PHYs
