@@ -3826,6 +3826,9 @@ vtss_rc vtss_cil_port_conf_set(struct vtss_state_s *vtss_state, const vtss_port_
 
     /* If bulk config is enabled then chip config is skipped */
     if (vtss_state->port.bulk_state == VTSS_PORT_BULK_ENABLED) {
+        if (conf->if_type == VTSS_PORT_INTERFACE_QSGMII) {
+            fa_serdes_mode_propagate(vtss_state, port_no, VTSS_SERDES_MODE_QSGMII);
+        }
         vtss_state->port.bulk_port_mask |= VTSS_BIT64(port_no);
         return VTSS_RC_OK;
     }
