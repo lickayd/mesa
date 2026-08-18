@@ -1,0 +1,61 @@
+# Copyright (c) 2006-2025 Microsemi Corporation "Microsemi". All Rights Reserved.
+# SPDX-License-Identifier: MIT
+---
+# The lm_utils library (compiled into the MESA library) and the third-party it
+# vendors. Migrated from utils/.module_info.
+
+spdx-elements:
+  - id: SPDXRef-ut-utils
+    name: "LIB: ut-utils"
+    directory: .
+    license: MIT
+    license_file: LICENSE
+    copyright: Copyright (c) 2006-2025 Microchip Technology Inc. and its subsidiaries.
+    source_info: Microchip internal development
+    use_packet_version: true
+    description: Utility functions for embedded systems, compiled into the MESA library.
+    sbom_add_kids:
+      - SPDXRef-arm-optimized-routines
+      - SPDXRef-arm-tf-memset
+
+  - id: SPDXRef-arm-optimized-routines
+    name: "LIB: Arm Optimized Routines"
+    directory: src/arm-optimized-routines
+    license: MIT OR Apache-2.0 WITH LLVM-exception
+    license_file: src/arm-optimized-routines/LICENSE
+    copyright: Copyright (c) 1999-2022, Arm Limited.
+    download_location: https://github.com/ARM-software/optimized-routines
+    version: "v23.01"
+    description: Optimized implementations of memset/memcmp and other library functions for ARM.
+
+  - id: SPDXRef-arm-tf-memset
+    name: "LIB: Arm Trusted Firmware memset"
+    files:
+      - src/lm_utils_memset.c
+    license: BSD-3-Clause
+    copyright: Copyright (c) Arm Limited and Contributors.
+    download_location: https://github.com/ARM-software/arm-trusted-firmware
+    source_info: >-
+      memset implementation taken from ARM Trusted Firmware
+      (lib/libc/memset.c), upstream commit 9881bb93a3bc0a3ea37e9f093e09ab4b360a9e48.
+    version: "v2.8.0"
+    description: memset() implementation from ARM Trusted Firmware libc.
+
+  # Test cases adapted from LLVM libc; not compiled into the shipped library.
+  - id: SPDXRef-llvm-libc-tests
+    name: "LIB: llvm-libc-tests"
+    files:
+      - test/lm_ut_strchr.c
+      - test/lm_ut_strcspn.c
+      - test/lm_ut_strspn.c
+    license: Apache-2.0 WITH LLVM-exception
+    license_text: |
+      Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+      See https://llvm.org/LICENSE.txt for license information.
+      SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+    copyright: Copyright (c) The LLVM Project contributors
+    download_location: https://github.com/llvm/llvm-project
+    source_info: Imported from LLVM libc at commit 8dfdcc7b7bf66834a761bd8de445840ef68e4d1a.
+    version: "15.0.7"
+    group: test
+    description: LLVM libc test cases adapted for the lm_utils string functions.

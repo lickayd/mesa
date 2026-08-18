@@ -1,0 +1,46 @@
+# Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# Third-party client-side assets embedded into the generated MESA/MEPA
+# documentation. They ship in the source tree but link into no binary.
+# Migrated from mepa/docs/resources/.module_info (mesa/demo/docs/resources holds
+# copies of the same assets).
+
+spdx-elements:
+  - id: SPDXRef-font-awesome
+    name: "LIB: Font Awesome Free"
+    directory: fontawesome-free-5.10.1-web
+    license: CC-BY-4.0 AND OFL-1.1 AND MIT
+    license_file: fontawesome-free-5.10.1-web/LICENSE.txt
+    copyright: Copyright (c) Fonticons, Inc.
+    download_location: https://use.fontawesome.com/releases/v5.10.1/fontawesome-free-5.10.1-web.zip
+    source_info: >-
+      Icons CC-BY-4.0, fonts OFL-1.1, code MIT. A copy is also vendored under
+      mesa/demo/docs/resources/fontawesome-free-5.10.1-web.
+    version: "5.10.1"
+    group: doc
+    description: Icon toolkit (fonts, CSS and JS) used by the documentation.
+
+  - id: SPDXRef-jquery
+    name: "LIB: jQuery"
+    files:
+      - jquery.min.js
+    license: MIT
+    copyright: Copyright OpenJS Foundation and other contributors
+    download_location: https://github.com/jquery/jquery
+    source_info: A copy is also vendored under mesa/demo/docs/resources/jquery.min.js.
+    version: "1.7.2"
+    group: doc
+    description: JavaScript DOM/AJAX library used by the documentation.
+
+  - id: SPDXRef-bootstrap
+    name: "LIB: Bootstrap"
+    files:
+      - bootstrap.min.css
+    license: MIT
+    copyright: Copyright (c) 2011-2014 Twitter, Inc.
+    download_location: https://github.com/twbs/bootstrap
+    source_info: A copy is also vendored under mesa/demo/docs/resources/bootstrap.min.css.
+    version: "3.2.0"
+    group: doc
+    description: CSS framework used to style the documentation.

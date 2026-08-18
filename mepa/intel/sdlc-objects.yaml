@@ -1,0 +1,17 @@
+# Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# Intel/MaxLinear GPY211 PHY driver, vendored into MEPA and compiled into the
+# MESA library. Migrated from mepa/intel/.module_info.
+
+spdx-elements:
+  - id: SPDXRef-intel-gpy211
+    name: "LIB: Intel GPY211 PHY"
+    directory: GPY_API_v2.7.2.1
+    license: BSD-3-Clause
+    license_file: GPY_API_v2.7.2.1/LICENSE
+    copyright: >-
+      Copyright (c) 2020, MaxLinear, Inc.; Copyright 2016-2020 Intel Corporation;
+      Copyright 2015-2016 Lantiq Beteiligungs-GmbH & Co. KG
+    version: "2.7.2.1"
+    description: Driver for the Intel/MaxLinear GPY211 Ethernet PHY.

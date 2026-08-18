@@ -1,0 +1,14 @@
+# Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# Aquantia PHY driver, vendored into MEPA and compiled into the MESA library.
+# Migrated from mepa/aqr/.module_info.
+
+spdx-elements:
+  - id: SPDXRef-aquantia-phy
+    name: "LIB: Aquantia PHY"
+    directory: .
+    license: MIT
+    copyright: Copyright (c) 2017 Aquantia Corp.
+    use_packet_version: true
+    description: Driver for the Aquantia Ethernet PHY.

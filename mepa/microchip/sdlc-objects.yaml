@@ -1,0 +1,16 @@
+# Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# SHA-256 implementation vendored into the LAN80xx PHY driver and compiled into
+# the MESA library. Migrated from mepa/microchip/.module_info.
+
+spdx-elements:
+  - id: SPDXRef-sha256
+    name: "LIB: SHA-256"
+    directory: lan80xx/src/sha256
+    license: MIT
+    license_file: lan80xx/src/sha256/LICENSE
+    copyright: Copyright (c) 2021 LekKit
+    download_location: git+https://github.com/LekKit/sha256.git
+    version: "c6cf8e509a713ef28c0b1b2f12578735b6402323"
+    description: SHA-256 algorithm implementation (C/C++), used by the LAN80xx PHY driver.

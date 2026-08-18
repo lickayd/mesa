@@ -1,0 +1,159 @@
+# Copyright (c) 2004-2022 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# MESA (MSCC Ethernet Switch API) is the shipped library. Every per-chip
+# <LIB>_static build target is the same library compiled for a different chip,
+# so they all map to the single SPDXRef-mesa-api component. The third-party that
+# compiles into the library (utils and the vendored PHY/crypto drivers) is
+# attached via sbom_add_kids, as it is not built as separate cmake targets.
+
+cmake-targets:
+  - id: cmake-target-lan966x_static
+    name: lan966x_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-lan966x_lm_static
+    name: lan966x_lm_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-lan9698RED_static
+    name: lan9698RED_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-lan969x_static
+    name: lan969x_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-lan969x_lm_static
+    name: lan969x_lm_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-p64h_static
+    name: p64h_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-p64h_lm_static
+    name: p64h_lm_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7410_static
+    name: vsc7410_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7415_static
+    name: vsc7415_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7423_static
+    name: vsc7423_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7424_static
+    name: vsc7424_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7425_static
+    name: vsc7425_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7426_static
+    name: vsc7426_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7427_static
+    name: vsc7427_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7428_static
+    name: vsc7428_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7429_static
+    name: vsc7429_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7430_static
+    name: vsc7430_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7435_static
+    name: vsc7435_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7436_static
+    name: vsc7436_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7437_static
+    name: vsc7437_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7438_static
+    name: vsc7438_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7440_static
+    name: vsc7440_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7442_static
+    name: vsc7442_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7444_static
+    name: vsc7444_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7448_static
+    name: vsc7448_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7449_static
+    name: vsc7449_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7464_static
+    name: vsc7464_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7468_static
+    name: vsc7468_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7511_static
+    name: vsc7511_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7512_static
+    name: vsc7512_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7513_static
+    name: vsc7513_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7514_static
+    name: vsc7514_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7546_static
+    name: vsc7546_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7546TSN_static
+    name: vsc7546TSN_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7549_static
+    name: vsc7549_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7549TSN_static
+    name: vsc7549TSN_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7552_static
+    name: vsc7552_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7552TSN_static
+    name: vsc7552TSN_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7556_static
+    name: vsc7556_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7556TSN_static
+    name: vsc7556TSN_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7558_static
+    name: vsc7558_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7558MSEC_static
+    name: vsc7558MSEC_static
+    spdx-id: SPDXRef-mesa-api
+  - id: cmake-target-vsc7558TSN_static
+    name: vsc7558TSN_static
+    spdx-id: SPDXRef-mesa-api
+
+spdx-elements:
+  - id: SPDXRef-mesa-api
+    name: "LIB: MESA"
+    directory: .
+    license: MIT
+    copyright: >-
+      Copyright (c) 2004-2024 Microsemi Corporation "Microsemi";
+      Copyright (c) 2004-2022 Microchip Technology Inc. and its subsidiaries.
+    download_location: git+https://github.com/microchip-ung/mesa.git
+    source_info: Microchip internal development
+    use_packet_version: true
+    description: >-
+      MSCC Ethernet Switch API (MESA) and Ethernet PHY API (MEPA); the C library
+      that is the MESA deliverable.
+    sbom_add_kids:
+      - SPDXRef-ut-utils
+      - SPDXRef-intel-gpy211
+      - SPDXRef-aquantia-phy
+      - SPDXRef-sha256

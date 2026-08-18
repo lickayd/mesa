@@ -1,0 +1,18 @@
+# Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# kalc: a build-time expression evaluator used by the header parser. It runs at
+# build time and is not part of the shipped library. Migrated from
+# mesa/scripts/.module_info.
+
+spdx-elements:
+  - id: SPDXRef-kalc
+    name: "LIB: kalc"
+    files:
+      - hdr_parser.rb
+    license: MIT
+    copyright: Copyright (c) 2012-2018 Chris Parker
+    download_location: https://github.com/mrcsparker/kalc
+    version: "0.3"
+    group: build-tool
+    description: Expression-based calculation language used by the build-time header parser.
