@@ -339,3 +339,14 @@ if (${BUILD_MESA_DEMO})
     endif()
 endif()
 
+# Export the full target graph (every library + app defined in the tree, with
+# their link dependencies) for the SBOM release generator (.cmake/sbom-spdx
+# --release). This is separate from cmake_target_db.txt above (which is rooted at
+# the MESA API libs for MISRA); here we root at every target so the generator can
+# enumerate every produced library (MESA-API / MEBA / MEPA) and resolve the
+# third-party PHY drivers each MEPA collection links.
+mesa_collect_all_targets(MESA_ALL_TARGETS "${CMAKE_CURRENT_SOURCE_DIR}")
+if (MESA_ALL_TARGETS)
+    mesa_export_targets_recursive("${CMAKE_CURRENT_BINARY_DIR}/cmake_target_db_full.txt" ${MESA_ALL_TARGETS})
+endif()
+

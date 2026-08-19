@@ -105,6 +105,13 @@ macro(mesa_export_targets_recursive)
             endif()
             list(APPEND visited ${l})
 
+            # LINK_LIBRARIES may contain non-target tokens (e.g. -static, dl,
+            # pthread, absolute paths). They are not targets and have no deps to
+            # follow, so skip them rather than calling get_property on them.
+            if (NOT TARGET ${l})
+                continue()
+            endif()
+
             #TODO, we need to get directory properties as well!
             #get_directory_property(DIRECTORY_DEFS COMPILE_DEFINITIONS)
 
@@ -181,3 +188,18 @@ macro(mesa_export_targets_recursive)
 
 
 endmacro()
+
+# Collect every target defined in <dir> and all of its subdirectories into
+# <out_var>. Used to export the full target graph (all libraries + apps) for the
+# SBOM release generator, which needs every produced library and its link deps.
+function(mesa_collect_all_targets out_var dir)
+    set(_all "")
+    get_property(_tgts DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
+    list(APPEND _all ${_tgts})
+    get_property(_subs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)
+    foreach(_s ${_subs})
+        mesa_collect_all_targets(_sub "${_s}")
+        list(APPEND _all ${_sub})
+    endforeach()
+    set(${out_var} ${_all} PARENT_SCOPE)
+endfunction()
