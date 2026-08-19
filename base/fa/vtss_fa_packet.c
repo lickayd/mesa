@@ -1109,6 +1109,11 @@ vtss_rc vtss_cil_packet_tx_hdr_encode(struct vtss_state_s *const         vtss_st
         } else {
             // Normal port injection without rewriting, unless asked to rewrite.
             rewrite = (info->tag.tpid == 0U && info->tag.vid != VTSS_VID_NULL);
+#if defined(VTSS_FEATURE_PORT_CPU_MASQUERADING)
+            if (vtss_state->port.map[info->dst_port].cpu_masquerade != VTSS_CPU_MASQUERADE_NONE) {
+                rewrite = TRUE;
+            }
+#endif
             pl_pt = (info->pipeline_pt == VTSS_PACKET_PIPELINE_PT_NONE
                          ? VTSS_PACKET_PIPELINE_PT_ANA_DONE
                          : info->pipeline_pt);
