@@ -79,9 +79,14 @@ macro(API_TARGET)
   # the top-level CMakeLists. As these libraries now live in this subdirectory,
   # the implicit generated-source dependency does not cross the directory
   # boundary, so depend on the generator target explicitly to order the build.
-  add_dependencies(${A_LIB}_static mesa_src)
-  if (TARGET ${A_LIB})
-      add_dependencies(${A_LIB} mesa_src)
+  # mesa_src only exists when the mesa-ag layer is generated (MESA_WRAP and not
+  # MESA_PRE_AG); with a pre-generated layer (e.g. when MESA is built inside
+  # LMStax) there is nothing to depend on, so guard on the target existing.
+  if (TARGET mesa_src)
+      add_dependencies(${A_LIB}_static mesa_src)
+      if (TARGET ${A_LIB})
+          add_dependencies(${A_LIB} mesa_src)
+      endif()
   endif()
 
   add_custom_command(
