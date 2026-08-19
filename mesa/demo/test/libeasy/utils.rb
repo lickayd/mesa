@@ -618,6 +618,53 @@ def pc_drop_counters_report(before, after, port)
     end
 end
 
+# Serializes check_rate() across DUTs that share one PC's traffic generator. Held on the PC itself,
+# since that's the one thing every caller can reach, even from different hosts.
+RATE_LOCK_FILE = "/tmp/mesa-rate-test.lock"
+RATE_LOCK_HOLD_TTL = 120          # Self-expiry backstop for a crashed/orphaned holder; its marker is left behind but harmless
+RATE_LOCK_MAX_STACKED_ORPHANS = 5 # Tolerate this many orphans self-expiring in sequence (e.g. repeated cancellations) before giving up
+RATE_LOCK_ACQUIRE_TIMEOUT = RATE_LOCK_HOLD_TTL * RATE_LOCK_MAX_STACKED_ORPHANS
+RATE_LOCK_POLL_INTERVAL = 0.5
+
+# Blocks (bounded) until this is the only DUT running check_rate() against this PC. Returns a holder
+# handle for rate_lock_release, or nil (having already reported t_e) if the wait timed out
+def rate_lock_acquire
+    token = "#{Process.pid}.#{rand(1_000_000)}"
+    marker = "#{RATE_LOCK_FILE}.acquired.#{token}"
+    # Blocks until free, then touches a marker unique to this attempt - a race-free acquire signal.
+    # 'exec sleep' keeps it one killable process, not a shell holding its own copy of the lock
+    holder_pid = $ts.pc.bg("rate_lock", "flock #{RATE_LOCK_FILE} -c 'touch #{marker} && exec sleep #{RATE_LOCK_HOLD_TTL}'")
+
+    deadline = Time.now + RATE_LOCK_ACQUIRE_TIMEOUT
+    polls = 0
+    loop do
+        break if ($ts.pc.try_ignore("test -f #{marker}")[:res] == 0)
+        if (Time.now > deadline)
+            t_e("Timed out after #{RATE_LOCK_ACQUIRE_TIMEOUT}s waiting for the shared rate-test lock on the PC - it may be stuck held by another run")
+            rate_lock_kill(holder_pid)
+            $ts.pc.try_ignore("rm -f #{marker}")
+            return nil
+        end
+        sleep(RATE_LOCK_POLL_INTERVAL)
+        polls += 1
+        # Progress line every ~10s, so a long queue doesn't look like a hang
+        t_i("Still waiting for the rate-test lock (#{(polls * RATE_LOCK_POLL_INTERVAL).round}s)...") if ((polls % (10.0 / RATE_LOCK_POLL_INTERVAL)) == 0)
+    end
+    return {:pid => holder_pid, :marker => marker}
+end
+
+def rate_lock_release(holder)
+    return if (holder == nil)
+    rate_lock_kill(holder[:pid])
+    $ts.pc.try_ignore("rm -f #{holder[:marker]}")     # kill -9 skips the holder's own cleanup, so remove the marker here
+end
+
+# A forked child inherits its own copy of the locked fd, so kill it before the flock process itself
+def rate_lock_kill(pid)
+    $ts.pc.try_ignore("pkill -KILL -P #{pid}")
+    $ts.pc.try_ignore("kill  -KILL    #{pid}")
+end
+
 # Wrapper function for measure() utilility
 # This takes a hash input and does not create a test block
 def check_rate(cfg)
@@ -638,6 +685,11 @@ def check_rate(cfg)
     streams = fld_get(cfg, :streams, 1)   # Parallel/Multiple Easyframe transmitter per ingress port
     strict_priority = fld_get(cfg, :strict_priority, false)
     sp_slack = fld_get(cfg, :sp_slack, 0)
+
+    # Only one DUT at a time may drive the PC's traffic generator - acquire before touching it, release however this returns
+    rate_lock = rate_lock_acquire
+    return nil if (rate_lock == nil)
+    begin
 
     pre_tx = with_pre_tx ? 1 : 0    # Calculate the possible pre tx time in seconds
     # The transmitters must outlive the counter window, which extends past the capture by the serial counter reads. They are always killed below
@@ -798,6 +850,9 @@ def check_rate(cfg)
     end
 
     return counters
+    ensure
+        rate_lock_release(rate_lock)
+    end
 end
 
 def measure(ig, eg, size, sec=1, frame_rate=false, data_rate=false, erate=[1000000000], etolerance=[1], with_pre_tx=false, pcp=[], cycle_time=[], size_array=[], strict_priority: false, sp_slack: 0)
