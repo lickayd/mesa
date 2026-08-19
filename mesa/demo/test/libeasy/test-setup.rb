@@ -584,7 +584,6 @@ class TestPCRemote
         @io.poll_stdin_
 
         while l = @io.pop_line
-            puts l
             ts_now = Time.now
             ts = ts_now.to_f
             msg = nil
