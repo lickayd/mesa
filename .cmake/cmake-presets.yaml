@@ -19,6 +19,7 @@ presets:
         - "./libvsc751?.{so,a}"
         - "./meba/libmeba_{caracal,jr2,ocelot,servalt}*.{a,so}"
         - "./mesa/demo/*.mfi"
+        - "./mepa/**/lib*.{a,so}"
 
     mipsel-debug:
         :arch:             "mipsel"
@@ -46,6 +47,7 @@ presets:
         - "./meba/*sparx5*.{a,so}"
         - "./mesa/demo/*lan969*.{itb,ext4.gz,ubifs}"
         - "./mesa/demo/*vsc75{46,49,52,56,58}*.{itb,ext4.gz,ubifs}"
+        - "./mepa/**/lib*.{a,so}"
 
     arm64-debug:
         :arch:             "arm64"
@@ -78,6 +80,7 @@ presets:
         - "./liblan966x.{a,so}"
         - "./meba/*lan966*.{a,so}"
         - "./mesa/demo/armv7_lan966{2,x}.{itb,ext4.gz}"
+        - "./mepa/**/lib*.{a,so}"
 
     arm-debug:
         :arch:             "arm"
