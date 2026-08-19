@@ -2022,7 +2022,7 @@ static vtss_rc fa_clm_entry_add(vtss_state_t     *vtss_state,
         FA_ACT_SET(CLM, CLASSIFICATION_CPU_Q, action->cpu_queue);
         FA_ACT_SET(CLM, CLASSIFICATION_MIP_SEL, action->mip_enable ? 1 : 0);
         FA_ACT_SET(CLM, CLASSIFICATION_OAM_Y1731_SEL, oam);
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
         FA_ACT_SET(CLM, CLASSIFICATION_OAM_MRP_ENA, action->mrp_enable);
 #endif
         FA_ACT_SET(CLM, CLASSIFICATION_PAG_OVERRIDE_MASK, pag_mask);
@@ -2074,7 +2074,7 @@ static vtss_rc fa_clm_entry_add(vtss_state_t     *vtss_state,
         FA_ACT_SET(CLM, FULL_CPU_Q, action->cpu_queue);
         FA_ACT_SET(CLM, FULL_MIP_SEL, action->mip_enable ? 1 : 0);
         FA_ACT_SET(CLM, FULL_OAM_Y1731_SEL, oam);
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
         FA_ACT_SET(CLM, FULL_OAM_MRP_ENA, action->mrp_enable);
 #endif
         FA_ACT_SET(CLM, FULL_PAG_OVERRIDE_MASK, pag_mask);
@@ -2274,7 +2274,7 @@ static const vtss_vcap_dbg_t fa_clm_dbg_act_x2[] = {
     FA_DBG_VCAP_ACT(CLM, "l3_mac_update_dis", CLASSIFICATION_L3_MAC_UPDATE_DIS),
     FA_DBG_VCAP_ACT_NL(CLM, "fwd_dis", CLASSIFICATION_FWD_DIS),
     FA_DBG_VCAP_ACT_ENA(CLM, "cpu_q", CLASSIFICATION_CPU_ENA, CLASSIFICATION_CPU_Q),
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     FA_DBG_VCAP_ACT(CLM, "mrp_ena", CLASSIFICATION_OAM_MRP_ENA),
 #endif
     FA_DBG_VCAP_ACT(CLM, "mip_sel", CLASSIFICATION_MIP_SEL),
@@ -2329,7 +2329,7 @@ static const vtss_vcap_dbg_t fa_clm_dbg_act_quarter[] = {
     FA_DBG_VCAP_ACT(CLM, "ttl_decr_dis", FULL_TTL_DECR_DIS),
     FA_DBG_VCAP_ACT_NL(CLM, "l3_mac_update_dis", FULL_L3_MAC_UPDATE_DIS),
     FA_DBG_VCAP_ACT_ENA(CLM, "cpu_q", FULL_CPU_ENA, FULL_CPU_Q),
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     FA_DBG_VCAP_ACT(CLM, "mrp_ena", FULL_OAM_MRP_ENA),
 #endif
     FA_DBG_VCAP_ACT(CLM, "mip_sel", FULL_MIP_SEL),
@@ -2971,7 +2971,7 @@ static vtss_rc fa_is2_action_set(vtss_state_t       *vtss_state,
         ptp_opt = 1U;
         break;
     default: ptp_cmd = 0U;
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
         if (ptp->rb_fwd.enable) {
             // Activate PTP rewriter with configured egress delay only
             ptp_add = 1U;
@@ -2993,7 +2993,7 @@ static vtss_rc fa_is2_action_set(vtss_state_t       *vtss_state,
                ((ptp_cmd << 0U) + (ptp_opt << 2U) + (ptp_add << 3U) +
                 ((ptp->set_smac_to_port_mac ? 1U : 0U) << 5U) + (ptp->dom_sel << 6U)));
 
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     u = ((ptp->rb_fwd.srcid ? 2U : 0U) + (ptp->rb_fwd.reqid ? 1U : 0U));
     FA_ACT_SET(IS2, BASE_TYPE_RB_FWD_SEL, u);
     FA_ACT_SET(IS2, BASE_TYPE_RB_TC0_ENA, 0);
@@ -3039,7 +3039,7 @@ static vtss_rc fa_is2_action_set(vtss_state_t       *vtss_state,
     case VTSS_ACL_ADDR_UPDATE_DMAC_REPLACE:     break;
     case VTSS_ACL_ADDR_UPDATE_DMAC_REPLACE_MSB: dmac_offset_ena = 1U; break;
     case VTSS_ACL_ADDR_UPDATE_IGR_MAC_SWAP:
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
         rew_sel = 1U;
 #else
         rew_sel = 0U;
@@ -3047,7 +3047,7 @@ static vtss_rc fa_is2_action_set(vtss_state_t       *vtss_state,
 #endif
         break;
     case VTSS_ACL_ADDR_UPDATE_IGR_DMAC_SMAC_INCR:
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
         rew_sel = 2U;
 #else
         rew_sel = 0U;
@@ -3055,7 +3055,7 @@ static vtss_rc fa_is2_action_set(vtss_state_t       *vtss_state,
 #endif
         break;
     case VTSS_ACL_ADDR_UPDATE_IGR_DMAC_INCR_SMAC_REPLACE:
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
         rew_sel = 3U;
 #else
         rew_sel = 0U;
@@ -3066,7 +3066,7 @@ static vtss_rc fa_is2_action_set(vtss_state_t       *vtss_state,
         rt_mode = 0U; /* Routing mode */
         break;
     }
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     FA_ACT_SET(IS2, BASE_TYPE_MAC_REW_SEL, rew_sel);
 #endif
     FA_ACT_SET(IS2, BASE_TYPE_ACL_RT_MODE, rew_sel > 0U ? 0U : rt_mode);
@@ -3715,7 +3715,7 @@ static const vtss_vcap_dbg_t fa_is2_dbg_act[] = {
     FA_DBG_VCAP_ACT_BITS(IS2, "match_id", BASE_TYPE_MATCH_ID),
     FA_DBG_VCAP_ACT_BITS_NL(IS2, "match_id_mask", BASE_TYPE_MATCH_ID_MASK),
     FA_DBG_VCAP_ACT(IS2, "swap_mac_ena", BASE_TYPE_SWAP_MAC_ENA),
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     FA_DBG_VCAP_ACT(IS2, "mac_rew_sel", BASE_TYPE_MAC_REW_SEL),
 #endif
     FA_DBG_VCAP_ACT_NL(IS2, "acl_rt_mode", BASE_TYPE_ACL_RT_MODE),
@@ -3727,7 +3727,7 @@ static const vtss_vcap_dbg_t fa_is2_dbg_act[] = {
     FA_DBG_VCAP_ACT(IS2, "rleg_stat_idx", BASE_TYPE_RLEG_STAT_IDX),
     FA_DBG_VCAP_ACT(IS2, "igr_acl_ena", BASE_TYPE_IGR_ACL_ENA),
     FA_DBG_VCAP_ACT(IS2, "egr_acl_ena", BASE_TYPE_EGR_ACL_ENA),
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     FA_DBG_VCAP_ACT(IS2, "rb_fwd_sel", BASE_TYPE_RB_FWD_SEL),
     FA_DBG_VCAP_ACT(IS2, "rb_tc0_ena", BASE_TYPE_RB_TC0_ENA),
     FA_DBG_VCAP_ACT(IS2, "rb_ptp_ena", BASE_TYPE_RB_PTP_ENA),

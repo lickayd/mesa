@@ -3708,7 +3708,7 @@ vtss_rc vtss_fa_qos_tas_port_conf_update(struct vtss_state_s *vtss_state,
     }
 #endif
 
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     REG_WRM(VTSS_HSCH_TAS_PROFILE_CONFIG(VTSS_CHIP_PORT(port_no)),
             VTSS_F_HSCH_TAS_PROFILE_CONFIG_LINK_SPEED(tas_link_speed_calc(vtss_state->port
                                                                               .conf[port_no]

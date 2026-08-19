@@ -1053,7 +1053,7 @@ vtss_rc vtss_cil_l2_icnt_get(struct vtss_state_s     *vtss_state,
                 counters->rx_yellow.bytes = 0;
                 counters->rx_sdu_discard = counters->rx_red.bytes;
                 counters->rx_red.bytes = 0;
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
                 counters->rx_sdu_pass = (counters->rx_match - counters->rx_sdu_discard);
                 counters->rx_gate_pass = (counters->rx_sdu_pass - counters->rx_gate_discard);
 #else
@@ -4204,7 +4204,7 @@ static vtss_rc fa_l2_port_map_set(vtss_state_t *vtss_state)
         REG_WR(VTSS_ANA_AC_STAT_GLOBAL_CFG_ISDX_STAT_GLOBAL_EVENT_MASK(i),
                VTSS_F_ANA_AC_STAT_GLOBAL_CFG_ISDX_STAT_GLOBAL_EVENT_MASK_GLOBAL_EVENT_MASK(value));
     }
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     // Include blocked frames in MaxSDU discard counter
     REG_WR(VTSS_ANA_AC_TSN_SF_TSN_SF, VTSS_F_ANA_AC_TSN_SF_TSN_SF_MAX_SDU_CNT_INCL_BLOCKED(1));
 #endif

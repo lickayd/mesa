@@ -3316,7 +3316,7 @@ static vtss_rc fa_port_conf_2g5_set(vtss_state_t *vtss_state, const vtss_port_no
         tx_gap = conf->frame_gaps.fdx_gap;
     }
 
-#if defined(VTSS_ARCH_LAN969X)
+#if defined(VTSS_ARCH_LAN969X) || defined(VTSS_ARCH_LAIKA)
     // MESA-931
     conf->exc_col_cont = TRUE;
 #endif
