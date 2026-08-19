@@ -146,6 +146,9 @@ API_TARGET(LIB p64h_lm               CHIP P64H          DEFS -DVTSS_OPT_LIGHT=1)
 API_TARGET(LIB p64h                  CHIP P64H)
 
 mesa_export_compile_commands_recursive(${mesa_active_target})
-# Keep the MISRA target database in the top-level build dir (lm-cov-runner reads
-# build-<arch>/cmake_target_db.txt), even though the libraries now live under mesa/.
-mesa_export_targets_recursive("${CMAKE_BINARY_DIR}/cmake_target_db.txt" ${mesa_active_target})
+# Write the MISRA target database to MESA's own project binary dir (lm-cov-runner
+# reads build-<arch>/cmake_target_db.txt). Use PROJECT_BINARY_DIR, not
+# CMAKE_BINARY_DIR: when MESA is built as a subdirectory of another project (e.g.
+# LMStax) CMAKE_BINARY_DIR is the outer project's build dir, and writing there
+# would collide with the outer project's own cmake_target_db.txt.
+mesa_export_targets_recursive("${PROJECT_BINARY_DIR}/cmake_target_db.txt" ${mesa_active_target})
