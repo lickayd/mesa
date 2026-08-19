@@ -1,0 +1,208 @@
+// Copyright (c) 2004-2026 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+= MESA SBOM (SPDX)
+
+This document explains how MESA produces its Software Bill of Material (SBOM) in
+https://spdx.dev/[SPDX 2.3] format, and how the tooling is kept common with the
+LMStax (VelocityDRIVE-SP) project, which consumes MESA and MEPA as third-party
+components.
+
+== Overview
+
+The SBOM is generated from *component metadata* declared in `sdlc-objects.yaml`
+files spread through the source tree, plus the *cmake target graph* of a build.
+The generator is `.cmake/sbom-spdx` (with `.cmake/sbom-model.rb` and
+`.cmake/cmake-targets.rb`); the metadata schema is `.cmake/sdlc_doc_schema.json`.
+
+These four files are a copy of the LMStax tool (`support/scripts/sbom-spdx`,
+`support/scripts/sbom-model.rb`, `support/scripts/cmake-targets.rb`,
+`support/dg/sdlc_doc_schema.json`). The schema is byte-identical; the scripts
+differ only in per-repo configuration (where the version comes from, the default
+build folders, the schema path) plus the additive `--release` mode described
+below. The intent is a single common tool -- see <<common-tooling>>.
+
+There are three SBOM flavours, all from the same metadata:
+
+[cols="18,82a"]
+|===
+| Flavour | What it is
+
+| Binary (`--build DIR`)
+| Driven by the cmake link graph rooted at the built targets: lists exactly what
+  links into a given artifact. (Primarily used by LMStax for its firmware images.)
+
+| Source (`--source`)
+| Element-driven: every `spdx-element` that has source in the tree, grouped by
+  `group` (product / test / build-tool / doc). Needs no build folder.
+
+| Release (`--release --bin-tree <bin>`)
+| The single SPDX shipped in the MESA release tarball. Mirrors the tarball's
+  `bin/` directory tree and calls out every produced library and bootable image.
+|===
+
+== The metadata: `sdlc-objects.yaml`
+
+Each file has two containers (full field reference in `sdlc_doc_schema.json`):
+
+`cmake-targets`:: One record per cmake target. It maps the target to an SPDX
+component (inline `spdx`, or `spdx-id`/`spdx-ids` references), or is a
+transparent pass-through when it maps to nothing. Example: `mepa_drv_intel` maps
+to `SPDXRef-intel-gpy211` so the produced `libmepa_drv_intel.a` carries the Intel
+GPY (BSD-3-Clause) license.
+
+`spdx-elements`:: Standalone SPDX components (the third-party the tree vendors:
+Intel GPY, Aquantia, SHA-256, arm-optimized-routines, the LLVM libc tests, kalc,
+the doc-bundle assets, ...), migrated from the legacy `.module_info` files.
+
+== The release SBOM
+
+`sbom-spdx --release --bin-tree <release>/bin` walks the *assembled* tarball
+`bin/` tree and emits:
+
+* A package per *directory* (`bin/`, `bin/<arch>/`, `bin/<arch>/mesa`,
+  `.../meba`, `.../mepa`, `.../mesa/demo`), mirroring the layout. Header-only
+  directories (`include_common/`) are pruned.
+* A package per produced *library file* (`libvsc7546.so`, `libmepa_drv_intel.a`,
+  ...), each with `packageFileName` set to its path in the tarball so the
+  file&#8596;component mapping is unambiguous.
+* A package per bootable *firmware image* (`*.itb`, `*.mfi`, ...). Each image
+  CONTAINS the buildroot rootfs for its arch (imported from the BSP SPDX, see
+  <<external-spdx>>) plus the mesa-demo application and libraries. If no BSP SPDX
+  is supplied for an arch, the image stays a placeholder.
+* The *source components* (the `ws/` source view) as a sibling group.
+
+=== License attribution
+
+Every library file is attributed from the cmake target graph: a library whose
+target maps to a third-party `spdx-element` carries that license (e.g.
+`libmepa_drv_intel.a` &#8594; BSD-3-Clause; `libmepa_drv_aqr.a` &#8594; MIT), and
+is linked to its source with `GENERATED_FROM`. Everything else is Microchip MESA
+(MIT). A generation-time gate fails if any listed component with a real license
+lacks a copyright notice.
+
+=== Partial-linking composition (important)
+
+MEPA collections and MEBA libraries are *merged static archives*: `libmepa_sparx5.a`
+physically contains the driver archives (`libmepa_drv_intel.a`,
+`libmepa_drv_aqr.a`, ...), and `libmeba_sparx5.a` contains the MEPA collection. A
+user who takes `libmeba_sparx5.a` therefore also takes the BSD-3-Clause Intel and
+MIT Aquantia code. The SBOM expresses this with real `CONTAINS` edges between the
+library file packages.
+
+The merge composition is discovered from the *cmake target graph*: each merge
+macro records the merged-in libraries as `add_dependencies(<lib>_target <libs>)`,
+so the `<lib>_target` UTILITY's `MANUALLY_ADDED_DEPENDENCIES` in the full target
+database (`cmake_target_db_full.txt`) list exactly what was merged. MESA's
+`mepa_merge_static_libs`, MESA's MEBA `merge_static_libs`, and LMStax's
+`lm_link_static_library` all record it this way, so a single graph-traversal in
+`SbomModel.merge_composition` covers every case -- no parsing of build artefacts
+(e.g. the `ar` merge scripts) is needed.
+
+`SbomModel.merge_composition` maps each `<lib>_target` to its output-file stem
+(via the resolved `TARGET_FILE`, or the `lib<name>` convention for IMPORTED
+merged collections) and its dependencies likewise, giving
+`{ owner_lib_stem => [merged_lib_stem, ...] }`. The generator then adds a
+`CONTAINS` edge between the corresponding library files present in each arch.
+
+== [[external-spdx]] Importing external SPDX (buildroot rootfs, ARM-TF)
+
+Some components are best described by an SPDX document produced elsewhere -- the
+buildroot rootfs (its packages are in the BSP's own SPDX), and ARM Trusted
+Firmware. An `spdx-element` declares this with an `external-spdx` block:
+
+[source,yaml]
+----
+spdx-elements:
+  - id: SPDXRef-brsdk-rootfs-arm
+    name: "Buildroot rootfs (arm)"
+    license: NOASSERTION
+    description: Buildroot/xstax root filesystem embedded in the arm bootable images.
+    external-spdx:
+      provider: brsdk-arm            # matched to a --ext-spdx argument
+      import:  SPDXRef-family-xstax  # the subtree to copy in
+----
+
+At release time the generator is given the concrete file per provider:
+`--ext-spdx brsdk-arm:/opt/mchp/mchp-brsdk-arm-<ver>/...spdx.json` (repeatable).
+It then *merges* the `import` subtree into our document: the `import` package and
+its transitive `CONTAINS` are copied in, with every SPDXID re-namespaced by a
+`SPDXRef-x-<provider>-` prefix (so nothing collides) and each package keeping its
+upstream license / version / copyright verbatim. Only `CONTAINS` is followed, so
+sibling families (`standalone`) and build tools (`BUILD_DEPENDENCY_OF`) are
+excluded by construction -- no explicit exclude list is needed. Provenance (the
+source `documentNamespace` + a SHA1 of the file) is recorded on the imported
+root, and any `LicenseRef` the imported packages use is carried across.
+
+The provider is arch-qualified (`brsdk-arm`, `brsdk-arm64`, `brsdk-mipsel`), so
+each rootfs element attaches to the bootable images under the matching
+`bin/<arch>/`. `aggr-artifacts.rb` resolves the per-arch BSP SPDX path from the
+pinned BSP version in `.cmake/deps-bsp.json` and passes the `--ext-spdx`
+arguments automatically. ARM-TF will use the same mechanism with a `tfa-*`
+provider, in both MESA and LMStax.
+
+== [[common-tooling]] Common tooling with LMStax
+
+LMStax imports MESA and MEPA from *git sources* (not a released tarball), and
+does not build exactly the MESA release configuration (e.g. `utils` is part of
+MESA standalone but supplied by LMStax when MESA is built inside it). So the MESA
+SBOM must be reproducible from the metadata + whatever is actually built, in
+either project -- which is why the model is metadata- and graph-driven rather
+than tied to a fixed artifact set.
+
+The tool is intended to be identical in both repos, with only a small per-repo
+config (version source, default build folders, schema path) and a shared set of
+modes (`--build`, `--source`, `--release`). Divergences to reconcile:
+
+* `sbom-model.rb`, `sdlc_doc_schema.json`: schema identical; the model differs
+  only by the schema path constant and two additive helpers
+  (`produced_libraries`, `merge_composition`) -- both back-portable.
+* `cmake-targets.rb`: MESA skips `add_compile_cmds` during the graph walk (the
+  SBOM never needs per-source compile commands, and MESA injects
+  `TARGET_OBJECTS` from other targets into `SOURCES`, which the pairing cannot
+  match). The common fix is to make `add_compile_cmds` tolerant (skip when the
+  source/object lists do not pair up) rather than fork the file.
+* MESA's MEBA `merge_static_libs` now records the merge with a target-level
+  `add_dependencies(meba_<lib>_static_target ...)`, matching MEPA and LMStax, so
+  the composition is fully in the target database and the model derives the
+  CONTAINS graph from pure graph traversal (no `ar`-script parsing).
+
+== Developer workflow: importing third-party
+
+When you vendor third-party code (or any separately-licensed code):
+
+. Place it under a sensible directory; keep its upstream `LICENSE` alongside.
+. Add or extend the nearest `sdlc-objects.yaml`:
+  * If it compiles into a produced library, add a `cmake-targets` record mapping
+    the target to an `spdx-element` (so the produced `.a`/`.so` gets the right
+    license -- e.g. a new PHY driver `mepa_drv_foo` &#8594; `SPDXRef-foo`).
+  * If it is test / documentation / build-only, add a standalone `spdx-element`
+    with the appropriate `group`.
+. Fill `license` (an SPDX id, or `LicenseRef-` + `license_file`), `copyright`,
+  `version`, `download_location` and `directory`/`files`.
+. Regenerate and check locally (below). The generator refuses to emit if a target
+  is unregistered, a license text is missing, or a real-license component has no
+  copyright.
+
+== Running it locally
+
+All tooling runs inside the build container via `dr`.
+
+[source,bash]
+----
+# Source SBOM (no build folder needed)
+dr ruby .cmake/sbom-spdx --source
+
+# Binary SBOM for one build
+dr ruby .cmake/sbom-spdx --build build-arm -n "MESA library SBOM" -o out.spdx.json
+
+# Release SBOM: mirror the assembled bin/ tree of the release
+dr ruby .cmake/sbom-spdx --release --bin-tree <release>/bin -o mesa-release-sbom.spdx.json
+----
+
+The full-graph database (`cmake_target_db_full.txt`) the release mode needs is
+written by the top-level `CMakeLists.txt` at configure time (`mesa_collect_all_targets`
++ `mesa_export_targets_recursive`); it is regenerated by re-running `cmake <build-dir>`.
+
+`.module_info` is the legacy attribution format and is superseded by
+`sdlc-objects.yaml`; do not add new `.module_info` files.
