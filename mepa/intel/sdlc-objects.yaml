@@ -4,6 +4,13 @@
 # Intel/MaxLinear GPY211 PHY driver, vendored into MEPA and compiled into the
 # MESA library. Migrated from mepa/intel/.module_info.
 
+# The produced driver library (libmepa_drv_intel.a) carries the third-party
+# license, so the release SBOM attributes it to the Intel GPY211 component.
+cmake-targets:
+  - id: cmake-target-mepa_drv_intel
+    name: mepa_drv_intel
+    spdx-id: SPDXRef-intel-gpy211
+
 spdx-elements:
   - id: SPDXRef-intel-gpy211
     name: "LIB: Intel GPY211 PHY"

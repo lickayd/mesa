@@ -8,6 +8,14 @@
 # attached via sbom_add_kids, as it is not built as separate cmake targets.
 
 cmake-targets:
+  # Internal build-time code-generation targets (produce the mesa-ag wrapper).
+  # Not shipped components -- transparent records so coverage passes now that the
+  # MESA libraries depend on mesa_src explicitly.
+  - id: cmake-target-mesa_src
+    name: mesa_src
+  - id: cmake-target-mesa_cache
+    name: mesa_cache
+
   - id: cmake-target-lan966x_static
     name: lan966x_static
     spdx-id: SPDXRef-mesa-api
@@ -157,3 +165,29 @@ spdx-elements:
       - SPDXRef-intel-gpy211
       - SPDXRef-aquantia-phy
       - SPDXRef-sha256
+
+  # The buildroot 'xstax' root filesystem embedded in the bootable demo images,
+  # one per arch. Its component breakdown is imported (merged) from the BSP's own
+  # SPDX at release time via --ext-spdx <provider>:<path>; the release generator
+  # attaches each to the bootable images under bin/<arch>/.
+  - id: SPDXRef-brsdk-rootfs-arm
+    name: "Buildroot rootfs (arm)"
+    license: NOASSERTION
+    description: Buildroot/xstax root filesystem embedded in the arm bootable images.
+    external-spdx:
+      provider: brsdk-arm
+      import: SPDXRef-family-xstax
+  - id: SPDXRef-brsdk-rootfs-arm64
+    name: "Buildroot rootfs (arm64)"
+    license: NOASSERTION
+    description: Buildroot/xstax root filesystem embedded in the arm64 bootable images.
+    external-spdx:
+      provider: brsdk-arm64
+      import: SPDXRef-family-xstax
+  - id: SPDXRef-brsdk-rootfs-mipsel
+    name: "Buildroot rootfs (mipsel)"
+    license: NOASSERTION
+    description: Buildroot/xstax root filesystem embedded in the mipsel bootable images.
+    external-spdx:
+      provider: brsdk-mipsel
+      import: SPDXRef-family-xstax

@@ -4,6 +4,13 @@
 # Aquantia PHY driver, vendored into MEPA and compiled into the MESA library.
 # Migrated from mepa/aqr/.module_info.
 
+# The produced driver library (libmepa_drv_aqr.a) is attributed to the Aquantia
+# PHY component in the release SBOM.
+cmake-targets:
+  - id: cmake-target-mepa_drv_aqr
+    name: mepa_drv_aqr
+    spdx-id: SPDXRef-aquantia-phy
+
 spdx-elements:
   - id: SPDXRef-aquantia-phy
     name: "LIB: Aquantia PHY"
