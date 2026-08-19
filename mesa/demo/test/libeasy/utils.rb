@@ -618,6 +618,46 @@ def pc_drop_counters_report(before, after, port)
     end
 end
 
+# Expected number of egress frames per second for one measurement index. 'size' is the requested frame size inclusive checksum
+def measure_expected_fps(erate, size, frame_rate, data_rate)
+    sec_count_in = 1000000000/8/(20+size)   # Frames per second offered at line speed. The ef tx function can only run at line speed
+    return erate if (frame_rate)            # A frame rate is already the number of frames per second
+    sec_count_out = 1000000000/8/((data_rate ? 0 : 20)+size)   # Theoretical full rate number of outgoing frames per sec
+    sec_count = (sec_count_out*erate)/1000000000               # Outgoing frames per sec as a fraction of the full rate count
+    # Number of outgoing frames cannot be larger than the number of incoming
+    return (sec_count < sec_count_in) ? sec_count : sec_count_in
+end
+
+# A frame rate shaper is only exercised while the offered load exceeds it. Line and data rate expectations are capped by the offered load, so only a frame rate can ask for the impossible
+def measure_config_check(erate, sizes, frame_rate)
+    return true if (!frame_rate)
+    ok = true
+    erate.each_with_index do |rate, idx|
+        next if ((rate == nil) || (rate == 0) || (sizes[idx] == nil))
+        line_rate_fps = 1000000000/8/(20+sizes[idx])
+        next if (rate <= line_rate_fps)
+        t_e("Test configuration error: #{rate} fps cannot be offered with frame size #{sizes[idx]}, line speed is #{line_rate_fps} fps. Use a frame size of #{(1000000000/8/rate)-20} bytes or less, or a lower rate")
+        ok = false
+    end
+    return ok
+end
+
+# The DUT is only measurable while the generator offers more than the expected egress rate. A shortfall beyond the tolerance makes the capture say nothing about the DUT
+def measure_offered_load_check(delta, ig, expected_fps, etolerance)
+    return true if (delta == nil)
+    ok = true
+    ig.each_with_index do |port, idx|
+        exp = expected_fps[idx].to_i
+        next if (exp == 0)
+        min = (exp - ((exp * (etolerance[idx] || 0).to_f) / 100)).to_i
+        fps = (delta[:rx][port] / delta[:secs][port]).to_i
+        next if (fps >= min)
+        t_e("Measurement invalid: ingress port #{port} was offered #{fps} fps, the #{exp} fps expected on egress needs at least #{min} fps. The traffic generator fell short, this says nothing about the DUT")
+        ok = false
+    end
+    return ok
+end
+
 # Serializes check_rate() across DUTs that share one PC's traffic generator. Held on the PC itself,
 # since that's the one thing every caller can reach, even from different hosts.
 RATE_LOCK_FILE = "/tmp/mesa-rate-test.lock"
@@ -685,6 +725,11 @@ def check_rate(cfg)
     streams = fld_get(cfg, :streams, 1)   # Parallel/Multiple Easyframe transmitter per ingress port
     strict_priority = fld_get(cfg, :strict_priority, false)
     sp_slack = fld_get(cfg, :sp_slack, 0)
+
+    # Frame size and expected egress rate per measurement index, before the transmitter loop overwrites 'size'
+    sizes = erate.each_index.map {|idx| size_array[idx] || size}
+    expected_fps = erate.each_index.map {|idx| measure_expected_fps(erate[idx], sizes[idx], frame_rate, data_rate)}
+    return nil if (!measure_config_check(erate, sizes, frame_rate))
 
     # Only one DUT at a time may drive the PC's traffic generator - acquire before touching it, release however this returns
     rate_lock = rate_lock_acquire
@@ -755,9 +800,17 @@ def check_rate(cfg)
 #        t_e("Failed as low priority tx is counted")
 #    end
 
+    counters_window_before = nil
+    counters_window_after = nil
     begin
         t_i("Wait for necessary amount of frames to be transmitted")
-        sleep(pre_tx+sec+2)
+        # Bracket exactly the window pcap_analyze will verdict (it skips the pre_tx ramp-up and the trailing drain),
+        # so the offered-load check below judges the same window as the pass/fail result it is meant to explain
+        sleep(pre_tx)
+        counters_window_before = measure_counters_get(ig, eg)
+        sleep(sec)
+        counters_window_after = measure_counters_get(ig, eg)
+        sleep(2)
     ensure
         # Always stop tcpdump, even if the test is interrupted or a check
         # raises during the capture window. tcpdump runs forever until killed;
@@ -785,6 +838,12 @@ def check_rate(cfg)
         $ts.pc.try_ignore("sudo pkill -KILL -P #{pid}")
         $ts.pc.try_ignore("sudo kill  -KILL    #{pid}")
     end
+    # The kill above only reaches the wrapper and its direct children. An ef orphaned below that keeps transmitting for the rest of its repeat count, so sweep per port as well
+    ig.each do |ig_value|
+        pc_port = $ts.pc.p[ig_value]
+        # Spaces as '.' keep the pattern one argv token, the bracketed first letter keeps it from matching the sweep itself
+        $ts.pc.try_ignore("sudo pkill -KILL -f ef.tx.[#{pc_port[0]}]#{pc_port[1..-1]}.")
+    end
 
     t_i("Wait for Easy Frame transmitters to stop")
     max = 0
@@ -804,6 +863,16 @@ def check_rate(cfg)
     measure_counters_report(counters, ig, eg, line_rate_fps)
     pc_drop_counters_report(pc_drops_before, pc_drops_after, $ts.pc.p[eg])
 
+    # Judge the offered load over the same window pcap_analyze verdicts, not the whole capture. A generator that only
+    # dips below the shaper rate during that window can still average out fine over the full pre_tx+sec+2 capture
+    counters_window = measure_counters_delta(counters_window_before, counters_window_after)
+
+    # Analyzing a capture the generator could not fill only reports the shortfall as a rate deviation
+    if (!measure_offered_load_check(counters_window, ig, expected_fps, etolerance))
+        t_i("Analyze skipped. The capture is kept in #{fname} on the PC")
+        return counters
+    end
+
     t_i("Analyze pcap file")
     expected_count = ""
     expected_tolerance = ""
@@ -812,16 +881,8 @@ def check_rate(cfg)
 
     if (pcp != [])
         pcp.each_with_index do |pcp_value, pcp_idx|
-            if (size_array != [])
-                size = size_array[pcp_idx]
-            end
-            sec_count_in = 1000000000/8/(20+size)    # Calculate frames per second at line speed. The ef tx function can only run at line speed. The 'size' parameter is the requested frame size inclusive checksum
-            sec_count_out = 1000000000/8/((data_rate ? 0 : 20)+size)  # This is the theoretical full rate number of outgoing frames per sec. 'size' is requested frame size inclusive checksum
-            sec_count = (sec_count_out*erate[pcp_idx])/1000000000   # Number of outgoing frames per sec as a fraction of the full rate count
-            sec_count = (sec_count < sec_count_in) ? sec_count : sec_count_in   # Number of outgoing frames cannot be larger than the number of incoming. In case of data rate and line speed shaping this could be calculated
-
             expected_pcp << "#{pcp_value},"
-            count = frame_rate ? sec*erate[pcp_idx] : sec*sec_count
+            count = sec*expected_fps[pcp_idx]
             expected_count << "#{count},"
             if (count != 0) # If count is expected the tolerance is a percentage of expected count
                 tolerance = ((count * etolerance[pcp_idx]) / 100) + ((((count * etolerance[pcp_idx]) % 100) != 0) ? 1 : 0)
@@ -833,11 +894,7 @@ def check_rate(cfg)
         sp_opt = strict_priority ? " --strict-priority --sp-slack #{sp_slack}" : ""
         res = $ts.pc.try("pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle}#{sp_opt} #{fname}")
     else
-        sec_count_in = 1000000000/8/(20+size)    # Calculate frames per second at line speed. The ef tx function can only run at line speed. The 'size' parameter is the requested frame size inclusive checksum
-        sec_count_out = 1000000000/8/((data_rate ? 0 : 20)+size)  # This is the theoretical full rate number of outgoing frames per sec. 'size' is requested frame size inclusive checksum
-        sec_count = (sec_count_out*erate[0])/1000000000   # Number of outgoing frames per sec as a fraction of the full rate count
-        sec_count = (sec_count < sec_count_in) ? sec_count : sec_count_in   # Number of outgoing frames cannot be larger than the number of incomming. In case of data rate and line speed shaping this could be calculated
-        expected_count = frame_rate ? sec*erate[0] : sec*sec_count
+        expected_count = sec*expected_fps[0]
         expected_tolerance = ((expected_count * etolerance[0]) / 100) + ((((expected_count * etolerance[0]) % 100) != 0) ? 1 : 0)
         res = $ts.pc.try("pcap_analyze.rb --frame-count all --pre-tx-sec #{pre_tx} --count-sec #{sec} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{fname}")
     end
