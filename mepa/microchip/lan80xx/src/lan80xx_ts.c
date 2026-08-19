@@ -450,7 +450,18 @@ static mepa_rc lan80xx_ts_ltc_get(mepa_device_t *dev, mepa_timestamp_t *const ts
     ts->seconds.low = (value & 0xffffffff);
 
     LAN80XX_CSR_RD(dev, data->port_no, LAN80XX_PTP_LTC_PTP_TOD_SEC_MSB(base_data->lsc_select), &value);
-    ts->seconds.high = (value & 0xffff) ;
+    ts->seconds.high = (value & 0xffff);
+
+    /* PTP_TOD_NSEC returns a 30-bit signed value on synced store near second boundary.
+     * Values >= 1e9 are negative (e.g. 0x3FFFFFFF = -1 ns). Per register spec:
+     * subtract 1 from SEC and add 1e9 to NSEC to normalize. */
+    if (ts->nanoseconds >= 1000000000UL) {
+        ts->nanoseconds += 1000000000UL;
+        ts->nanoseconds -= 0x40000000UL;
+        if (ts->seconds.low-- == 0) {
+            ts->seconds.high--;
+        }
+    }
 
     MEPA_EXIT(dev);
 
