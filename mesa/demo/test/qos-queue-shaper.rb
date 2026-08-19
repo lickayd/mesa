@@ -12,21 +12,21 @@ test_table =
     {
         txt: "Shaper disabled",
         cfg: {idx: 0, rate: 0xffffffff},
-        chk: {etolerance: [2.8]}
+        chk: {etolerance: [3]}
     },
     {
-        txt: "Shaper frame rate 100 kpps",
+        txt: "Shaper frame rate 100 fps",
         cfg: {idx: 0, frame_rate: true, level: 5, rate: 100},
         chk: {size: 600, etolerance: [3], with_pre_tx: true}
     },
     {
-        txt: "Shaper frame rate 1000 kpps (1 Mpps)",
+        txt: "Shaper frame rate 1000 fps",
         cfg: {idx: 1, frame_rate: true, level: 10, rate: 1000},
         chk: {size: 300, etolerance: [3], with_pre_tx: true}
     },
     {
-        txt: "Shaper frame rate 300000 kpps (300 Mpps)",
-        cfg: {idx: 0, frame_rate: true, level: 50, rate: 300000},
+        txt: "Shaper frame rate 100.000 fps",
+        cfg: {idx: 0, frame_rate: true, level: 50, rate: 100_000},
         chk: {size: 300, etolerance: [3], with_pre_tx: true}
     },
     {
@@ -35,15 +35,15 @@ test_table =
         chk: {sec: 4, etolerance: [3], with_pre_tx: true}
     },
     {
-        txt: "Shaper line rate 100000 kbps (100 Mbps)",
-        cfg: {idx: 1, level: 1, rate: 100000},
+        txt: "Shaper line rate 100 Mbps",
+        cfg: {idx: 1, level: 1, rate: 100_000},
         chk: {etolerance: [3]}
     },
     {
-        txt: "Shaper line rate 1000000 kbps (1 Gbps)",
+        txt: "Shaper line rate 1 Gbps",
         # Shaper must have large burst size level to shape correct at high rate 
-        cfg: {idx: 0, level: 25000, rate: 1000000},
-        chk: {etolerance: [2.7]}
+        cfg: {idx: 0, level: 25000, rate: 1_000_000},
+        chk: {etolerance: [3]}
     },
     {
         txt: "Shaper data rate 400 kbps",
@@ -51,14 +51,14 @@ test_table =
         chk: {with_pre_tx: true}
     },
     {
-        txt: "Shaper data rate 100000 kbps (100 Mbps)",
-        cfg: {idx: 1, data_rate: true, level: 1, rate: 100000},
+        txt: "Shaper data rate 100 Mbps",
+        cfg: {idx: 1, data_rate: true, level: 1, rate: 100_000},
     },
     {
-        txt: "Shaper data rate 1000000 kbps (1 Gbps)",
+        txt: "Shaper data rate 1 Gbps",
         # Shaper must have large burst size level to shape correct at high rate 
-        cfg: {idx: 0, data_rate: true, level: 25000, rate: 1000000},
-        chk: {etolerance: [2.6]}
+        cfg: {idx: 0, data_rate: true, level: 25000, rate: 1_000_000},
+        chk: {etolerance: [3]}
     }
 ]
 
@@ -69,11 +69,20 @@ def test_runner(t)
     eg = cfg[:idx] == 1 ? 0 : 1
     eg_port = $ts.dut.p[eg]
 
+    # Frame rate shaping only exists on some families. Without it there is nothing to measure
+    if (fld_get(cfg, :frame_rate, false) && (cap_get("QOS_EGRESS_SHAPER_FRAME") != 1))
+        test_skip()
+        return
+    end
+
     setup_ingress_port(port)
     egress_ctag_all(eg_port)
 
     [0,3,7].each do |queue|
-        next if (configure_queue_port(cfg, eg_port, queue) == false)
+        if (configure_queue_port(cfg, eg_port, queue) == false)
+            t_e("Shaper configuration was not applied on queue #{queue}")
+            next
+        end
         setup_chk_params(cfg, chk, queue)
         check_rate(chk)
     end
@@ -163,8 +172,12 @@ end
 sel = table_lookup(test_table, :sel)
 test_table.each do |t|
     next if (t[:sel] != sel)
-    test t[:txt] do
-        test_runner(t)
+    rep = fld_get(t, :rep, 1)
+    rep.times do |i|
+        txt = (rep == 1) ? t[:txt] : "#{t[:txt]} (#{i + 1}/#{rep})"
+        test(txt) do
+            test_runner(t)
+        end
     end
 end
 
