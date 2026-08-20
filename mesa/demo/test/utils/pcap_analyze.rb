@@ -44,6 +44,10 @@ OptionParser.new do |opts|
         $options[:exp_cycle] = cyc.to_i
     end
 
+    opts.on("--exp-open-ratio x,y,z", Array, "List of expected PCP gate-open percentage (0-100) of the cycle, used to size the hole-vs-new-interval threshold") do |r|
+        $options[:exp_open_ratio] = r
+    end
+
     opts.on("--strict-priority", "Strict-priority invariant instead of per-PCP tolerances: the highest-rate PCP must keep the egress (within its --exp-tolerance) and the combined count of the zero-expected PCPs (the 'leak') must not exceed the highest PCP's shortfall (+ --sp-slack). Robust to host tx jitter that briefly gaps the highest-priority stream.") do
         $options[:strict_priority] = true
     end
@@ -103,13 +107,16 @@ end
 exp_cycle_f = 0.0
 max_diff_percent = 2.0
 max_diff_floor_sec = 0.000160
-new_interval_gap = 0.0
+new_interval_gap = Array.new(8, 0.0)
 if ($options[:exp_cycle] != nil)
     exp_cycle_f = $options[:exp_cycle].to_f / 1000000  # Convert expected cycle from micro seconds to floating point seconds
     max_diff = [((exp_cycle_f / 100) * max_diff_percent), max_diff_floor_sec].max
-    # A new gate interval is a PCP change or, when only one PCP is measured, a gap longer than this.
-    # Half a cycle is longer than any hole inside an open interval and shorter than a closed gate.
-    new_interval_gap = exp_cycle_f / 2
+    # A new gate interval is a PCP change or a gap past half that PCP's closed-gate time.
+    # Falls back to half the cycle when the open ratio is unknown.
+    ($options[:pcp_values] || []).each_index do |pcp_idx|
+        open_ratio = $options[:exp_open_ratio] ? ($options[:exp_open_ratio][pcp_idx].to_f / 100) : 0.5
+        new_interval_gap[pcp_idx] = (exp_cycle_f * (1.0 - open_ratio)) / 2
+    end
 end
 
 count_sec = $options[:count_sec]
@@ -174,14 +181,14 @@ Open3.popen2e("tcpdump -ttttt -en -r #{$pcap_file}") do |stdin, stdout, wait_thr
                             if ((distance > (frame_time * 2)) && (distance < (frame_time * 50)))
                                 distance_count += 1
                             end
-                            if ((curr_pcp == pcp_value) && (distance > (frame_time * 50)) && (distance <= new_interval_gap))
+                            if ((curr_pcp == pcp_value) && (distance > (frame_time * 50)) && (distance <= new_interval_gap[pcp_idx]))
                                 # A hole inside an open interval - not a new interval, most likely a lossy capture
                                 $hole_count[pcp_idx] += 1
                                 puts("hole  pcp_idx #{pcp_idx}  last_time #{last_time}  gap #{distance}") if ($hole_count.sum <= 10)
                             end
                             old_last_time = last_time
 
-                            if ((curr_pcp != pcp_value) || (distance > new_interval_gap))  # This is a new PCP or "long" time since last received - new SAT interval. Cycle time for this PCP can possibly be calculated
+                            if ((curr_pcp != pcp_value) || (distance > new_interval_gap[pcp_idx]))  # This is a new PCP or "long" time since last received - new SAT interval. Cycle time for this PCP can possibly be calculated
                                 if (rx_time[pcp_idx] != 1000.000000)    # A previous time for this PCP is valid - calculate the TAS cycle time
                                     cycle_time = last_time - rx_time[pcp_idx]  # Calculate cycle time
                                     if (cycle_time < (exp_cycle_f - max_diff)) # Count cycles too short

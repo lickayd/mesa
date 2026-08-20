@@ -877,7 +877,12 @@ def check_rate(cfg)
     expected_count = ""
     expected_tolerance = ""
     expected_pcp = ""
+    expected_open_ratio = ""
     expected_cycle = (cycle_time == []) ? "" : "--exp-cycle #{cycle_time[0] / 1000}"
+    # Gate-open percentage of the cycle per PCP, for pcap_analyze's hole detection
+    open_ratio_pct = erate.each_index.map do |idx|
+        (line_rate_fps[idx].to_i > 0) ? [[((expected_fps[idx].to_f / line_rate_fps[idx]) * 100).round, 0].max, 99].min : nil
+    end
 
     if (pcp != [])
         pcp.each_with_index do |pcp_value, pcp_idx|
@@ -890,9 +895,10 @@ def check_rate(cfg)
                 tolerance = etolerance[pcp_idx]
             end
             expected_tolerance << "#{tolerance},"
+            expected_open_ratio << "#{open_ratio_pct[pcp_idx] || 50},"
         end
         sp_opt = strict_priority ? " --strict-priority --sp-slack #{sp_slack}" : ""
-        res = $ts.pc.try("pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle}#{sp_opt} #{fname}")
+        res = $ts.pc.try("pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle} --exp-open-ratio #{expected_open_ratio}#{sp_opt} #{fname}")
     else
         expected_count = sec*expected_fps[0]
         expected_tolerance = ((expected_count * etolerance[0]) / 100) + ((((expected_count * etolerance[0]) % 100) != 0) ? 1 : 0)
