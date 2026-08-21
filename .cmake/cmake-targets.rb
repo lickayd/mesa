@@ -98,8 +98,13 @@ class CmakeTargets
   end
 
   def load_compile_commands
-    j = JSON.parse(File.read("#{@path}/compile_commands.json"))
+    # Only used by add_compile_cmds (compile-command lookups), which the SBOM
+    # coverage/validation path never calls. The release aggregate stage ships the
+    # cmake_target_db but not compile_commands.json, so tolerate its absence.
     @compile_cmds = {}
+    f = "#{@path}/compile_commands.json"
+    return unless File.exist?(f)
+    j = JSON.parse(File.read(f))
 
     j.each do |r|
       next_is_output = false
