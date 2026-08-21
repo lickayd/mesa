@@ -138,8 +138,11 @@ begin
 rescue => e
   puts "WARN: could not resolve BSP SPDX paths: #{e}"
 end
-run ".cmake/sbom-spdx --release --bin-tree #{$out_name}/bin #{ext.join(' ')} " \
-    "-o #{$out_name}/mesa-sbom.spdx.json 2>&1"
+# Use sys (streams to the console) rather than run (captures and discards the
+# child's output): sbom-spdx's progress and any validation/attribution errors
+# must be visible in the build log, while a non-zero exit still fails the build.
+sys ".cmake/sbom-spdx --release --bin-tree #{$out_name}/bin #{ext.join(' ')} " \
+    "-o #{$out_name}/mesa-sbom.spdx.json"
 
 # Bake a standalone, browsable HTML viewer with the SBOM inlined, shipped next to
 # the JSON so the release can be inspected without a server or file picker.
