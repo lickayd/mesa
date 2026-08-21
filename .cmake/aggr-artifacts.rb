@@ -6,6 +6,7 @@
 require 'pp'
 require 'open3'
 require 'optparse'
+require 'json'
 
 $res = 0
 $verbose = true
@@ -108,11 +109,43 @@ sys "cp -r static_analysis_reports/* #{$report_name}" if File.exist? "static_ana
 
 raise "No ws folder" if not File.exist? "./ws"
 
+# Start from a clean packet directory (a previous interrupted run may have left
+# one behind; in CI the name is unique per build, but local re-runs reuse it).
+run "rm -rf #{$out_name}"
 run "cp -r ws #{$out_name}"
 run "mkdir #{$out_name}/bin"
 try "tar -C #{$out_name}/bin -f arm.tar -x"
 try "tar -C #{$out_name}/bin -f arm64.tar -x"
 try "tar -C #{$out_name}/bin -f mipsel.tar -x"
+
+# Generate the single release SBOM: it mirrors the assembled bin/ tree (produced
+# libraries + bootable images), imports each arch's buildroot rootfs from the
+# BSP's own SPDX, and includes the source components. The per-arch BSP SPDX is
+# resolved from the pinned BSP version in .cmake/deps-bsp.json. stderr is merged
+# into stdout so the logcmd wrapper (which fails on any stderr) is happy.
+ext = []
+begin
+  bsp_ver = JSON.parse(File.read("#{$top}/.cmake/deps-bsp.json"))[0]["build-artifact-version-string"]
+  ["arm", "arm64", "mipsel"].each do |a|
+    name = "mchp-brsdk-#{a}-#{bsp_ver}"
+    spdx = "/opt/mchp/#{name}/#{name}.spdx.json"
+    if File.exist?(spdx)
+      ext << "--ext-spdx brsdk-#{a}:#{spdx}"
+    else
+      puts "WARN: BSP SPDX not found for #{a}: #{spdx} (rootfs left as placeholder)"
+    end
+  end
+rescue => e
+  puts "WARN: could not resolve BSP SPDX paths: #{e}"
+end
+run ".cmake/sbom-spdx --release --bin-tree #{$out_name}/bin #{ext.join(' ')} " \
+    "-o #{$out_name}/mesa-sbom.spdx.json 2>&1"
+
+# Bake a standalone, browsable HTML viewer with the SBOM inlined, shipped next to
+# the JSON so the release can be inspected without a server or file picker.
+run ".cmake/spdx-outline-inline.rb #{$out_name}/mesa-sbom.spdx.json " \
+    "#{$out_name}/mesa-sbom-outline.html 2>&1"
+
 run "tar -czvf #{$out_name}.tar.gz #{$out_name}"
 
 if File.exist? "./images"
@@ -121,6 +154,10 @@ if File.exist? "./images"
   run "cp #{$out_name}/bin/arm64/mesa/demo/*.itb images/."
   run "cp #{$out_name}/bin/arm/mesa/demo/*.ext4.gz images/."
   run "cp #{$out_name}/bin/arm64/mesa/demo/*.ext4.gz images/."
+  # The SBOM (and its browsable HTML outline) as loose artifacts, so they can be
+  # picked up and viewed directly without unpacking the release tarball.
+  run "cp #{$out_name}/mesa-sbom.spdx.json images/."
+  run "cp #{$out_name}/mesa-sbom-outline.html images/."
 end
 run "rm -rf #{$out_name}"
 

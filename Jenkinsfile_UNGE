@@ -402,6 +402,9 @@ pipeline {
                         sh ".cmake/aggr-artifacts.rb"
                     }
                 }
+                // The SBOM and its browsable HTML outline, so they can be picked
+                // up and viewed straight from the build page.
+                archiveArtifacts artifacts: 'images/mesa-sbom.spdx.json, images/mesa-sbom-outline.html', allowEmptyArchive: true
             }
         }
     }
