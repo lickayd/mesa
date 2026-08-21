@@ -1,0 +1,525 @@
+#!/usr/bin/env ruby
+
+# Copyright (c) 2021-2022 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+
+# Generate a Software Bill of Material in SPDX 2.3 JSON format from the
+# sdlc-objects.yaml records (see support/dg/sdlc_doc_schema.json).
+#
+# Roots (SW packets) are the components mapped to a cmake root target; they are
+# the packages the document DESCRIBES. Every other reachable component is a
+# package, and the containment graph is emitted as CONTAINS relationships.
+#
+# Reference: https://spdx.github.io/spdx-spec/v2.3/
+
+require 'optparse'
+require 'securerandom'
+require 'time'
+require 'fileutils'
+require 'set'
+require 'yaml'
+require 'json'
+require 'digest'
+
+require_relative "sbom-model.rb"
+
+$err = []
+
+def spdx_val(v)
+  (v.nil? || v.to_s.strip.empty?) ? "NOASSERTION" : v.to_s.strip
+end
+
+# Collect ExtractedLicensingInfo text for LicenseRef licenses, verifying that a
+# given LicenseRef id always resolves to the same text.
+$extracted = {}
+def register_license_ref(c)
+  return unless c.license_ref?
+  text = c.license_text
+  if text.nil?
+    $err << "#{c.id}: license '#{c.license}' is a LicenseRef but has no license_text/license_file"
+    text = "NOASSERTION"
+  end
+  ref = c.license
+  if $extracted[ref] && $extracted[ref].strip != text.strip
+    $err << "LicenseRef '#{ref}' resolves to different texts (e.g. via #{c.id})"
+  end
+  $extracted[ref] ||= text
+end
+
+def package_hash(c)
+  $err << "Missing license for #{c.id}" if c.license.nil?
+  # external-spdx elements carry no own version; the versions come from the
+  # imported packages.
+  $err << "Missing version for #{c.id}" if c.version.nil? && !c.use_packet_version && !c.external_spdx
+  register_license_ref(c)
+
+  version = c.use_packet_version ? $packet_version : c.version
+
+  h = {
+    "SPDXID"           => c.spdxref,
+    "name"             => c.name,
+    "versionInfo"      => spdx_val(version),
+    "downloadLocation" => spdx_val(c.download_location),
+    "filesAnalyzed"    => false,
+    "licenseConcluded" => spdx_val(c.license),
+    "licenseDeclared"  => spdx_val(c.license),
+    "copyrightText"    => c.copyright ? c.copyright.strip : "NOASSERTION",
+  }
+  h["sourceInfo"]  = c.source_info.strip if c.source_info
+  h["description"] = c.description.strip if c.description
+  h
+end
+
+# Merge-import the subtree rooted at `import_root` from the external SPDX at
+# `path`, re-namespacing every SPDXID with `prefix` (to avoid collisions) and
+# preserving the internal CONTAINS graph. Only CONTAINS is followed, so build
+# tools (BUILD_DEPENDENCY_OF/BUILD_TOOL_OF) are naturally excluded. Any
+# LicenseRef the imported packages use is carried over into $extracted, and the
+# imported root records its provenance (source documentNamespace + file SHA1).
+# Returns { packages:, contains:, root: } or nil (with a warning) if unavailable.
+def merge_import(path, import_root, prefix)
+  unless path && File.exist?(path)
+    STDERR.puts "sbom-spdx: external SPDX for import not found (#{path.inspect}); leaving placeholder"
+    return nil
+  end
+  doc = JSON.parse(File.read(path))
+  pk = {}
+  (doc["packages"] || []).each { |p| pk[p["SPDXID"]] = p }
+  unless pk[import_root]
+    $err << "external SPDX #{path}: import root '#{import_root}' not found"
+    return nil
+  end
+  kids = Hash.new { |h, k| h[k] = [] }
+  (doc["relationships"] || []).each { |r| kids[r["spdxElementId"]] << r["relatedSpdxElement"] if r["relationshipType"] == "CONTAINS" }
+
+  keep = {}
+  stack = [import_root]
+  until stack.empty?
+    id = stack.pop
+    next if keep[id] || pk[id].nil?
+    keep[id] = true
+    kids[id].each { |k| stack << k }
+  end
+
+  newid = lambda { |old| prefix + old.to_s.sub(/\ASPDXRef-/, "") }
+  sha1  = Digest::SHA1.hexdigest(File.read(path))
+  ns    = doc["documentNamespace"]
+  ext_lics = {}
+  (doc["hasExtractedLicensingInfos"] || []).each { |e| ext_lics[e["licenseId"]] = e["extractedText"] }
+
+  packages = []
+  keep.each_key do |id|
+    p = pk[id].dup
+    p["SPDXID"] = newid.call(id)
+    if id == import_root
+      c = p["comment"].to_s
+      p["comment"] = (c.empty? ? "" : c + "\n") + "Imported from #{ns} (SHA1: #{sha1})."
+    end
+    # carry over any LicenseRef the package declares
+    [p["licenseConcluded"], p["licenseDeclared"]].compact.each do |expr|
+      expr.scan(/LicenseRef-[A-Za-z0-9.\-]+/).each do |ref|
+        next unless ext_lics[ref]
+        if $extracted[ref] && $extracted[ref].strip != ext_lics[ref].strip
+          $err << "LicenseRef '#{ref}' from #{path} conflicts with an existing definition"
+        end
+        $extracted[ref] ||= ext_lics[ref]
+      end
+    end
+    packages << p
+  end
+
+  edges = []
+  keep.each_key { |id| kids[id].each { |k| edges << [newid.call(id), newid.call(k)] if keep[k] } }
+  { packages: packages, contains: edges, root: newid.call(import_root) }
+end
+
+$opt_output = nil
+$opt_builds = []
+$opt_excludes = []
+$opt_name = nil
+$opt_all = false
+$opt_source = false
+$opt_release = false
+$opt_bin_tree = nil
+$opt_ext_spdx = {}   # provider => path to an external SPDX json to merge-import
+OptionParser.new do |opts|
+  opts.banner = "Usage: sbom-spdx [options]\n\nOptions:"
+  opts.on("-o", "--output FILE", "Write SPDX document to FILE (default: stdout)") { |o| $opt_output = o }
+  opts.on("-b", "--build DIR", "Build folder to read the cmake database from (repeatable; default: build-arm, or all three arches for --release)") { |b| $opt_builds << b }
+  opts.on("-x", "--exclude DIR", "Ignore sdlc-objects.yaml under DIR (repeatable; e.g. a packet output folder holding copies of source metadata)") { |d| $opt_excludes << d }
+  opts.on("-n", "--name NAME", "Document name (e.g. 'MESA release SBOM'); the product version is appended and a matching namespace is derived") { |n| $opt_name = n }
+  opts.on("--source", "Emit the source-release SBOM: every spdx-element that has source (element-driven, all sdlc-objects.yaml), organised by 'group', rather than the cmake-linked binary SBOM") { $opt_source = true }
+  opts.on("--release", "Emit the release SBOM (the one shipped in the release tarball): mirror the bin/ tree (--bin-tree) as CONTAINS'd packages -- a package per produced library (with packageFileName) and a placeholder per bootable fw image -- plus the source components. Reads cmake_target_db_full.txt from the build folders for license attribution") { $opt_release = true }
+  opts.on("--bin-tree DIR", "For --release: the assembled release bin/ directory to mirror (e.g. <release>/bin)") { |d| $opt_bin_tree = d }
+  opts.on("--ext-spdx PROVIDER:PATH", "For --release: merge-import a subtree of an external SPDX for the spdx-element with external-spdx.provider == PROVIDER (repeatable). Arch-specific documents use an arch-qualified provider, e.g. brsdk-arm:/opt/.../mchp-brsdk-arm-....spdx.json") { |a| k, v = a.split(":", 2); $opt_ext_spdx[k] = v }
+  opts.on("--all", "Read every sdlc-objects.yaml on disk (default: only git-tracked, so worktrees/hidden copies are ignored)") { $opt_all = true }
+  opts.on("-h", "--help", "Show this message") { puts opts; exit }
+end.parse!(ARGV)
+
+# .cmake/sbom-spdx -> repo top is two dirnames up.
+$top = File.dirname(File.dirname(File.expand_path(__FILE__)))
+Dir.chdir($top)
+
+# The binary SBOM walks the cmake link graph, so it needs a build folder (and
+# defaults to build-arm). The source SBOM is element-driven and needs none;
+# any -b given is used only for the coverage check.
+builds = if $opt_release
+           $opt_builds.empty? ? ["./build-arm", "./build-arm64", "./build-mipsel"] : $opt_builds
+         elsif $opt_source
+           $opt_builds
+         else
+           $opt_builds.empty? ? ["./build-arm"] : $opt_builds
+         end
+
+# Validation is part of generation: schema + cross-record checks and the
+# cmake-target coverage check (every target the build system reports must have a
+# record) run first and abort on any failure, so a generated SBOM is always valid.
+verrors, vstats = SbomModel.validate($opt_excludes, builds, all: $opt_all)
+if verrors.empty?
+  STDERR.puts "Validated #{vstats[:files]} sdlc-objects.yaml files " \
+       "(#{vstats[:targets]} cmake targets, #{vstats[:elements]} spdx-elements)"
+else
+  STDERR.puts "sbom-spdx: sdlc-objects validation FAILED (#{verrors.size} issue(s)):"
+  verrors.each { |e| STDERR.puts "  #{e}" }
+  exit 1
+end
+
+# Product version, derived the same way the MESA release scripts do
+# (git describe --tags --long; see .cmake/source-prepare.rb / aggr-artifacts.rb),
+# used by elements flagged with use_packet_version.
+$packet_version = begin
+  v = `git describe --tags --long 2>/dev/null`.strip
+  v.empty? ? "MESA (unknown version)" : v
+rescue
+  "MESA (unknown version)"
+end
+
+model = SbomModel.new(builds, $opt_excludes, all: $opt_all)
+$err += model.errors
+
+# The components the document describes: the source SBOM lists every element
+# with source (grouped, below); the binary SBOM lists the cmake-linked roots and
+# their reachable components.
+components = ($opt_source || $opt_release) ? model.source_elements : model.emitted
+
+# Attribution gate: every listed package with a real license must carry a
+# copyright notice, so the SBOM can serve as the attribution vehicle for the
+# MIT/BSD (and other) components it lists.
+components.each do |c|
+  next if c.license.nil? || c.license == "NONE" || c.license == "NOASSERTION"
+  if c.copyright.nil? || c.copyright.to_s.strip.empty?
+    $err << "#{c.id}: listed package (license #{c.license}) has no copyright text"
+  end
+end
+
+# --- Emit SPDX document (2.3 JSON) -------------------------------------------
+
+created = Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+if $opt_release
+  # Release SBOM: the single SPDX shipped in the release tarball. It MIRRORS the
+  # tarball layout as a tree of CONTAINS'd packages: bin/ -> bin/<arch>/ ->
+  # mesa|meba|mepa (+ mesa/demo) -> the produced library and bootable-image
+  # files. Every leaf library/image package carries packageFileName (its path in
+  # the tarball) so the file<->component mapping is unambiguous. The source
+  # components (the ws/ source view) hang off the release root as a sibling.
+  $err << "--release requires --bin-tree DIR (the assembled release bin/ directory)" if $opt_bin_tree.nil?
+
+  root_id  = "SPDXRef-release"
+  doc_base = $opt_name || "MESA release SBOM"
+
+  # Package skeleton with all SPDX-required fields defaulted; extra overrides it.
+  base_pkg = lambda do |sid, name, extra|
+    { "SPDXID" => sid, "name" => name, "versionInfo" => spdx_val($packet_version),
+      "downloadLocation" => "NOASSERTION", "filesAnalyzed" => false,
+      "licenseConcluded" => "NOASSERTION", "licenseDeclared" => "NOASSERTION",
+      "copyrightText" => "NOASSERTION" }.merge(extra)
+  end
+
+  packages = [base_pkg.call(root_id, "MESA release (mesa-#{$packet_version})",
+      { "description" => "The MESA release tarball: the bin/ tree of produced libraries and bootable images, plus the source components." })]
+  relationships = [{ "spdxElementId" => "SPDXRef-DOCUMENT", "relationshipType" => "DESCRIBES", "relatedSpdxElement" => root_id }]
+  contains = []
+  gen_from = []
+
+  # output-name -> third-party spdx-element (nil => Microchip MESA, MIT). Built
+  # from the full cmake target graph: a produced lib whose target maps to a
+  # third-party element (e.g. mepa_drv_intel -> Intel GPY211, BSD-3) carries that
+  # license; everything else is Microchip MIT.
+  lib_tp = {}
+  SbomModel.produced_libraries(builds, $top).each do |l|
+    lib_tp[l[:output]] = l[:names].map { |n| (model.by_target[n] || []).first }.compact.first
+  end
+
+  # Every produced library is GENERATED_FROM a source component: a third-party lib
+  # from its mapped element (Intel/Aquantia/...), everything else (the Microchip
+  # MEPA/MEBA collections and the MESA API libs) from the MESA source component.
+  mesa_src_ref = model.by_id["SPDXRef-mesa-api"]&.spdxref
+
+  sanitize = lambda { |s| s.gsub(%r{[/_]}, "-").gsub(/[^A-Za-z0-9.\-]/, "-") }
+  outname  = lambda { |fn| fn.sub(/\Alib/, "").sub(/\.(a|so)(\..*)?\z/, "") }
+  is_lib   = lambda { |fn| fn.start_with?("lib") && fn =~ /\.(a|so)(\..*)?\z/ }
+  is_img   = lambda { |fn| fn =~ /\.(itb|mfi|ext4\.gz|ubifs)\z/ }
+  qual     = lambda { |d| Dir.glob("#{d}/**/*").any? { |p| b = File.basename(p); File.file?(p) && (is_lib.call(b) || is_img.call(b)) } }
+
+  n_libs = 0; n_imgs = 0
+  lib_files = []   # {arch:, stem:, sid:} for the merge-composition pass below
+  img_files = []   # {arch:, sid:} for the external-spdx (rootfs) wiring below
+  # Recursive mirror: abs dir path + its release-relative path (e.g. "bin/arm64").
+  walk = lambda do |dir, rel, parent_id|
+    did = "SPDXRef-dir-#{sanitize.call(rel)}"
+    packages << base_pkg.call(did, "DIR: #{rel}/", { "description" => "Release directory #{rel}/." })
+    contains << [parent_id, did]
+    Dir.children(dir).sort.each do |e|
+      p = "#{dir}/#{e}"; r = "#{rel}/#{e}"
+      if File.directory?(p)
+        walk.call(p, r, did) if qual.call(p)      # prune header-only dirs
+      elsif File.file?(p) && is_lib.call(e)
+        on = outname.call(e); tp = lib_tp[on]
+        lic = tp ? tp.license : "MIT"
+        cpr = tp ? tp.copyright : "Copyright (c) Microchip Technology Inc. and its subsidiaries."
+        register_license_ref(tp) if tp && tp.license_ref?
+        fid = "SPDXRef-file-#{sanitize.call(r)}"
+        packages << base_pkg.call(fid, "LIB: #{e}", {
+          "packageFileName" => r,
+          "licenseConcluded" => spdx_val(lic), "licenseDeclared" => spdx_val(lic),
+          "copyrightText" => (cpr && !cpr.strip.empty?) ? cpr.strip : "NOASSERTION",
+          "description" => tp ? "Produced library #{e}, containing #{tp.name}." : "MESA library #{e}." })
+        contains << [did, fid]
+        src_ref = tp ? tp.spdxref : mesa_src_ref
+        gen_from << [fid, src_ref] if src_ref
+        lib_files << { arch: r.split("/")[1], stem: e.sub(/\.(a|so)(\..*)?\z/, ""), sid: fid }
+        n_libs += 1
+      elsif File.file?(p) && is_img.call(e)
+        fid = "SPDXRef-file-#{sanitize.call(r)}"
+        packages << base_pkg.call(fid, "FW: #{e}", {
+          "packageFileName" => r,
+          "comment" => "PLACEHOLDER: bootable demo image; the Linux kernel and buildroot rootfs component breakdown is provided by the toolchain/buildroot SPDX, to be imported in a later step.",
+          "description" => "Bootable demo firmware image #{e} (mesa-demo + Linux kernel + buildroot rootfs)." })
+        contains << [did, fid]
+        img_files << { arch: r.split("/")[1], sid: fid }
+        n_imgs += 1
+      end
+    end
+  end
+
+  if $opt_bin_tree && File.directory?($opt_bin_tree)
+    walk.call($opt_bin_tree, "bin", root_id)
+  elsif $opt_bin_tree
+    $err << "--bin-tree #{$opt_bin_tree.inspect} is not a directory"
+  end
+
+  # Merge-composition CONTAINS edges: a MEPA collection archive truly contains the
+  # driver archives merged into it (libmepa_sparx5.a -> Intel + Aquantia + ...),
+  # and a MEBA lib contains the MEPA collection. Add these within each arch,
+  # between the library files that are actually present there.
+  comp = SbomModel.merge_composition(builds)
+  n_comp = 0
+  lib_files.group_by { |f| f[:arch] }.each do |_arch, files|
+    by_stem = files.group_by { |f| f[:stem] }
+    files.each do |f|
+      (comp[f[:stem]] || []).each do |dep_stem|
+        (by_stem[dep_stem] || []).each do |df|
+          next if df[:sid] == f[:sid]
+          contains << [f[:sid], df[:sid]]
+          n_comp += 1
+        end
+      end
+    end
+  end
+
+  # External-SPDX imports (e.g. the buildroot rootfs): merge the referenced
+  # subtree and attach it to the arch's bootable images. The rootfs element's
+  # provider is arch-qualified (brsdk-arm, brsdk-arm64, ...), so it attaches to
+  # the images under bin/<arch>/ whose arch the provider ends with.
+  n_ext = 0
+  archs = (lib_files + img_files).map { |f| f[:arch] }.uniq
+  components.select(&:external_spdx).each do |el|
+    provider = el.external_spdx["provider"]
+    packages << package_hash(el)                     # the rootfs container element
+    root_of = el.spdxref
+    path = $opt_ext_spdx[provider]
+    m = path ? merge_import(path, el.external_spdx["import"], "SPDXRef-x-#{sanitize.call(provider)}-") : nil
+    if m
+      packages.concat(m[:packages])
+      m[:contains].each { |pa, ki| contains << [pa, ki] }
+      contains << [root_of, m[:root]]
+      n_ext += m[:packages].size
+    end
+    # Attach the rootfs element to the bootable images of the matching arch(s).
+    archs.select { |a| provider.end_with?("-#{a}") }.each do |a|
+      img_files.select { |f| f[:arch] == a }.each { |f| contains << [f[:sid], root_of] }
+    end
+  end
+
+  # Source components (the ws/ source view) as a sibling of the bin/ tree
+  # (external-spdx elements are attached to the images above, not here).
+  src_group = "SPDXRef-group-source"
+  packages << base_pkg.call(src_group, "Group: Source components", { "description" => "The source that goes into the release, and its third-party components." })
+  contains << [root_id, src_group]
+  components.reject(&:external_spdx).each do |c|
+    h = package_hash(c)
+    # In the source view, tag every component "SRC:" (replacing any leading
+    # tag such as "LIB:") so it is distinct from the produced library files.
+    h["name"] = "SRC: " + h["name"].sub(/\A[A-Z][A-Za-z0-9]*:\s*/, "")
+    packages << h
+    contains << [src_group, c.spdxref]
+  end
+
+  contains.uniq.each { |parent, kid| relationships << { "spdxElementId" => parent, "relationshipType" => "CONTAINS", "relatedSpdxElement" => kid } }
+  gen_from.uniq.each { |lib, src| relationships << { "spdxElementId" => lib, "relationshipType" => "GENERATED_FROM", "relatedSpdxElement" => src } }
+
+  $release_summary = "#{n_libs} libs, #{n_imgs} fw-images, #{n_comp} merge edges, #{n_ext} imported ext-spdx pkgs, #{components.count { |c| !c.external_spdx }} source components"
+
+elsif $opt_source
+  # Source-release SBOM: one root package for the release, then a synthetic
+  # "group" package per non-empty group, with each source component CONTAINED by
+  # its group. This organises the many source components (product / test /
+  # build-tool / doc / merely-aggregated) the way GPL-style "mere aggregation"
+  # calls for -- distributed together, but each a distinct work.
+  GROUPS = [
+    ["product",    "SPDXRef-group-product",    "Group: Product source",
+     "Source compiled into one or more shipped MESA library targets."],
+    ["test",       "SPDXRef-group-test",       "Group: Test code",
+     "Test-only code and test frameworks; not built into any shipped binary."],
+    ["build-tool", "SPDXRef-group-build-tool", "Group: Build tools",
+     "Tools used at build time to produce the release."],
+    ["doc",        "SPDXRef-group-doc",        "Group: Documentation resources",
+     "Third-party assets embedded into the generated MESA documentation."],
+    ["aggregated", "SPDXRef-group-aggregated", "Group: Merely aggregated",
+     "Shipped in the source tree but not built into any product, tool or test."],
+  ]
+
+  $err << "no source components found -- nothing to describe" if components.empty?
+  unknown = components.map(&:group).uniq - GROUPS.map(&:first)
+  $err << "unknown group(s): #{unknown.join(', ')}" unless unknown.empty?
+
+  root_id = "SPDXRef-source-release"
+  doc_base = $opt_name || "MESA source release SBOM"
+  root_pkg = {
+    "SPDXID"           => root_id,
+    "name"             => "MESA source release",
+    "versionInfo"      => spdx_val($packet_version),
+    "downloadLocation" => "NOASSERTION",
+    "filesAnalyzed"    => false,
+    "licenseConcluded" => "NOASSERTION",
+    "licenseDeclared"  => "NOASSERTION",
+    "copyrightText"    => "NOASSERTION",
+    "description"      => "The MESA source packet: an aggregation of the components below.",
+  }
+
+  # Group packages, in GROUPS order, only for groups that actually have members.
+  members = Hash.new { |h, k| h[k] = [] }
+  components.each { |c| members[c.group] << c }
+  group_pkgs = []
+  contains = []
+  GROUPS.each do |gname, gid, gtitle, gdesc|
+    next if members[gname].empty?
+    group_pkgs << {
+      "SPDXID"           => gid,
+      "name"             => gtitle,
+      "versionInfo"      => spdx_val($packet_version),
+      "downloadLocation" => "NOASSERTION",
+      "filesAnalyzed"    => false,
+      "licenseConcluded" => "NOASSERTION",
+      "licenseDeclared"  => "NOASSERTION",
+      "copyrightText"    => "NOASSERTION",
+      "description"      => gdesc,
+    }
+    contains << [root_id, gid]
+    members[gname].sort_by(&:id).each { |c| contains << [gid, c.spdxref] }
+  end
+
+  packages = [root_pkg] + group_pkgs + components.map { |c| package_hash(c) }
+  relationships = [
+    { "spdxElementId" => "SPDXRef-DOCUMENT", "relationshipType" => "DESCRIBES", "relatedSpdxElement" => root_id },
+  ]
+  contains.each do |parent, kid|
+    relationships << { "spdxElementId" => parent, "relationshipType" => "CONTAINS", "relatedSpdxElement" => kid }
+  end
+else
+  roots = model.roots.sort_by(&:id)
+  embedded = model.embedded.sort_by(&:id)
+  emit_set = model.emitted.to_set
+
+  # A document that describes nothing is not a valid SBOM; refuse to write one
+  # (e.g. when the build folders are missing, the default invocation shape).
+  $err << "no SW packets found in #{builds.join(', ')} -- nothing to describe" if roots.empty?
+
+  doc_base = $opt_name || "MESA Software Bill of Material"
+
+  # Roots (the SW packets the document DESCRIBES) first, then every other
+  # reachable component; SPDXID/name uniqueness is guaranteed by the validator.
+  packages = (roots + embedded).map { |c| package_hash(c) }
+
+  # DESCRIBES for each root, then the containment graph as CONTAINS edges.
+  relationships = roots.map do |c|
+    { "spdxElementId" => "SPDXRef-DOCUMENT", "relationshipType" => "DESCRIBES", "relatedSpdxElement" => c.spdxref }
+  end
+  contains = []
+  model.emitted.each do |c|
+    c.kids.each do |kid|
+      next unless emit_set.include?(kid)
+      contains << [c.spdxref, kid.spdxref]
+    end
+  end
+  contains.uniq.sort.each do |parent, kid|
+    relationships << { "spdxElementId" => parent, "relationshipType" => "CONTAINS", "relatedSpdxElement" => kid }
+  end
+end
+
+# Document name carries the packet identity and the product version so the
+# per-packet SBOMs are distinguishable (the SPDXID is always SPDXRef-DOCUMENT
+# per the spec; per-document identity is the documentNamespace). The namespace
+# is a meaningful, unique URI derived from the name plus a UUID.
+doc_name = "#{doc_base} (#{$packet_version})"
+slug = doc_base.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-+|-+\z/, "")
+namespace = "https://microchip.com/mesa/#{slug}-#{SecureRandom.uuid}"
+
+doc = {
+  "spdxVersion"       => "SPDX-2.3",
+  "dataLicense"       => "CC0-1.0",
+  "SPDXID"            => "SPDXRef-DOCUMENT",
+  "name"              => doc_name,
+  "documentNamespace" => namespace,
+  "creationInfo"      => {
+    "created"  => created,
+    "creators" => ["Tool: .cmake/sbom-spdx", "Organization: Microchip Technology Inc."],
+  },
+  "packages"          => packages,
+  "relationships"     => relationships,
+}
+
+# Non-standard licenses referenced above as LicenseRef-* must be defined here.
+unless $extracted.empty?
+  doc["hasExtractedLicensingInfos"] =
+    $extracted.sort.map { |ref, text| { "licenseId" => ref, "extractedText" => text.strip } }
+end
+
+json = JSON.pretty_generate(doc) + "\n"
+
+# Abort before writing anything, so a broken or empty document is never left at
+# the output path (which create-binary-packets copies from).
+if $err.size > 0
+  STDERR.puts "sbom-spdx: refusing to write SBOM (#{$err.size} error(s)):"
+  $err.each { |e| STDERR.puts "  #{e}" }
+  exit(-1)
+end
+
+summary = if $opt_release
+            $release_summary
+          elsif $opt_source
+            "#{components.size} source components in #{packages.size - components.size - 1} groups"
+          else
+            "#{roots.size} SW packets, #{embedded.size} embedded components"
+          end
+if $opt_output
+  FileUtils.mkdir_p(File.dirname($opt_output))
+  File.write($opt_output, json)
+  puts "Wrote SPDX document to #{$opt_output}  (#{summary})"
+else
+  # No -o: emit the document on stdout; the status line goes to stderr so stdout
+  # stays a clean SPDX document that can be piped.
+  STDERR.puts "SPDX document (#{summary})"
+  print json
+end

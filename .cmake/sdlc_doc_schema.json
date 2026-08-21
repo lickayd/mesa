@@ -1,0 +1,839 @@
+{
+    "$id": "http://schemas.microchip.com/mchp-trace",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$comment": "This schema uses Draft 7 of the specification for better tool support",
+    "title": "Microchip SW Documentation Lifecycle Artifact Data Format",
+    "type": "object",
+    "description": "The SW development lifecycle artifacts and their relations in a project",
+    "properties": {
+        "compliance-analysis": {
+            "description": "Compliance analysis",
+            "$ref": "#/$defs/compliance-analysis"
+        },
+        "sw-requirements": {
+            "description": "The functional software requirements",
+            "$ref": "#/$defs/sw-requirements"
+        },
+        "test-suites": {
+            "description": "Test suites",
+            "$ref": "#/$defs/test-suites"
+        },
+        "test-cases": {
+            "description": "Test cases",
+            "$ref": "#/$defs/test-cases"
+        },
+        "arch-elements": {
+            "description": "Software Architectural Elements (based on 4+1 model)",
+            "$ref": "#/$defs/arch-elements"
+        },
+        "test-setups": {
+            "description": "List of test setups",
+            "$ref": "#/$defs/test-setups"
+        },
+        "if-specifications": {
+            "description": "Interface specifications implementing protocols and their related services",
+            "$ref": "#/$defs/if-specifications"
+        },
+        "platform-definitions": {
+            "description": "Platform definitions with capability attribute values specified",
+            "$ref": "#/$defs/platform_defs"
+        },
+        "platform-capabilities": {
+            "description": "Requirements attributes for platform capability scoping",
+            "$ref": "#/$defs/platform_capabilities"
+        },
+        "capabilities": {
+            "description": "Definition of requirement capabilities",
+            "$ref": "#/$defs/capability_defs"
+        },
+        "references": {
+            "description": "References used by an artifact, typically to standards, articles or external documentation",
+            "$ref": "#/$defs/references"
+        },
+        "authorities": {
+            "description": "Name/numbering authorities for use by service specifications",
+            "$ref": "#/$defs/name-authorities"
+        },
+        "sw-coding-rules": {
+            "description": "Coding standard rule or guideline",
+            "$ref": "#/$defs/sw-coding-rules"
+        },
+        "test-case-common-steps": {
+            "description": "Common Configuration",
+            "$ref": "#/$defs/test-case-common-steps"
+        },
+        "page": {
+            "description": "Page-level metadata (a stable id and attributes for a documentation page)",
+            "$ref": "#/$defs/page"
+        },
+        "tool-classifications": {
+            "description": "FuSa software-tool classification (SPI-50435 / ISO 26262-8 Cl.11)",
+            "$ref": "#/$defs/tool-classifications"
+        },
+        "cmake-targets": {
+            "description": "CMake build targets and their linkage to SPDX SBOM components",
+            "$ref": "#/$defs/cmake-targets"
+        },
+        "spdx-elements": {
+            "description": "SPDX SBOM components referenced by cmake-targets (spdx-id) and sbom_add_kids",
+            "$ref": "#/$defs/spdx-elements"
+        }
+    },
+    "minProperties": 1,
+    "additionalProperties": false,
+    "$defs": {
+        "page": {
+            "type": "array",
+            "description": "Page-level metadata: a stable id and attributes for a single documentation page",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "$ref": "#/$defs/id"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Human-readable page title"
+                    },
+                    "owner": {
+                        "type": "string",
+                        "description": "Owning team or person"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Page lifecycle status"
+                    }
+                },
+                "required": [
+                    "id"
+                ]
+            }
+        },
+        "cmake-targets": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/cmake-target" }
+        },
+        "cmake-target": {
+            "type": "object",
+            "description": "One cmake build target. Links to an SPDX component via an inline 'spdx' block or a 'spdx-id' reference; neither means it is a transparent pass-through (not an SBOM component). Other initiatives may attach their own blocks.",
+            "additionalProperties": true,
+            "required": ["id", "name"],
+            "properties": {
+                "id": { "$ref": "#/$defs/id" },
+                "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The actual CMake target name"
+                },
+                "spdx": {
+                    "description": "Inline SPDX element (the common 1:1 case). Mutually exclusive with spdx-id.",
+                    "$ref": "#/$defs/spdx-element"
+                },
+                "spdx-id": {
+                    "description": "Reference to a spdx-elements[].id (several targets can share one component). Mutually exclusive with spdx / spdx-ids.",
+                    "$ref": "#/$defs/spdxref"
+                },
+                "spdx-ids": {
+                    "description": "References to several spdx-elements[].id, for a target that bundles more than one distinct component (e.g. two vendored crypto files). Mutually exclusive with spdx / spdx-id.",
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/spdxref" },
+                    "minItems": 1,
+                    "uniqueItems": true
+                }
+            },
+            "not": {
+                "anyOf": [
+                    { "required": ["spdx", "spdx-id"] },
+                    { "required": ["spdx", "spdx-ids"] },
+                    { "required": ["spdx-id", "spdx-ids"] }
+                ]
+            }
+        },
+        "spdx-elements": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/spdx-element" }
+        },
+        "spdx-element": {
+            "type": "object",
+            "description": "An SPDX SBOM component: a set of source files (directory/files) with license and provenance, or a source-less aggregate (no_src_aggr).",
+            "additionalProperties": false,
+            "required": ["id", "name", "license", "description"],
+            "properties": {
+                "id": { "$ref": "#/$defs/spdxref" },
+                "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Name written into the SPDX file (PackageName)"
+                },
+                "directory": {
+                    "type": "string",
+                    "description": "Source subtree for this component, relative to this yaml file"
+                },
+                "files": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "minItems": 1,
+                    "description": "Explicit source files, relative to this yaml file"
+                },
+                "license": {
+                    "type": "string",
+                    "pattern": "^(NONE|NOASSERTION|LicenseRef-[A-Za-z0-9.\\-]+|[A-Za-z0-9.+\\-]+(?:\\s+(?:AND|OR|WITH)\\s+[A-Za-z0-9.+\\-]+)*)$",
+                    "description": "SPDX license expression, a 'LicenseRef-<id>', or NONE/NOASSERTION. Prose is rejected."
+                },
+                "license_file": {
+                    "type": "string",
+                    "description": "Path (relative to this yaml file) to the full license text; required when license is a LicenseRef"
+                },
+                "license_text": {
+                    "type": "string",
+                    "description": "Inline full license text; required when license is a LicenseRef"
+                },
+                "download_location": {
+                    "type": "string",
+                    "pattern": "^(NONE|NOASSERTION|pkg:.+|(https?|ftp|git|ssh|svn|hg|bzr)([+:]).+)$",
+                    "description": "SPDX PackageDownloadLocation: URL/VCS/pkg: or NONE/NOASSERTION. Prose provenance goes in source_info."
+                },
+                "source_info": {
+                    "type": "string",
+                    "description": "Free-text provenance -> SPDX PackageSourceInfo"
+                },
+                "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Component version; always a string (quote it) so e.g. '1.10' is not truncated"
+                },
+                "use_packet_version": {
+                    "type": "boolean",
+                    "description": "When true, PackageVersion is the product version (lm_version from .version.yaml) rather than a literal version. Mutually exclusive with version."
+                },
+                "copyright": {
+                    "type": "string",
+                    "description": "Copyright statement -> SPDX PackageCopyrightText"
+                },
+                "no_src_aggr": {
+                    "type": "boolean",
+                    "description": "True for a source-less aggregate binary (e.g. VDSP_BIN_*); exempts the element from the directory/files requirement"
+                },
+                "group": {
+                    "type": "string",
+                    "enum": ["product", "test", "build-tool", "doc", "aggregated"],
+                    "description": "Source-SBOM grouping (how this component relates to the release): 'product' is source compiled into one or more shipped targets; 'test' is test code or a test-only framework; 'build-tool' is a build-time tool; 'doc' is an asset embedded in the generated documentation; 'aggregated' is merely aggregated (shipped in the source tree but not built into any product, tool or test). Defaults to 'product'. Ignored by the binary SBOM (which is driven by the cmake link graph)."
+                },
+                "sbom_add_kids": {
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/spdxref" },
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "description": "spdx-element ids baked into this one but not visible via the cmake link graph"
+                },
+                "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Short component description -> SPDX PackageDescription"
+                },
+                "external-spdx": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["provider", "import"],
+                    "description": "Realise this component by merging a subtree of an external SPDX document (e.g. the buildroot BSP rootfs, or ARM Trusted Firmware). The concrete file is passed to the generator as --ext-spdx <provider>:<path>.",
+                    "properties": {
+                        "provider": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Provider key matched to a --ext-spdx <provider>:<path> argument. Arch-specific documents use an arch-qualified key, e.g. 'brsdk-arm', 'brsdk-arm64', 'brsdk-mipsel'."
+                        },
+                        "import": {
+                            "$ref": "#/$defs/spdxref",
+                            "description": "SPDXID of the subtree root to import (its transitive CONTAINS is copied in; BUILD_DEPENDENCY_OF/BUILD_TOOL_OF are not followed)."
+                        }
+                    }
+                }
+            },
+            "allOf": [
+                {
+                    "description": "Exactly one of a literal version or use_packet_version:true, unless the component is imported from an external SPDX (versions come from the imported packages).",
+                    "anyOf": [
+                        { "required": ["external-spdx"] },
+                        { "oneOf": [
+                            { "required": ["version"] },
+                            { "required": ["use_packet_version"], "properties": { "use_packet_version": { "const": true } } }
+                        ] }
+                    ]
+                },
+                {
+                    "description": "Anchor to source unless it is a source-less aggregate or imported from an external SPDX.",
+                    "anyOf": [
+                        { "required": ["directory"] },
+                        { "required": ["files"] },
+                        { "required": ["no_src_aggr"], "properties": { "no_src_aggr": { "const": true } } },
+                        { "required": ["external-spdx"] }
+                    ]
+                },
+                {
+                    "description": "A LicenseRef must be backed by its license text.",
+                    "if": {
+                        "properties": { "license": { "pattern": "^LicenseRef-" } },
+                        "required": ["license"]
+                    },
+                    "then": {
+                        "anyOf": [
+                            { "required": ["license_file"] },
+                            { "required": ["license_text"] }
+                        ]
+                    }
+                }
+            ]
+        },
+        "compliance-analysis": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "$ref": "#/$defs/id"
+                    },
+                    "parent": {
+                        "$ref": "#/$defs/id",
+                        "description": "If used, points to the requirement this requirement is a part of"
+                    },
+                    "compliance-spec": {
+                        "type": "string",
+                        "description": "Pointer to the spec"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description"
+                    },
+                    "analysis": {
+                        "type": "string",
+                        "description": "Description"
+                    },
+                    "status": {
+                        "enum": [
+                            "Unknown",
+                            "Supported",
+                            "Partially-supported",
+                            "Not-supported"
+                        ],
+                        "description": "Description"
+                    },
+                    "references": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "References"
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "id"
+                ]
+            },
+            "uniqueItems": true
+        },
+        "sw-requirements": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/sw-requirement"
+            },
+            "uniqueItems": true
+        },
+        "sw-requirement": {
+            "type": "object",
+            "description": "A software requirement record",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "parent": {
+                    "$ref": "#/$defs/id",
+                    "description": "If used, points to the requirement this requirement is a part of"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "The functional sw requirement as adoc formatted text"
+                },
+                "vc": {
+                    "type": "string",
+                    "description": "Verification criterions as adoc formatted text"
+                }
+            },
+            "required": [
+                "id",
+                "description"
+            ]
+        },
+        "test-case-common-steps": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/test-case-common-step"
+            },
+            "uniqueItems": true
+        },
+        "test-case-common-step": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Common configuration on DUTs"
+                },
+                "steps": {
+                    "type": "string",
+                    "steps": "Common configuration steps"
+                }
+            }
+        },
+        "test-cases": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/test-case"
+            },
+            "uniqueItems": true
+        },
+        "test-case": {
+            "type": "object",
+            "description": "A test case specification",
+            "additionalProperties": false,
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "parent": {
+                    "$ref": "#/$defs/id",
+                    "description": "If used, points to the qualification test case this case is a part of"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "DUT behaviour is verified as per feature configuration in the test case"
+                },
+                "test-owner": {
+                    "enum": [
+                        "SW-Development",
+                        "Verification",
+                        "SQA"
+                    ],
+                    "description": "Team being responsible for of test case."
+                },
+                "exec-env": {
+                    "enum": [
+                        "Static",
+                        "Simulated",
+                        "Target"
+                    ],
+                    "description": "Type of test depending on scenario used for testing the feature. Static referes to code analysis, SIL is SW-in-the-loop, HIL is HW-in-the-loop."
+                },
+                "test-suite": {
+                    "$ref": "#/$defs/id",
+                    "description": "Link to test suite"
+                },
+                "test-type": {
+                    "enum": [
+                        "Regression",
+                        "CodeCovGuided",
+                        "ReqCovGuided",
+                        "UseCase",
+                        "ComplexUserCase",
+                        "Negative",
+                        "Stress"
+                    ],
+                    "description": "Type of test depending on scenario used for testing the feature. Static referes to code analysis, SIL is SW-in-the-loop, HIL is HW-in-the-loop."
+                },
+                "test-setup": {
+                    "$ref": "#/$defs/id",
+                    "description": "ID of the test-setup to be used"
+                },
+                "test-prio": {
+                    "enum": [
+                        "P0",
+                        "P1",
+                        "P2",
+                        "P3"
+                    ],
+                    "description": "Describes the priority depending on the test type"
+                },
+                "script-id": {
+                    "type": "string",
+                    "description": "Describes the script id used in automation"
+                },
+                "test-steps": {
+                    "type": "string",
+                    "description": "Steps that are defined to test the feature behaviour on the board"
+                },
+                "test-criteria": {
+                    "type": "string",
+                    "description": "Describes the criteria to conclude whether the test case is passed or failed"
+                },
+                "sw-requirements": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "description": "SW requirements that are covered in test scope"
+                    }
+                },
+                "arch-element-id": {
+                    "$ref": "#/$defs/id",
+                    "description": "If used, points to the interfaces covered by the test case"
+                },
+                "arch-element-interfaces": {
+                    "type": "string",
+                    "description": "In some cases a given architecture element have many interfaces, and we need multiple test cases to cover the entire architecture element. In such cases, this field shall be used to list the interfaces covered by a given test case."
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "arch-elements": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/sw-element"
+            },
+            "uniqueItems": true
+        },
+        "sw-element": {
+            "type": "object",
+            "description": "A software element specification",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "parent": {
+                    "$ref": "#/$defs/id",
+                    "description": "ID"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description of element"
+                },
+                "interface": {
+                    "type": "string",
+                    "description": "Interface of element"
+                }
+            },
+            "required": [
+                "id",
+                "description",
+                "interface"
+            ]
+        },
+        "test-suites": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/test-suite"
+            },
+            "uniqueItems": true
+        },
+        "test-suite": {
+            "type": "object",
+            "description": "Description of a test suite.",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description of a test suite"
+                }
+            }
+        },
+        "test-setups": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/test-setup"
+            },
+            "uniqueItems": true
+        },
+        "test-setup": {
+            "type": "object",
+            "description": "Description of a physical test setup.",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "The Test setup with DUTs, Tester and Network connections"
+                }
+            }
+        },
+        "id": {
+            "type": "string",
+            "description": "The artifact identification string, used for traceability between artifacts",
+            "minLength": 1
+        },
+        "spdxref": {
+            "type": "string",
+            "description": "An SPDX element identifier, emitted verbatim as the SPDXID and used in relationships. SPDX 2.3 permits only letters, digits, '.' and '-' after the 'SPDXRef-' prefix (note: '_' is not allowed).",
+            "pattern": "^SPDXRef-[A-Za-z0-9.\\-]+$"
+        },
+        "platform_defs": {
+            "type": "array",
+            "description": "Definition of one or more platforms and their capabilities",
+            "items": {
+                "$ref": "#/$defs/platform_def",
+                "description": "Platform capability specification"
+            },
+            "uniqueItems": true
+        },
+        "platform_def": {
+            "type": "object",
+            "description": "The platform definition",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description of the platform"
+                }
+            }
+        },
+        "platform_capabilities": {
+            "type": "array",
+            "description": "Definition of platform capabilities",
+            "items": {
+                "$ref": "#/$defs/platform_cap",
+                "description": "Platform capability specification"
+            },
+            "uniqueItems": true
+        },
+        "platform_cap": {
+            "type": "object",
+            "description": "Platform capability specification",
+            "properties": {
+                "capability": {
+                    "$ref": "#/$defs/id"
+                },
+                "platform": {
+                    "$ref": "#/$defs/id"
+                },
+                "value": {
+                    "type": "string",
+                    "description": "The actual value of the capability attribute referenced on the specified platform"
+                }
+            },
+            "additionalProperties": false
+        },
+        "capability_defs": {
+            "type": "array",
+            "description": "Declaration of platform capability attributes",
+            "items": {
+                "type": "object",
+                "description": "Platform capability attribute declaration",
+                "properties": {
+                    "id": {
+                        "$ref": "#/$defs/id",
+                        "description": "ID of the capability"
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Type of the capability"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description of the capability"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "uniqueItems": true
+        },
+        "references": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/reference"
+            },
+            "uniqueItems": true
+        },
+        "reference": {
+            "type": "object",
+            "description": "A reference to documentation external to the artifacts",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Title of the reference"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL to the reference"
+                }
+            },
+            "additionalProperties": true,
+            "required": [
+                "id",
+                "name"
+            ]
+        },
+        "sw-coding-rules": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/sw-coding-rule"
+            },
+            "uniqueItems": true
+        },
+        "sw-coding-rule": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "What is this?"
+                },
+                "severity": {
+                    "enum": [
+                        "Mandatory",
+                        "Required",
+                        "Advisory"
+                    ],
+                    "description": "Severity"
+                },
+                "deviation": {
+                    "type": "string",
+                    "description": "How are deviation tracked"
+                },
+                "enforcement": {
+                    "type": "string",
+                    "description": "How shall this rule be enforced"
+                },
+                "scope": {
+                    "enum": [
+                        "TARGET-ALL",
+                        "TARGET-LM",
+                        "TARGET-CORE",
+                        "TEST-ALL",
+                        "TEST-LM",
+                        "TARGET-AND-TEST",
+                        "SUPPORT-ALL",
+                        "SUPPORT-LM",
+                        "REPO"
+                    ],
+                    "description": "Where does this apply"
+                }
+            },
+            "required": [
+                "id",
+                "description",
+                "scope"
+            ]
+        },
+        "tool-classifications": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/tool-classification"
+            },
+            "uniqueItems": true
+        },
+        "tool-classification": {
+            "type": "object",
+            "description": "A software-tool classification record (SPI-50435 / ISO 26262-8 Cl.11)",
+            "properties": {
+                "id": {
+                    "$ref": "#/$defs/id"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "SW tool name"
+                },
+                "version": {
+                    "type": "string",
+                    "description": "Resolved tool version (auto-extracted from the build environment by gen-tool-versions.rb)"
+                },
+                "version-source": {
+                    "type": "string",
+                    "description": "Where the version is pinned/locked (toolchain file, container tag, Gemfile.lock, in-tree path)"
+                },
+                "vendor": {
+                    "type": "string",
+                    "description": "Tool vendor / origin (3rd-party or Microchip homegrown)"
+                },
+                "purpose": {
+                    "type": "string",
+                    "description": "Use case: what the tool does in the flow"
+                },
+                "tool-impact": {
+                    "enum": [
+                        "TI1",
+                        "TI2"
+                    ],
+                    "description": "Tool Impact (ISO 26262-8): TI1 no impact, TI2 possible impact"
+                },
+                "error-detection": {
+                    "enum": [
+                        "TD1",
+                        "TD2",
+                        "TD3",
+                        "n/a"
+                    ],
+                    "description": "Tool error Detection: TD1 high, TD2 medium, TD3 low (n/a when TI1)"
+                },
+                "tcl": {
+                    "enum": [
+                        "TCL1",
+                        "TCL2",
+                        "TCL3"
+                    ],
+                    "description": "Tool Confidence Level (result); TCL2/TCL3 require qualification"
+                },
+                "iec-61508-class": {
+                    "enum": [
+                        "T1",
+                        "T2",
+                        "T3"
+                    ],
+                    "description": "IEC 61508 tool class (SPI-50435-001 conversion)"
+                },
+                "detection-measures": {
+                    "type": "string",
+                    "description": "TD safety/detection measures and assumptions of use (AoU)"
+                },
+                "qualification-method": {
+                    "type": "string",
+                    "description": "Qualification method if TCL2/TCL3, else not required (TCL1)"
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Lifecycle status (draft/reviewed/...)"
+                },
+                "rationale": {
+                    "type": "string",
+                    "description": "The TI/TD/TCL argument"
+                }
+            },
+            "required": [
+                "id",
+                "name",
+                "tool-impact",
+                "tcl"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+                {
+                    "if": { "properties": { "tool-impact": { "const": "TI2" } } },
+                    "then": {
+                        "required": ["error-detection", "rationale", "qualification-method"],
+                        "$comment": "A tool that can impact the item (TI2) must document its error-detection level (TD), the TI/TD/TCL rationale, and the qualification method (for TCL1 this states 'Not required')"
+                    }
+                },
+                {
+                    "if": { "properties": { "tcl": { "enum": ["TCL2", "TCL3"] } } },
+                    "then": {
+                        "required": ["error-detection", "rationale", "qualification-method"],
+                        "$comment": "TCL2/TCL3 tools require qualification; the TI/TD argument and qualification method are mandatory evidence"
+                    }
+                }
+            ]
+        }
+    }
+}

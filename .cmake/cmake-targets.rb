@@ -24,17 +24,17 @@ class CmakeTargets
     @root_targets = []
     load_cmake_target_db()
     load_compile_commands()
+
   end
 
   def visit(target_name, &cb)
     stack = []
-    #puts "Visit: #{target_name}"
     visit_(target_name, stack, "", cb)
   end
 
  private
   def load_cmake_target_db
-    puts "Reading: #{@path}/cmake_target_db.txt"
+    STDERR.puts "Reading: #{@path}/cmake_target_db.txt"
     x = File.read("#{@path}/cmake_target_db.txt")
 
     @targets = {}
@@ -53,7 +53,7 @@ class CmakeTargets
         end
       elsif l =~ /([^ ]+) (\w+) =\s*$/
       else
-        puts "Garbage: #{l}"
+        STDERR.puts "Garbage: #{l}"
       end
     end
 
@@ -72,7 +72,7 @@ class CmakeTargets
       deps.each do |d|
         dd = @targets[d]
         if dd.nil?
-          puts "Missing dependency! #{k} dependes on '#{d}', but '#{d}' could not be found"
+          STDERR.puts "Missing dependency! #{k} dependes on '#{d}', but '#{d}' could not be found"
         else
           @targets[d]["RDEPS"] << k
         end
@@ -100,40 +100,32 @@ class CmakeTargets
   def load_compile_commands
     j = JSON.parse(File.read("#{@path}/compile_commands.json"))
     @compile_cmds = {}
-    @compile_cmds_by_src = {}
 
     j.each do |r|
-      #puts "----"
       next_is_output = false
       o = nil
-      #puts r["command"]
       Shellwords.split(r["command"]).each do |w|
         o = w if next_is_output
         next_is_output = (w == "-o")
       end
 
-      #puts o
       if o
         p = Pathname.new o
         p = p.expand_path(@path)
         if @compile_cmds[o]
           raise "multiple commands generate same output!"
         end
-        #puts "abs out path: #{p.to_s}"
-        r["obj"] = p.to_s
-        @compile_cmds_by_src[r["file"]] = r
         @compile_cmds[p.to_s] = r
       end
     end
   end
 
   def visit_(target_name, stack, indent, cb)
-    #puts "#{indent}#{target_name}"
     t = @targets[target_name]
     return if t.nil?
 
     if t["mark"]
-      puts "Loops! #{stack.inspect}"
+      STDERR.puts "Loops! #{stack.inspect}"
       raise "loops"
     else
       t["mark"] = true
@@ -141,7 +133,10 @@ class CmakeTargets
 
     stack.push target_name
 
-    add_compile_cmds t
+    # NB: the SBOM only needs the target dependency graph, not per-source compile
+    # commands. add_compile_cmds is intentionally not called here: MESA injects
+    # TARGET_OBJECTS from other targets into SOURCES, which its source<->object
+    # pairing cannot match. Kept below for reference / other callers.
     cb.call target_name, t, indent, stack
 
     deps = targets_deps(t)
@@ -156,14 +151,21 @@ class CmakeTargets
   def add_compile_cmds target
     compile_command_records = []
     src_bin_pairs = []
+    target["SOURCES"].zip(target["TARGET_OBJECTS"]).each do |src_bin|
+      src, bin = src_bin
 
-    src_a = []
-    target["TARGET_OBJECTS"].each do |bin|
       p = Pathname.new bin
       if not p.absolute?
         p = p.expand_path(@path)
       else
         p = p.expand_path
+      end
+
+      src_path = Pathname.new src
+      if not src_path.absolute?
+        src_path = src_path.expand_path(target["SOURCE_DIR"])
+      else
+        src_path = src_path.expand_path
       end
 
       cmds = @compile_cmds[p.to_s]
@@ -180,28 +182,13 @@ class CmakeTargets
         src_path_json = src_path_json.expand_path
       end
 
-      src_bin_pairs << [src_path_json.to_s, p.to_s]
-      src_a << src_path_json.to_s
+      if src_path.to_s != src_path_json.to_s
+        raise "src-patch did not match! #{src_path.to_s} != #{src_path_json.to_s}"
+      end
+
+      src_bin_pairs << [src_path.to_s, p.to_s]
       compile_command_records << cmds
     end
-
-    src_b = []
-    target["SOURCES"].each do |src|
-      src_path = Pathname.new src
-      if not src_path.absolute?
-        src_path = src_path.expand_path(target["SOURCE_DIR"])
-      else
-        src_path = src_path.expand_path
-      end
-      src_b << src_path.to_s
-    end
-
-    s = src_a - src_b
-    if (s.size != 0)
-      pp s
-      raise "Some sources was not covered"
-    end
-
     target["COMPILE_COMMANDS"] = compile_command_records
     target["SRC_BIN_PAIRS"] = src_bin_pairs
   end
@@ -209,7 +196,7 @@ end
 
 if $0 == __FILE__
   $opt_path = nil
-  $top = File.dirname(File.dirname(File.expand_path(__FILE__)))
+  $top = File.dirname(File.dirname(File.dirname(File.expand_path(__FILE__))))
 
   opt_parser = OptionParser.new do |opts|
     opts.banner = """Usage: lm-cov-runner [options]
