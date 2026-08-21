@@ -81,6 +81,8 @@ end
   next if /mepa.microchip.lan80xx.src.sha256/ =~ f
   next if /.cmake\/docker\/SimpleGridClient/ =~ f
 
+  next if ".cmake/spdx-outline.html" == f # HTML viewer asset; MIT, see spdx-outline-inline.rb
+
   next if "misra-lan969x_lm.readme" == f
   next if ".cmake/pod-base.yaml" == f
   next if ".cmake/pod-build.yaml" == f
