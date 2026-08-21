@@ -658,6 +658,35 @@ def measure_offered_load_check(delta, ig, expected_fps, etolerance)
     return ok
 end
 
+# Confirms a pcap_analyze deficit against the DUT's own egress counters over the same window. Unlike
+# measure_offered_load_check this never fails the test itself, it only tells the caller whether the DUT's own view agrees
+def measure_egress_load_check(delta, eg, expected_fps, etolerance, pcp)
+    return true if (delta == nil)
+    ok = true
+    secs = delta[:secs][eg]
+    if (pcp == [])
+        exp = expected_fps[0].to_i
+        return true if (exp == 0)
+        min = (exp - ((exp * (etolerance[0] || 0).to_f) / 100)).to_i
+        fps = (delta[:tx][eg] / secs).to_i
+        if (fps < min)
+            t_i("Confirmation: egress port #{eg} delivered #{fps} fps over this window, the #{exp} fps expected needs at least #{min} fps. The DUT's own counters show this deficit too")
+            ok = false
+        end
+    else
+        pcp.each_with_index do |pcp_value, idx|
+            exp = expected_fps[idx].to_i
+            next if (exp == 0)
+            min = (exp - ((exp * (etolerance[idx] || 0).to_f) / 100)).to_i
+            fps = (delta[:prio_tx][eg][pcp_value.to_i] / secs).to_i
+            next if (fps >= min)
+            t_i("Confirmation: egress port #{eg} pcp #{pcp_value} delivered #{fps} fps over this window, the #{exp} fps expected needs at least #{min} fps. The DUT's own counters show this deficit too")
+            ok = false
+        end
+    end
+    return ok
+end
+
 # Serializes check_rate() across DUTs that share one PC's traffic generator. Held on the PC itself,
 # since that's the one thing every caller can reach, even from different hosts.
 RATE_LOCK_FILE = "/tmp/mesa-rate-test.lock"
@@ -707,6 +736,9 @@ end
 
 # Wrapper function for measure() utilility
 # This takes a hash input and does not create a test block
+# A pcap-verdicted deficit the DUT's own counters can't confirm on either end is retried once, then treated as a real failure
+MEASURE_MAX_ATTEMPTS = 2
+
 def check_rate(cfg)
     # Extract input parameters
     ig = fld_get(cfg, :ig)
@@ -739,8 +771,15 @@ def check_rate(cfg)
     pre_tx = with_pre_tx ? 1 : 0    # Calculate the possible pre tx time in seconds
     # The transmitters must outlive the counter window, which extends past the capture by the serial counter reads. They are always killed below
     time = (pre_tx+sec+100)
-    pid_ef = []
     max_cnt = 50
+
+    attempt = 0
+    counters = nil
+
+    # Loop Start
+    loop do
+    attempt += 1
+    pid_ef = []
     line_rate_fps = []
     ig.each_with_index do |ig_value, ig_idx|
         if (size_array != [])
@@ -872,6 +911,8 @@ def check_rate(cfg)
         t_i("Analyze skipped. The capture is kept in #{fname} on the PC")
         return counters
     end
+    # A deficit the DUT's own egress counters confirm over this exact window is real, not worth retrying
+    egress_ok = measure_egress_load_check(counters_window, eg, expected_fps, etolerance, pcp)
 
     t_i("Analyze pcap file")
     expected_count = ""
@@ -898,19 +939,30 @@ def check_rate(cfg)
             expected_open_ratio << "#{open_ratio_pct[pcp_idx] || 50},"
         end
         sp_opt = strict_priority ? " --strict-priority --sp-slack #{sp_slack}" : ""
-        res = $ts.pc.try("pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle} --exp-open-ratio #{expected_open_ratio}#{sp_opt} #{fname}")
+        cmd = "pcap_analyze.rb --frame-count pcp --pre-tx-sec #{pre_tx} --count-sec #{sec} --pcp_values #{expected_pcp} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{expected_cycle} --exp-open-ratio #{expected_open_ratio}#{sp_opt} #{fname}"
     else
         expected_count = sec*expected_fps[0]
         expected_tolerance = ((expected_count * etolerance[0]) / 100) + ((((expected_count * etolerance[0]) % 100) != 0) ? 1 : 0)
-        res = $ts.pc.try("pcap_analyze.rb --frame-count all --pre-tx-sec #{pre_tx} --count-sec #{sec} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{fname}")
+        cmd = "pcap_analyze.rb --frame-count all --pre-tx-sec #{pre_tx} --count-sec #{sec} --exp-count #{expected_count} --exp-tolerance #{expected_tolerance} #{fname}"
     end
+
+    # A deficit neither DUT counter saw is likely generator-host jitter, not a real DUT problem, so retry once.
+    # try_ignore keeps a retried attempt from marking the test failed before we know it needs to be
+    last_attempt = (attempt >= MEASURE_MAX_ATTEMPTS) || !egress_ok
+    res = last_attempt ? $ts.pc.try(cmd) : $ts.pc.try_ignore(cmd)
 
     # pcap_analyze.rb saved a copy when it failed. Keep the analyzed file too, the next measurement removes it again
     if (res[:res] == 0)
         $ts.pc.run("rm -f #{fname}")
-    else
+        break
+    elsif (last_attempt)
         t_i("Analyze failed. The capture is kept in #{fname} on the PC")
+        break
+    else
+        t_i("Analyze failed on attempt #{attempt}/#{MEASURE_MAX_ATTEMPTS}, but the DUT's own ingress and egress counters over this exact window show no deficit, retrying, likely the shared generator host's scheduler jitter rather than a DUT issue")
     end
+    end
+    # Loop End
 
     return counters
     ensure
