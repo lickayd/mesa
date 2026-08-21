@@ -72,14 +72,25 @@ the doc-bundle assets, ...), migrated from the legacy `.module_info` files.
   is supplied for an arch, the image stays a placeholder.
 * The *source components* (the `ws/` source view) as a sibling group.
 
+Package names are prefixed by kind so the tree reads at a glance: `DIR:` for
+directories, `LIB:` for produced library files, `FW:` for firmware images, and
+`SRC:` for source components (e.g. `LIB: libmepa_sparx5.a`, `FW: armv7_lan966x.itb`,
+`SRC: Intel GPY211 PHY`).
+
 === License attribution
 
 Every library file is attributed from the cmake target graph: a library whose
 target maps to a third-party `spdx-element` carries that license (e.g.
-`libmepa_drv_intel.a` &#8594; BSD-3-Clause; `libmepa_drv_aqr.a` &#8594; MIT), and
-is linked to its source with `GENERATED_FROM`. Everything else is Microchip MESA
-(MIT). A generation-time gate fails if any listed component with a real license
-lacks a copyright notice.
+`libmepa_drv_intel.a` &#8594; BSD-3-Clause; `libmepa_drv_aqr.a` &#8594; MIT).
+Everything else is Microchip MESA (MIT). A generation-time gate fails if any
+listed component with a real license lacks a copyright notice.
+
+Every produced library is linked to its source with `GENERATED_FROM`: the
+vendored drivers to their own component, and all Microchip libraries (the MESA
+API libs and the MEPA/MEBA collections) to `SRC: MESA`. Because a chip output is
+built by both a shared and a static target and only one carries the
+`sdlc-objects.yaml` mapping, the mapping is resolved across *all* targets that
+produce a given output name, so no library is left without a source edge.
 
 === Partial-linking composition (important)
 
@@ -104,6 +115,15 @@ database (`cmake_target_db_full.txt`) list exactly what was merged. MESA's
 merged collections) and its dependencies likewise, giving
 `{ owner_lib_stem => [merged_lib_stem, ...] }`. The generator then adds a
 `CONTAINS` edge between the corresponding library files present in each arch.
+
+=== Browsable HTML outline
+
+`aggr-artifacts.rb` bakes the release SBOM into a standalone, foldable HTML
+viewer with `spdx-outline-inline.rb`, shipped next to the JSON as
+`mesa-sbom-outline.html`. It renders the package/relationship tree with no server
+and no file picker (drag/drop still works to load another document), so the SBOM
+can be inspected by just opening the file. Both the JSON and the HTML are copied
+into `images/` and archived by the CI build for direct pickup.
 
 == [[external-spdx]] Importing external SPDX (buildroot rootfs, ARM-TF)
 
