@@ -3579,6 +3579,59 @@ mepa_rc mepa_t1s_get_plca_config(struct mepa_device *dev,
     return dev->drv->mepa_t1s->mepa_driver_t1s_get_plca_config(dev, cfg);
 }
 
+mepa_rc mepa_tunable_bulk_set(struct mepa_device *dev,
+                              uint32_t size,
+                              const mepa_tunable_t *tunables)
+{
+    uint32_t i;
+
+    if (tunables == NULL) {
+        return MESA_RC_ERR_PARM;
+    }
+
+    /* Validate the whole array before anything is written to the PHY, so that a
+     * bad entry cannot leave the earlier entries already applied */
+    for (i = 0; i < size; i++) {
+        if (tunables[i].link_id >= MESA_LINK_ID_LAST) {
+            return MESA_RC_ERR_PARM;
+        }
+
+        if (tunables[i].type >= MESA_TUNABLE_LAST) {
+            return MESA_RC_ERR_PARM;
+        }
+    }
+
+    if ((dev == NULL) || (dev->drv->mepa_driver_tunable_bulk_set == NULL)) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    return dev->drv->mepa_driver_tunable_bulk_set(dev, size, tunables);
+}
+
+mepa_rc mepa_tunable_get(struct mepa_device *dev,
+                         mepa_link_id_t link,
+                         mepa_tunable_type_t type,
+                         uint32_t *val)
+{
+    if (val == NULL) {
+        return MESA_RC_ERR_PARM;
+    }
+
+    if ((link >= MESA_LINK_ID_LAST)) {
+        return MESA_RC_ERR_PARM;
+    }
+
+    if (type >= MESA_TUNABLE_LAST) {
+        return MESA_RC_ERR_PARM;
+    }
+
+    if ((dev == NULL) || (dev->drv->mepa_driver_tunable_get == NULL)) {
+        return MESA_RC_NOT_IMPLEMENTED;
+    }
+
+    return dev->drv->mepa_driver_tunable_get(dev, link, type, val);
+}
+
 #if defined(MEPA_OPSYS_VELOCITYSP)
 static void mepa_trace_buf_init(lmu_fmt_state_buf128_t *buf, const char *fmt)
 {

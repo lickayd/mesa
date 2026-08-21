@@ -635,5 +635,29 @@ typedef enum {
 // not used anywhere within MESA.
 typedef int (*mesa_debug_printf_t)(const char *fmt, ...) MESA_ATTR_PRINTF(1, 2);
 
+// The unit of the tunable is target and implementation dependent. Typically the
+// raw value is written into the HW (only masking out size of the field). To use
+// this, one will have to reference the datasheet/registers list of the given
+// device.
+typedef enum {
+    MESA_TUNABLE_TX_AMPL,
+
+    MESA_TUNABLE_LAST,
+} mesa_tunable_type_t;
+
+typedef enum {
+    MESA_LINK_ID_SWITCH,
+    MESA_LINK_ID_PHY_HOST,
+    MESA_LINK_ID_PHY_LINE,
+
+    MESA_LINK_ID_LAST,
+} mesa_link_id_t;
+
+typedef struct {
+    mesa_link_id_t      link_id;
+    mesa_tunable_type_t type;
+    uint32_t            val;
+} mesa_tunable_t;
+
 #include <microchip/ethernet/hdr_end.h>
 #endif // MICROCHIP_ETHERNET_COMMON

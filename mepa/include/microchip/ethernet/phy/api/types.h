@@ -48,6 +48,9 @@ typedef mesa_phy_event_t mepa_event_t;
 typedef mesa_phy_veriphy_status_t mepa_cable_diag_status_t;
 typedef mesa_port_admin_state_t mepa_port_admin_state_t;
 typedef mesa_debug_printf_t mepa_debug_print_t;
+typedef mesa_tunable_type_t mepa_tunable_type_t;
+typedef mesa_link_id_t mepa_link_id_t;
+typedef mesa_tunable_t mepa_tunable_t;
 typedef uint16_t mepa_vid_t;
 typedef uint16_t mepa_etype_t;
 

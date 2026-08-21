@@ -874,6 +874,39 @@ typedef uint32_t (*mepa_capability_t)(struct mepa_device *dev, uint32_t capabili
  **/
 typedef mepa_rc (*mepa_driver_phy_qsgmii_sync_t)(struct mepa_device *dev);
 
+/**
+ * \brief To set tunables
+ *
+ * \param dev        [IN]  Driver instance.
+ * \param tunables   [IN]  An array of tunables. Which contains the link_id, the
+ *                         tunable type and the value. The value is set directly
+ *                         into the register. The meaning of the value depends
+ *                         on the link and tunable type.
+ * \param size       [IN]  The size of the tunables array.
+ *
+ * The entries are applied in order and the first failure aborts the call, so
+ * the entries before it stay applied.
+ *
+ * \return
+ *   MEPA_RC_OK on success
+ **/
+typedef mepa_rc (*mepa_driver_tunable_bulk_set_t)(struct mepa_device *dev, uint32_t size, const mepa_tunable_t *tunables);
+
+/**
+ * \brief To get tunables
+ *
+ * \param dev        [IN]   Driver instance.
+ * \param link       [IN]   Link id type
+ * \param type       [IN]   Tunable type
+ * \param val        [OUT]  Value that is set directly into the register. The
+ *                          meaning of the value depends on link and tunable
+ *                          types
+ *
+ * \return
+ *   MEPA_RC_OK on success
+ **/
+typedef mepa_rc (*mepa_driver_tunable_get_t)(struct mepa_device *dev, mepa_link_id_t link, mepa_tunable_type_t type, uint32_t *val);
+
 typedef struct mepa_driver {
     mepa_driver_delete_t                 mepa_driver_delete;
     mepa_driver_reset_t                  mepa_driver_reset;
@@ -936,6 +969,8 @@ typedef struct mepa_driver {
     mepa_driver_warmrestart_conf_set_t   mepa_driver_warmrestart_conf_set;
     mepa_driver_serdes_tx_conf_set_t     mepa_driver_serdes_tx_conf_set;
     mepa_driver_phy_qsgmii_sync_t        mepa_driver_phy_qsgmii_sync;
+    mepa_driver_tunable_bulk_set_t       mepa_driver_tunable_bulk_set;
+    mepa_driver_tunable_get_t            mepa_driver_tunable_get;
     mepa_ts_driver_t                     *mepa_ts;
     mepa_macsec_driver_t                 *mepa_macsec;
     mepa_tc10_driver_t                   *mepa_tc10;

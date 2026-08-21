@@ -1200,5 +1200,45 @@ mepa_rc mepa_warmstart_conf_set(struct mepa_device *dev, const mepa_restart_t re
 
 mepa_rc mepa_phy_qsgmii_sync(struct mepa_device *dev);
 
+/**
+ * \brief To set tunables. This will set directly the value in the HW registers
+ *
+ * \param dev        [IN]  Driver instance.
+ * \param size       [IN]  The size of the tunables array. A size of zero is
+ *                         accepted and does nothing.
+ * \param tunables   [IN]  An array of tunables. Which contains the link_id, the
+ *                         tunable type and the value. The value is set directly
+ *                         into the register. The meaning of the value depends
+ *                         on the link and tunable type.
+ *
+ * The whole array is validated before anything is written. The entries are then
+ * applied in order and the first failure aborts the call, so the entries before
+ * it stay applied.
+ *
+ * \return
+ *   MEPA_RC_OK on success
+ **/
+mepa_rc mepa_tunable_bulk_set(struct mepa_device *dev, uint32_t size, const mepa_tunable_t *tunables);
+
+/**
+ * \brief To get tunables. This will read directly the value from the HW registers.
+ *        One should not expect that all 'set-able' tunables to also be
+ *        read-able
+ *
+ * \param dev        [IN]  Driver instance.
+ * \param link       [IN]  Link id type
+ * \param type       [IN]  Tunable type
+ * \param val        [OUT]  Value that is set directly into the register. The
+ *                         meaning of the value depends on link and tunable
+ *                         types
+ *
+ * This is more for debug purpose. That is the reason of not implementing a bulk
+ * operation for the get.
+ *
+ * \return
+ *   MEPA_RC_OK on success
+ **/
+mepa_rc mepa_tunable_get(struct mepa_device *dev, mepa_link_id_t link, mepa_tunable_type_t type, uint32_t *val);
+
 #include <microchip/ethernet/hdr_end.h>
 #endif
