@@ -1048,6 +1048,11 @@ mepa_drivers_t mepa_lan867x_driver_init(void);
 mepa_drivers_t mepa_lan80xx_driver_init(void);
 #endif /* MEPA_HAS_LAN80XX */
 
+#if defined(MEPA_HAS_AS2XXXX)
+/** \brief Returns drivers for as2xxxx PHY */
+mepa_drivers_t mepa_as2xxxx_driver_init();
+#endif /* MEPA_HAS_LAN80XX */
+
 #if defined(MEPA_HAS_DUMMY_PHY)
 /** \brief Dummy SW driver */
 mepa_drivers_t mepa_dummy_driver_init(void);

@@ -952,6 +952,15 @@ typedef enum {
     MEPA_CAP_LOOPBACK,                    /* PHY supports loopback. The return value
                                              is a bitmask where each bit represents an
                                              entry in the struct mepa_loopback_t */
+
+    MEPA_CAP_HOST_RATE_FOLLOWS_LINE,      /* The PHY does not rate-adapt between its line and
+                                             host sides, so the host interface must be run at
+                                             the negotiated line rate. Returns 1 when the
+                                             application is required to reconfigure its MAC to
+                                             the line speed on every link-up and then call
+                                             mepa_if_set(), which makes the PHY align its host
+                                             side to match. Returns 0 for a PHY that adapts
+                                             internally, whose host rate must be left alone. */
 } mepa_cap_t;
 
 #include <microchip/ethernet/hdr_end.h>  /**< ALL INCLUDE ABOVE THIS LINE */
