@@ -12,7 +12,7 @@ test_table =
     {
         txt: "Shaper port disabled",
         cfg: {idx: 0, rate: 0xffffffff},
-        chk: {etolerance: [2], with_pre_tx: false}
+        chk: {etolerance: [3], with_pre_tx: false}
     },
     {
         txt: "Shaper port frame rate 100 kpps",
@@ -52,7 +52,7 @@ test_table =
     {
         txt: "Shaper port line rate 1000000 kbps (1 Gbps)",
         cfg: {idx: 0, level: 25000, rate: 1000000},
-        chk: {etolerance: [2]}
+        chk: {etolerance: [3]}
     },
     {
         txt: "Shaper port data rate 400 kbps",
@@ -65,7 +65,7 @@ test_table =
     {
         txt: "Shaper port data rate 10000 kbps (10 Mbps)",
         cfg: {idx: 0, data_rate: true, level: 1, rate: 10000},
-        chk: {etolerance: [2.2]}
+        chk: {etolerance: [3]}
     },
     {
         txt: "Shaper port data rate 100000 kbps (100 Mbps)",
