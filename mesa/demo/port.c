@@ -323,6 +323,8 @@ static void port_setup(mesa_port_no_t port_no, mesa_bool_t aneg, mesa_bool_t ini
     mesa_port_conf_t       conf, old_conf;
     mepa_conf_t            phy = {};
     meba_port_cap_t        cap = entry->meba.cap;
+    mesa_bool_t            host_follows_line =
+        (meba_capability(meba_global_inst, port_no, MEPA_CAP_HOST_RATE_FOLLOWS_LINE) != 0);
 
     if (mesa_port_conf_get(NULL, port_no, &conf) != MESA_RC_OK) {
         T_E("mesa_port_conf_get(%u) failed", port_no);
@@ -344,6 +346,17 @@ static void port_setup(mesa_port_no_t port_no, mesa_bool_t aneg, mesa_bool_t ini
     conf.serdes.tx_invert = (cap & MEBA_PORT_CAP_SERDES_TX_INVERT ? 1 : 0);
     if (entry->media_type == MSCC_PORT_TYPE_CU || entry->media_type == MSCC_PORT_TYPE_NONE) {
         conf.if_type = entry->meba.mac_if;
+
+        /* The board entry names one interface for the port, which cannot be right at every speed
+         * when the host has to track the line. Ask the PHY which one it needs for the speed that
+         * was negotiated. */
+        if (host_follows_line && aneg && ps->speed != MESA_SPEED_UNDEFINED) {
+            if (meba_phy_if_get(meba_global_inst, port_no, ps->speed, &conf.if_type) !=
+                MESA_RC_OK) {
+                T_E("meba_phy_if_get(%u) failed", port_no);
+                return;
+            }
+        }
     }
     if (entry->sfp_device != NULL) {
         if (entry->sfp_device->drv->meba_sfp_driver_mt_get != NULL) {
@@ -357,7 +370,11 @@ static void port_setup(mesa_port_no_t port_no, mesa_bool_t aneg, mesa_bool_t ini
     }
     if (aneg) {
         /* Setup port based on auto negotiation status */
-        conf.speed = (conf.if_type == MESA_PORT_INTERFACE_SFI ? pc->speed : ps->speed);
+        /* SFI ports normally keep their configured rate, so that a 10G-SFI switch can sit in front
+         * of a copper PHY that adapts internally. A PHY whose host follows the line cannot do that
+         * - the two sides have to agree, so take the negotiated speed here too. */
+        conf.speed = ((conf.if_type == MESA_PORT_INTERFACE_SFI && !host_follows_line) ? pc->speed
+                                                                                      : ps->speed);
         conf.fdx = ps->fdx;
         conf.flow_control.obey = ps->aneg.obey_pause;
         conf.flow_control.generate = ps->aneg.generate_pause;
@@ -428,6 +445,17 @@ static void port_setup(mesa_port_no_t port_no, mesa_bool_t aneg, mesa_bool_t ini
     if ((memcmp(&old_conf, &conf, sizeof(conf)) != 0) || init) {
         if (mesa_port_conf_set(NULL, port_no, &conf) != MESA_RC_OK) {
             T_E("mesa_port_conf_set(%u) failed", port_no);
+            /* Do not tell the PHY the MAC has moved when it has not - it would align its host side
+             * to a rate this end is not running and drop the link. */
+            return;
+        }
+    }
+
+    /* Outside the compare above on purpose: the MAC may already have been at the right rate, and
+     * the PHY still needs to be told. */
+    if (host_follows_line) {
+        if (meba_phy_if_set(meba_global_inst, port_no, conf.if_type) != MESA_RC_OK) {
+            T_E("meba_phy_if_set(%u) failed", port_no);
         }
     }
 }
@@ -1114,7 +1142,13 @@ static void cli_cmd_phy_id(cli_req_t *req)
 
     for (uint32_t port_no = 0; port_no < mesa_port_cnt(NULL); port_no++) {
         if ((rc = meba_phy_info_get(meba_global_inst, port_no, &phy_id)) == MESA_RC_OK) {
-            meba_phy_if_get(meba_global_inst, port_no, port_table[port_no].conf.speed, &mac_if);
+            // A PHY is allowed to report that it has no host interface for the configured speed,
+            // and does so for MESA_SPEED_AUTO since that is not a link rate. Only print what it
+            // resolved to when it actually resolved.
+            if (meba_phy_if_get(meba_global_inst, port_no, port_table[port_no].conf.speed,
+                                &mac_if) != MESA_RC_OK) {
+                mac_if = MESA_PORT_INTERFACE_NO_CONNECTION;
+            }
             sprintf(spd, "%s",
                     phy_id.cap & MEPA_CAP_SPEED_MASK_2G5   ? "2G5"
                     : phy_id.cap & MEPA_CAP_SPEED_MASK_10G ? "10G"
