@@ -2793,6 +2793,7 @@ mesa_rc read_sfp_plugin_module(meba_inst_t inst, int address, const edsx_module_
 {
     char                 eeprom_name[128];
     char                 eeprom[128];
+    char                 buf[64];
     char                *uboot_env = NULL;
     const edsx_module_t *m;
 
@@ -2802,7 +2803,8 @@ mesa_rc read_sfp_plugin_module(meba_inst_t inst, int address, const edsx_module_
 
     FILE *f = fopen(eeprom_name, "r");
     if (!f) {
-        return MESA_RC_ERROR;
+        T_I(inst, "No EEPROM at %s, using U-Boot env for SFP slot %d\n", eeprom_name, address);
+        goto use_uboot;
     }
 
     int i;
@@ -2828,9 +2830,9 @@ mesa_rc read_sfp_plugin_module(meba_inst_t inst, int address, const edsx_module_
     }
 
     // Unrecognized pluging module
-    char buf[64];
     T_W(inst, "Unrecognized plugin module in SFP slot %d\n", address);
 
+use_uboot:
     if (address == 1) {
         uboot_env = "plugin_module";
     } else {
