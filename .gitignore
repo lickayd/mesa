@@ -17,3 +17,5 @@ mesa-doc.html
 mesa/demo/docs/html
 .mscc-libeasy-topology.yaml
 .multi-work
+mesa-*.spdx.json
+mesa-sbom-outline.html
