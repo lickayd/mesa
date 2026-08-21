@@ -514,6 +514,21 @@ static mesa_rc ev96d50a_sfp_status_read(meba_inst_t        inst,
     return MESA_RC_OK;
 }
 
+#define MEBA_CAP_AIS21010                                                                          \
+    (MEBA_PORT_CAP_COPPER_10G | MEBA_PORT_CAP_100M_FDX | MEBA_PORT_CAP_1G_FDX |                    \
+     MEBA_PORT_CAP_2_5G_FDX | MEBA_PORT_CAP_5G_FDX | MEBA_PORT_CAP_10G_FDX |                       \
+     MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_OUT_BAND_STATUS | MEBA_PORT_CAP_NO_FORCE)
+
+static port_map_t port_table_ais21010_slot_1[] = {
+    {56, 24, MESA_MIIM_CONTROLLER_0, MESA_PORT_INTERFACE_SFI, MESA_BW_10G, MEBA_CAP_AIS21010, 0,
+     false},
+};
+
+static port_map_t port_table_ais21010_slot_2[] = {
+    {60, 28, MESA_MIIM_CONTROLLER_0, MESA_PORT_INTERFACE_SFI, MESA_BW_10G, MEBA_CAP_AIS21010, 0,
+     false},
+};
+
 typedef struct {
     const plugin_module_t plugin_module;
     const port_map_t     *port_table[2]; /* [0] = slot 1, [1] = slot 2 */
@@ -530,6 +545,10 @@ static const edsx_module_t edsx_modules[] = {
      .port_count = 4,
      .lan80xx = false,
      .plugin_module = {.name = "EV96D50A", .sfp_status_read = ev96d50a_sfp_status_read}},
+    {.port_table = {port_table_ais21010_slot_1, port_table_ais21010_slot_2},
+     .port_count = 1,
+     .lan80xx = false,
+     .plugin_module = {.name = "AIS21010", .sfp_status_read = NULL}                    },
 };
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
