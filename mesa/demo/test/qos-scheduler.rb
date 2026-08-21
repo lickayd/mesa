@@ -202,14 +202,18 @@ end
 # Run all or selected test
 sel = table_lookup(test_table, :sel)
 test_table.each do |t|
-    test t[:txt] do
-        if (t[:sel] != sel || (t[:cap] && cap_get("QOS_SCHEDULER_MODE_DWRR") == 0))
-            test_skip
-            next
+    rep = fld_get(t, :rep, 1)
+    rep.times do |i|
+        txt = (rep == 1) ? t[:txt] : "#{t[:txt]} (#{i + 1}/#{rep})"
+        test(txt) do
+            if (t[:sel] != sel || (t[:cap] && cap_get("QOS_SCHEDULER_MODE_DWRR") == 0))
+                test_skip
+                next
+            end
+            t[:ig] = ig
+            t[:eg] = eg
+            run_test(t)
         end
-        t[:ig] = ig
-        t[:eg] = eg
-        run_test(t)
     end
 end
 

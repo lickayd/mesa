@@ -140,8 +140,12 @@ end
 sel = table_lookup(test_table, :sel)
 test_table.each do |t|
     next if (t[:sel] != sel)
-    test t[:txt] do
-        test_runner(t)
+    rep = fld_get(t, :rep, 1)
+    rep.times do |i|
+        txt = (rep == 1) ? t[:txt] : "#{t[:txt]} (#{i + 1}/#{rep})"
+        test(txt) do
+            test_runner(t)
+        end
     end
 end
 
