@@ -65,7 +65,7 @@ _multi_detect_platform() {
         servalt) echo st ;;
         jr2)     echo j2 ;;
         fireant) echo fa ;;
-        laguna)  echo la ;;
+        laguna|lan969x) echo la ;;
         lan966x)
             if [ "$vsc" == "9668" ]; then
                 echo m8
