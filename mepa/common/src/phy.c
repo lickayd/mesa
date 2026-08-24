@@ -5,7 +5,7 @@
 #include <mepa_utils.h>
 #include <microchip/ethernet/phy/api.h>
 
-#define PHY_FAMILIES 16U
+#define PHY_FAMILIES 17U
 
 #define MEPA_GLOBAL_REG_DEV_ID      0x1E /* MMD ID of GLOBAL Registers */
 #define MEPA_SILICON_REVISION_REG   0x2  /* Silicon Revision register */
@@ -296,9 +296,12 @@ static void mepa_initialize_libraries(void)
 #if defined(MEPA_HAS_VSC8574)
         MEPA_phy_lib[14] = mepa_vsc8574_driver_init();
 #endif
+#if defined(MEPA_HAS_AS2XXXX)
+        MEPA_phy_lib[15] = mepa_as2xxxx_driver_init();
+#endif
         // Shall be last
 #if defined(MEPA_HAS_VTSS)
-        MEPA_phy_lib[15] = mepa_default_phy_driver_init();
+        MEPA_phy_lib[16] = mepa_default_phy_driver_init();
 #endif
     }
 }
