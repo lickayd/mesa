@@ -378,14 +378,14 @@ test "test_run" do
                         t_i "Run test with KR RS-FEC"
                         $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} all")
                         $ts.dut.run("mesa-cmd Port KR aneg #{port0+1} all")
-                        sleep 2
+                        t_e("Link did not come up after KR aneg train  port0 #{port0}  port1 #{port1}") unless dut_port_state_up([port0, port1])
                         tod_latency_test(port0, port1, "10G_FDX - KR RS-FEC")
                     end
 
                     t_i "Run test with KR R-FEC"
                     $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} adv-10g rfec train")
                     $ts.dut.run("mesa-cmd Port KR aneg #{port0+1} adv-10g rfec train")
-                    sleep 2
+                    t_e("Link did not come up after KR aneg train  port0 #{port0}  port1 #{port1}") unless dut_port_state_up([port0, port1])
                     tod_latency_test(port0, port1, "10G_FDX - KR R-FEC")
                     $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} disable")
                     $ts.dut.run("mesa-cmd Port KR aneg #{port0+1} disable")
@@ -438,13 +438,13 @@ test "test_run" do
                 t_i "Run test with KR RS-FEC"
                 $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} all")
                 $ts.dut.run("mesa-cmd Port KR aneg #{port0+1} all")
-                sleep 0.5
+                t_e("Link did not come up after KR aneg train  port0 #{port0}  port1 #{port1}") unless dut_port_state_up([port0, port1])
                 tod_latency_test(port0, port1, "25G_FDX - KR RS-FEC")
 
                 t_i "Run test with KR R-FEC"
                 $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} adv-25g rfec train")
                 $ts.dut.run("mesa-cmd Port KR aneg #{port0+1} adv-25g rfec train")
-                sleep 0.5
+                t_e("Link did not come up after KR aneg train  port0 #{port0}  port1 #{port1}") unless dut_port_state_up([port0, port1])
                 tod_latency_test(port0, port1, "25G_FDX - KR R-FEC")
 
                 $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} disable")
