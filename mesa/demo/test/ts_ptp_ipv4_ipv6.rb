@@ -189,7 +189,7 @@ def ptp_origin_request_test(ip)
     nano_correction = ((data[off+8]<<40) + (data[off+9]<<32) + (data[off+10]<<24) + (data[off+11]<<16) + (data[off+12]<<8) + (data[off+13]))
     origin_sec = ((data[off+34]<<40) + (data[off+35]<<32) + (data[off+36]<<24) + (data[off+37]<<16) + (data[off+38]<<8) + (data[off+39]))
     origin_nsec = ((data[off+40]<<24) + (data[off+41]<<16) + (data[off+42]<<8) + (data[off+43]))
-    origin_f = origin_sec.to_f + origin_nsec/1000000000.0
+    origin_f = origin_sec.to_f + origin_nsec/1_000_000_000.0
 
     # Origin is the live TOD written by HW, so its upper bound must track the
     # measured console round trip, not a fixed window.
@@ -217,7 +217,7 @@ def ptp_one_step_request_test(ip)
     time_a = Time.now()
 
     frameHdrTx = frame_create("00:02:03:04:05:06", "00:08:09:0a:0b:0c", "#{ip} udp")
-    frametx = tx_ifh_create($ts.dut.port_list[$port0], "MESA_PACKET_PTP_ACTION_ONE_STEP", (seconds * 1000000000) << 16, 0, 0, ip) + frameHdrTx.dup + request_pdu_create(requestClockId, requestPortNumber)
+    frametx = tx_ifh_create($ts.dut.port_list[$port0], "MESA_PACKET_PTP_ACTION_ONE_STEP", (seconds * 1_000_000_000) << 16, 0, 0, ip) + frameHdrTx.dup + request_pdu_create(requestClockId, requestPortNumber)
 
     frame_cfg = { frame: frametx, port: $npi_port, capture_size: p[:size], port0: $port0, port1: $port1, npi_port: $npi_port }
     frame_tx(frame_cfg)
@@ -230,13 +230,13 @@ def ptp_one_step_request_test(ip)
     nano_correction = ((data[off+8]<<40) + (data[off+9]<<32) + (data[off+10]<<24) + (data[off+11]<<16) + (data[off+12]<<8) + (data[off+13]))
     origin_sec = ((data[off+34]<<40) + (data[off+35]<<32) + (data[off+36]<<24) + (data[off+37]<<16) + (data[off+38]<<8) + (data[off+39]))
     origin_nsec = ((data[off+40]<<24) + (data[off+41]<<16) + (data[off+42]<<8) + (data[off+43]))
-    origin_f = origin_sec.to_f + origin_nsec/1000000000.0
+    origin_f = origin_sec.to_f + origin_nsec/1_000_000_000.0
 
     # Correction is the live TOD minus the fixed IFH timestamp, so its expected
     # value must track the measured console round trip, not a fixed window.
     execution = time_b - time_a
-    expected_ns = execution * 1000000000
-    tolerance_ns = 500000000
+    expected_ns = execution * 1_000_000_000
+    tolerance_ns = 500_000_000
     floor_ns = 300
 
     t_i("nano_correction #{nano_correction}")
