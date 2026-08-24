@@ -88,7 +88,7 @@ def nano_delay_measure(port0, port1)
     if (pkts[1] == nil)
         t_e("get_pcap did not return any received frame")
         $ts.dut.run "mesa-cmd port statis #{port1+1}"
-        return 10000
+        return nil
     end
 
     t_i ("Calculate the IFH and decode it")
@@ -255,7 +255,7 @@ def tod_latency_test(port0, port1, text)
         end
     end
 
-    if ((nano_delay_0 < min) || (nano_delay_0 > max))
+    if (!nano_delay_0.nil? && ((nano_delay_0 < min) || (nano_delay_0 > max)))
         t_e("#{text}  port0 #{port0}  port1 #{port1}")
         t_e("Unexpected delay with egress latency 0 and ingress latency 0.  Delay = #{nano_delay_0}  min #{min}  max #{max}")
     end
@@ -266,13 +266,13 @@ def tod_latency_test(port0, port1, text)
 
     t_i "Measure nanosecond delay with egress latency #{PTP_LATENCY_MAX} and ingress latency 0"
     nano_delay_1 = nano_delay_measure(port0, port1)
-    diff = nano_delay_0 - nano_delay_1
+    diff = (nano_delay_0.nil? || nano_delay_1.nil?) ? nil : (nano_delay_0 - nano_delay_1)
     t_i ("delay difference #{diff}")
     diff_tolerance = 9
     if (($ts.dut.pcb == "8281-SVB") || ($ts.dut.pcb == "8290"))
         diff_tolerance = 20
     end
-    if ((diff > (PTP_LATENCY_MAX + diff_tolerance)) || (diff < (PTP_LATENCY_MAX - diff_tolerance)))
+    if (!diff.nil? && ((diff > (PTP_LATENCY_MAX + diff_tolerance)) || (diff < (PTP_LATENCY_MAX - diff_tolerance))))
         t_e("#{text}  port0 #{port0}  port1 #{port1}")
         t_e("Unexpected delay with egress latency #{PTP_LATENCY_MAX} and ingress latency 0.  Delay = #{nano_delay_1}  tolerance #{diff_tolerance}")
     end
@@ -283,9 +283,9 @@ def tod_latency_test(port0, port1, text)
 
     t_i "Measure nanosecond delay with egress latency #{PTP_LATENCY_MAX} and ingress latency #{PTP_LATENCY_MAX}"
     nano_delay_2 = nano_delay_measure(port0, port1)
-    diff = nano_delay_0 - nano_delay_2
+    diff = (nano_delay_0.nil? || nano_delay_2.nil?) ? nil : (nano_delay_0 - nano_delay_2)
     t_i ("delay difference #{diff}")
-    if ((diff > (PTP_LATENCY_MAX*2 + diff_tolerance)) || (diff < (PTP_LATENCY_MAX*2 - diff_tolerance)))
+    if (!diff.nil? && ((diff > (PTP_LATENCY_MAX*2 + diff_tolerance)) || (diff < (PTP_LATENCY_MAX*2 - diff_tolerance))))
         t_e("#{text}  port0 #{port0}  port1 #{port1}")
         t_e("Unexpected delay with egress latency #{PTP_LATENCY_MAX} and ingress latency #{PTP_LATENCY_MAX}.  Delay = #{nano_delay_2}  tolerance #{diff_tolerance}")
     end
