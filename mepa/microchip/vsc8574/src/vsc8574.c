@@ -2174,6 +2174,135 @@ static mepa_rc vsc8574_temp_read(mepa_device_t *dev, u8 *temp_reading)
     return vsc8574_phy_page_std(dev);
 }
 
+// --- Media-side 1G SerDes output buffer amplitude -------------------------
+//
+// OB_AMP_CTRL_1G is bits [58:55] of the 1G SerDes MCB configuration vector.
+// That vector has no MDIO mapping: it is reached by asking the 8051 to copy
+// the MCB into its PRAM, poking the bytes there, and asking it to write the
+// vector back out again. All commands go through the micro mailbox at 18G,
+// see TN1121.
+//
+// The fetched vector always lands at cfg_buf[0] == PRAM 0x47c7, so the byte
+// addresses below are the same whichever slave was read; only the fetch and
+// write-back commands carry the slave/port selection.
+//
+//   bit 55 -> cfg_buf[6] bit 7    == OB_AMP_CTRL[0]
+//   bit 58 -> cfg_buf[7] bits 2:0 == OB_AMP_CTRL[3:1]
+//
+// - The setting lives in the SerDes macro, not in a register that the driver
+//   restores. It is lost whenever the media interface is set up again (the
+//   0x80C1 micro command rewrites the MCB from defaults) and on any PHY reset,
+//   so it has to be re-applied after MEPA_RESET_POINT_DEFAULT.
+#define VSC8574_MCB_ADDR_CFG_BUF_6 0xd7cdU // mem_set_address of PRAM 0x47cd
+#define VSC8574_MCB_ADDR_CFG_BUF_7 0xd7ceU // mem_set_address of PRAM 0x47ce
+#define VSC8574_MCB_PEEK           0x8007U // peek, no post-increment
+#define VSC8574_MCB_POKE           0x8006U // poke, no post-increment
+#define VSC8574_MCB_POKE_INCR      0x9006U // poke, with post-increment
+#define VSC8574_MCB_RD_SD1G        0x8003U // read MCB, bus 0 (SerDes 1G)
+#define VSC8574_MCB_WR_MEDIA       0x8040U // write MCB, fiber media select
+#define VSC8574_TX_AMPL_MAX        0xfU
+
+// Issue one micro command and wait for the micro to clear 18G.15
+static mepa_rc vsc8574_micro_cmd(mepa_device_t *dev, u16 cmd)
+{
+    MEPA_RC(vsc8574_phy_page_gpio(dev));
+    MEPA_RC(PHY_WR_PAGE(dev, VTSS_PHY_MICRO_PAGE, cmd));
+
+    return vsc8574_phy_wait_for_micro_complete(dev);
+}
+
+// Collect the byte returned by a preceding peek out of 18G[11:4]
+static mepa_rc vsc8574_micro_peek_data(mepa_device_t *dev, u8 *data)
+{
+    u16 reg18g = 0;
+
+    MEPA_RC(vsc8574_phy_page_gpio(dev));
+    MEPA_RC(PHY_RD_PAGE(dev, VTSS_PHY_MICRO_PAGE, &reg18g));
+    *data = (u8)((reg18g >> 4) & 0xffU);
+
+    return MEPA_RC_OK;
+}
+
+// Copy this port's media-side 1G MCB into the micro's PRAM.
+// Fiber media slave mapping (TN1121): PHY0 -> S0, PHY1 -> S2, PHY2 -> S4,
+// PHY3 -> S6, i.e. slave = 2 * chip_port.
+static mepa_rc vsc8574_mcb_media_1g_fetch(mepa_device_t *dev, u16 chip_port)
+{
+    return vsc8574_micro_cmd(dev, VSC8574_MCB_RD_SD1G | ((2U * chip_port) << 8));
+}
+
+// Write the PRAM copy back out to this port's media-side 1G macro. Bit 12
+// clear selects fiber media, bits 11:8 are a one-hot port vector.
+static mepa_rc vsc8574_mcb_media_1g_commit(mepa_device_t *dev, u16 chip_port)
+{
+    return vsc8574_micro_cmd(dev, VSC8574_MCB_WR_MEDIA | (0x0100U << chip_port));
+}
+
+static mepa_rc vsc8574_media_tx_ampl_set(mepa_device_t *dev, u32 val)
+{
+    u16 chip_port = 0;
+    u8  cfg_buf_6 = 0;
+    u8  cfg_buf_7 = 0;
+    u8  ampl;
+
+    // OB_AMP_CTRL_1G is a 4 bit field
+    if (val > VSC8574_TX_AMPL_MAX) {
+        T_E(MEPA_TRACE_GRP_GEN, "TX_AMPL %u out of range, max %u", val,
+            VSC8574_TX_AMPL_MAX);
+        return MEPA_RC_ERROR;
+    }
+
+    ampl = (u8)val;
+
+    MEPA_RC(vsc8574_phy_chip_port(dev, &chip_port));
+    chip_port %= 4U;
+
+    // The commit at the end writes the whole vector, so a failed fetch must
+    // abort rather than push stale PRAM contents into the macro.
+    MEPA_RC(vsc8574_mcb_media_1g_fetch(dev, chip_port));
+
+    // cfg_buf[6] bit 7 = OB_AMP_CTRL[0]
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_ADDR_CFG_BUF_6));
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_PEEK));
+    MEPA_RC(vsc8574_micro_peek_data(dev, &cfg_buf_6));
+    cfg_buf_6 = (cfg_buf_6 & 0x7fU) | (u8)((ampl & 0x1U) << 7);
+
+    // Poke with post-increment so the address advances to cfg_buf[7]
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_POKE_INCR | ((u16)cfg_buf_6 << 4)));
+
+    // cfg_buf[7] bits 2:0 = OB_AMP_CTRL[3:1]
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_PEEK));
+    MEPA_RC(vsc8574_micro_peek_data(dev, &cfg_buf_7));
+    cfg_buf_7 = (cfg_buf_7 & 0xf8U) | (u8)((ampl >> 1) & 0x7U);
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_POKE | ((u16)cfg_buf_7 << 4)));
+
+    return vsc8574_mcb_media_1g_commit(dev, chip_port);
+}
+
+static mepa_rc vsc8574_media_tx_ampl_get(mepa_device_t *dev, u8 *ampl)
+{
+    u16 chip_port = 0;
+    u8  cfg_buf_6 = 0;
+    u8  cfg_buf_7 = 0;
+
+    MEPA_RC(vsc8574_phy_chip_port(dev, &chip_port));
+    chip_port %= 4U;
+
+    MEPA_RC(vsc8574_mcb_media_1g_fetch(dev, chip_port));
+
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_ADDR_CFG_BUF_6));
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_PEEK));
+    MEPA_RC(vsc8574_micro_peek_data(dev, &cfg_buf_6));
+
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_ADDR_CFG_BUF_7));
+    MEPA_RC(vsc8574_micro_cmd(dev, VSC8574_MCB_PEEK));
+    MEPA_RC(vsc8574_micro_peek_data(dev, &cfg_buf_7));
+
+    *ampl = (u8)((cfg_buf_6 >> 7) | ((cfg_buf_7 & 0x7U) << 1));
+
+    return MEPA_RC_OK;
+}
+
 // Public API bellow
 
 static mepa_device_t *vsc8574_probe(mepa_driver_t *drv,
@@ -2432,6 +2561,78 @@ static mepa_rc vsc8574_chip_temp_get(mepa_device_t *dev, i16 *const temp)
     return MEPA_RC_OK;
 }
 
+static mepa_rc vsc8574_tunable_bulk_set(mepa_device_t *dev,
+                                        uint32_t size,
+                                        const mepa_tunable_t *tunables)
+{
+    mepa_rc rc = MEPA_RC_OK;
+    uint32_t i;
+
+    for (i = 0U; i < size; ++i) {
+        switch (tunables[i].link_id) {
+        case MESA_LINK_ID_PHY_LINE:
+            rc = MEPA_RC_OK;
+            break;
+        default:
+            rc = MEPA_RC_NOT_IMPLEMENTED;
+            break;
+        }
+
+        // Skipped when the link id above was rejected.
+        if (rc == MEPA_RC_OK) {
+            switch (tunables[i].type) {
+            case MESA_TUNABLE_TX_AMPL:
+                rc = vsc8574_media_tx_ampl_set(dev, tunables[i].val);
+                break;
+            default:
+                rc = MEPA_RC_NOT_IMPLEMENTED;
+                break;
+            }
+        }
+
+        if (rc != MEPA_RC_OK) {
+            break;
+        }
+    }
+
+    return rc;
+}
+
+static mepa_rc vsc8574_tunable_get(mepa_device_t *dev,
+                                   mepa_link_id_t link,
+                                   mepa_tunable_type_t type,
+                                   uint32_t *val)
+{
+    mepa_rc rc = MEPA_RC_OK;
+    u8 ampl;
+
+    switch (link) {
+    case MESA_LINK_ID_PHY_LINE:
+        break;
+    default:
+        rc = MEPA_RC_NOT_IMPLEMENTED;
+        break;
+    }
+
+    if (rc == MEPA_RC_NOT_IMPLEMENTED) {
+        return rc;
+    }
+
+    switch (type) {
+    case MESA_TUNABLE_TX_AMPL:
+        rc = vsc8574_media_tx_ampl_get(dev, &ampl);
+        if (rc == MEPA_RC_OK) {
+            *val = ampl;
+        }
+        break;
+    default:
+        rc = MEPA_RC_NOT_IMPLEMENTED;
+        break;
+    }
+
+    return rc;
+}
+
 mepa_drivers_t mepa_vsc8574_driver_init(void)
 {
     static const int nr_vsc8574_drivers = 1;
@@ -2448,6 +2649,8 @@ mepa_drivers_t mepa_vsc8574_driver_init(void)
             .mepa_driver_conf_get = vsc8574_conf_get,
             .mepa_driver_poll = vsc8574_poll,
             .mepa_driver_chip_temp_get = vsc8574_chip_temp_get,
+            .mepa_driver_tunable_bulk_set = vsc8574_tunable_bulk_set,
+            .mepa_driver_tunable_get = vsc8574_tunable_get,
         },
     };
 
