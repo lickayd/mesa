@@ -515,6 +515,10 @@ typedef struct {
     mesa_bool_t err_inj;
     phy_media_t trace_media;
     mesa_bool_t trace_set;
+
+    uint32_t link_id;      /* mesa_link_id_t */
+    uint32_t tunable_type; /* mesa_tunable_type_t */
+    uint32_t tunable_val;  /* Value written straight into the PHY */
 } port_cli_req_t;
 
 static const char *port_mode_txt(mesa_port_speed_t speed, mesa_bool_t fdx)
@@ -1708,6 +1712,84 @@ static void cli_cmd_deb_port_10g_mode(cli_req_t *req)
     }
 }
 
+static const char *link_id_txt(mepa_link_id_t link)
+{
+    switch (link) {
+    case MESA_LINK_ID_SWITCH:   return "switch";
+    case MESA_LINK_ID_PHY_HOST: return "phy-host";
+    case MESA_LINK_ID_PHY_LINE: return "phy-line";
+    default:                    return "unknown";
+    }
+}
+
+static const char *tunable_type_txt(mepa_tunable_type_t type)
+{
+    switch (type) {
+    case MESA_TUNABLE_TX_AMPL: return "tx-ampl";
+    default:                   return "unknown";
+    }
+}
+
+/* Set or show a PHY tunable. Tunables are not wrapped by MEBA, so the MEPA
+ * device is used directly, the same way cli_cmd_phy_dump does. */
+static void cli_cmd_port_tunable(cli_req_t *req)
+{
+    uint32_t            port_cnt = mesa_port_cnt(NULL);
+    mesa_port_no_t      iport, uport;
+    port_cli_req_t     *mreq = req->module_req;
+    mepa_link_id_t      link = (mepa_link_id_t)mreq->link_id;
+    mepa_tunable_type_t type = (mepa_tunable_type_t)mreq->tunable_type;
+    mesa_bool_t         first = TRUE;
+    mepa_tunable_t      tunable = {};
+    mesa_rc             rc;
+
+    /* Tunables are a PHY API, so only the PHY sides are handled here.
+     * MESA_LINK_ID_SWITCH does not address a PHY at all. */
+    if ((link != MESA_LINK_ID_PHY_HOST) && (link != MESA_LINK_ID_PHY_LINE)) {
+        cli_printf("Link id %u (%s) does not address a PHY\n", link, link_id_txt(link));
+        return;
+    }
+
+    for (iport = 0; iport < port_cnt; iport++) {
+        uport = iport2uport(iport);
+        if (req->port_list[uport] == 0) {
+            continue;
+        }
+
+        if (meba_global_inst->phy_devices[iport] == NULL) {
+            continue;
+        }
+
+        if (req->set) {
+            tunable.link_id = link;
+            tunable.type = type;
+            tunable.val = mreq->tunable_val;
+
+            rc = mepa_tunable_bulk_set(meba_global_inst->phy_devices[iport], 1, &tunable);
+            if (rc != MESA_RC_OK) {
+                cli_printf("Port %u: %s %s set failed (%s)\n", uport, link_id_txt(link),
+                           tunable_type_txt(type),
+                           rc == MESA_RC_NOT_IMPLEMENTED ? "not implemented" : "error");
+            }
+        } else {
+            uint32_t val = 0;
+
+            rc = mepa_tunable_get(meba_global_inst->phy_devices[iport], link, type, &val);
+            if (rc != MESA_RC_OK) {
+                cli_printf("Port %u: %s %s get failed (%s)\n", uport, link_id_txt(link),
+                           tunable_type_txt(type),
+                           rc == MESA_RC_NOT_IMPLEMENTED ? "not implemented" : "error");
+                continue;
+            }
+            if (first) {
+                cli_table_header("Port  Link-Id   Tunable   Value");
+                first = FALSE;
+            }
+            cli_printf("%-6u%-10s%-10s%u\n", uport, link_id_txt(link), tunable_type_txt(type), val);
+        }
+    }
+}
+
 static cli_cmd_t cli_cmd_table[] = {
     {"Port State [<port_list>] [enable|disable]", "Set or show the port administrative state",
      cli_cmd_port_state},
@@ -1745,6 +1827,8 @@ static cli_cmd_t cli_cmd_table[] = {
      "Set SerDes trace-length tuning profile", cli_cmd_phy_trace},
     {"Debug Port 10G oper-mode [<port_list>] [lan|1g|repeater]",
      "Get or set 10G PHY operating mode (lan=10G, 1g=non-repeater, repeater)", cli_cmd_deb_port_10g_mode},
+    {"Debug Port Tunable [<port_list>] <link_id> <tunable> [<tunable_val>]",
+     "Set or show a PHY tunable", cli_cmd_port_tunable},
 };
 
 static int cli_parm_max_frame(cli_req_t *req)
@@ -1752,6 +1836,26 @@ static int cli_parm_max_frame(cli_req_t *req)
     port_cli_req_t *mreq = req->module_req;
     return cli_parm_u32(req, &mreq->max_length, MESA_MAX_FRAME_LENGTH_STANDARD,
                         mesa_capability(NULL, MESA_CAP_PORT_FRAME_LENGTH_MAX));
+}
+
+static int cli_parm_link_id(cli_req_t *req)
+{
+    port_cli_req_t *mreq = req->module_req;
+    return cli_parm_u32(req, &mreq->link_id, 0, MESA_LINK_ID_LAST - 1);
+}
+
+static int cli_parm_tunable(cli_req_t *req)
+{
+    port_cli_req_t *mreq = req->module_req;
+    return cli_parm_u32(req, &mreq->tunable_type, 0, MESA_TUNABLE_LAST - 1);
+}
+
+static int cli_parm_tunable_val(cli_req_t *req)
+{
+    port_cli_req_t *mreq = req->module_req;
+    /* The value goes straight into the PHY, so the range is driver specific.
+     * VSC8574 TX_AMPL is 4 bits, other drivers may accept more. */
+    return cli_parm_u32(req, &mreq->tunable_val, 0, 0xff);
 }
 
 static int cli_parm_keyword(cli_req_t *req)
@@ -1924,6 +2028,16 @@ static cli_parm_t cli_parm_table[] = {
      "custom     : Honour explicit Tx/Rx tap values currently configured", CLI_PARM_FLAG_NO_TXT | CLI_PARM_FLAG_SET, cli_parm_keyword},
     {"<max_frame>", "Port maximum frame size, default: Show maximum frame size",
      CLI_PARM_FLAG_NONE | CLI_PARM_FLAG_SET, cli_parm_max_frame},
+    {"<link_id>",
+     "Link id (mesa_link_id_t):\n"
+     "0          : switch\n"
+     "1          : PHY host (MAC) side\n"
+     "2          : PHY line (media) side", CLI_PARM_FLAG_NONE, cli_parm_link_id},
+    {"<tunable>",
+     "Tunable type (mesa_tunable_type_t):\n"
+     "0          : Tx amplitude", CLI_PARM_FLAG_NONE, cli_parm_tunable},
+    {"<tunable_val>", "Tunable value written directly into the PHY, default: Show current value",
+     CLI_PARM_FLAG_NONE | CLI_PARM_FLAG_SET, cli_parm_tunable_val},
     {"near-end|far-end|facility|equipment",
      "near-end   : Loopback from Tx to Rx in PHY\n"
      "far-end    : Loopback from Rx to Tx in PHY\n"
