@@ -73,10 +73,7 @@ test_table =
     {
         txt: "ONE-STEP SYNC through switch correction field check (ipv6)",
         cfg: -> () { {ip: "ipv6"} },
-        chk: {max_corr: {
-            default: 3160,
-            # chip_family_to_id("MESA_CHIP_FAMILY_LAN966X") => 3400,
-        }},
+        chk: {max_corr: {default: 3160, chip_family_to_id("MESA_CHIP_FAMILY_LAN966X") => 3400}},
         fun: -> (t) { c = t[:cfg].call; ptp_switch_one_step_test(c[:ip], t[:chk]) }
     },
 ]
