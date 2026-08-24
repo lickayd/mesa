@@ -176,12 +176,14 @@ def ptp_origin_request_test(ip)
     requestPortNumber = 0xABCD
     p = ptp_ip_offsets(ip)
     ptp_domain_tod_set(seconds, domain)
+    time_a = Time.now()
 
     frameHdrTx = frame_create("00:02:03:04:05:06", "00:08:09:0a:0b:0c", "#{ip} udp")
     frametx = tx_ifh_create($ts.dut.port_list[$port0], "MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP", 0xFEFEFEFE0000, 0, 0, ip) + frameHdrTx.dup + request_pdu_create(requestClockId, requestPortNumber)
 
     frame_cfg = { frame: frametx, port: $npi_port, capture_size: p[:size], port0: $port0, port1: $port1, npi_port: $npi_port }
     frame_tx(frame_cfg)
+    time_b = Time.now()
     pkts = $ts.pc.get_pcap "#{$ts.links[$port0][:pc]}.pcap"
     data = pkts[0][:data].each_byte.map{|c| c.to_i}
     t_i("data #{data}")
@@ -191,13 +193,20 @@ def ptp_origin_request_test(ip)
     origin_sec = ((data[off+34]<<40) + (data[off+35]<<32) + (data[off+36]<<24) + (data[off+37]<<16) + (data[off+38]<<8) + (data[off+39]))
     origin_nsec = ((data[off+40]<<24) + (data[off+41]<<16) + (data[off+42]<<8) + (data[off+43]))
     origin_f = origin_sec.to_f + origin_nsec/1000000000.0
+
+    # Origin is the live TOD written by HW, so its upper bound must track the
+    # measured console round trip, not a fixed window.
+    execution = time_b - time_a
+    tolerance_s = 0.5
+
     t_i("nano_correction #{nano_correction}")
     t_i("origin_f #{origin_f}")
+    t_i("execution #{execution}  tolerance_s #{tolerance_s}")
     if (nano_correction > 1000) || (nano_correction < 300)
         t_e("Origin not as expected")
     end
-    if ((origin_f > 13.2) || (origin_f < seconds))
-        t_e("Origin not as expected")
+    if ((origin_f > (seconds + execution + tolerance_s)) || (origin_f < seconds))
+        t_e("Origin not as expected.  origin_sec #{origin_sec}  origin_nsec #{origin_nsec}")
     end
 end
 
@@ -208,12 +217,14 @@ def ptp_one_step_request_test(ip)
     requestPortNumber = 0xABCD
     p = ptp_ip_offsets(ip)
     ptp_domain_tod_set(seconds, domain)
+    time_a = Time.now()
 
     frameHdrTx = frame_create("00:02:03:04:05:06", "00:08:09:0a:0b:0c", "#{ip} udp")
     frametx = tx_ifh_create($ts.dut.port_list[$port0], "MESA_PACKET_PTP_ACTION_ONE_STEP", (seconds * 1000000000) << 16, 0, 0, ip) + frameHdrTx.dup + request_pdu_create(requestClockId, requestPortNumber)
 
     frame_cfg = { frame: frametx, port: $npi_port, capture_size: p[:size], port0: $port0, port1: $port1, npi_port: $npi_port }
     frame_tx(frame_cfg)
+    time_b = Time.now()
     pkts = $ts.pc.get_pcap "#{$ts.links[$port0][:pc]}.pcap"
     data = pkts[0][:data].each_byte.map{|c| c.to_i}
     t_i("data #{data}")
@@ -223,9 +234,18 @@ def ptp_one_step_request_test(ip)
     origin_sec = ((data[off+34]<<40) + (data[off+35]<<32) + (data[off+36]<<24) + (data[off+37]<<16) + (data[off+38]<<8) + (data[off+39]))
     origin_nsec = ((data[off+40]<<24) + (data[off+41]<<16) + (data[off+42]<<8) + (data[off+43]))
     origin_f = origin_sec.to_f + origin_nsec/1000000000.0
+
+    # Correction is the live TOD minus the fixed IFH timestamp, so its expected
+    # value must track the measured console round trip, not a fixed window.
+    execution = time_b - time_a
+    expected_ns = execution * 1000000000
+    tolerance_ns = 500000000
+    floor_ns = 300
+
     t_i("nano_correction #{nano_correction}")
     t_i("origin_f #{origin_f}")
-    if (nano_correction > 800000000) || (nano_correction < 100000000)
+    t_i("execution #{execution}  expected_ns #{expected_ns}  tolerance_ns #{tolerance_ns}")
+    if (nano_correction > (expected_ns + tolerance_ns)) || (nano_correction < floor_ns)
         t_e("Origin not as expected")
     end
     if (origin_f != 0)
