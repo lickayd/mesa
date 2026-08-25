@@ -35,14 +35,9 @@ $cap_family = $ts.dut.call("mesa_capability", "MESA_CAP_MISC_CHIP_FAMILY")
 test_table =
 [
     {
-        txt: "ORIGIN-TIMESTAMP SYNC frame check (ipv4)",
+        txt: "ORIGIN-TIMESTAMP SYNC and REQUEST check (ipv4)",
         cfg: -> () { {ip: "ipv4"} },
-        fun: -> (t) { c = t[:cfg].call; ptp_sync_test(c[:ip]) }
-    },
-    {
-        txt: "ORIGIN-TIMESTAMP REQUEST correction field check (ipv4)",
-        cfg: -> () { {ip: "ipv4"} },
-        fun: -> (t) { c = t[:cfg].call; ptp_origin_request_test(c[:ip]) }
+        fun: -> (t) { c = t[:cfg].call; ptp_origin_timestamp_test(c[:ip]) }
     },
     {
         txt: "ONE-STEP REQUEST correction field check (ipv4)",
@@ -56,14 +51,9 @@ test_table =
         fun: -> (t) { c = t[:cfg].call; ptp_switch_one_step_test(c[:ip], t[:chk]) }
     },
     {
-        txt: "ORIGIN-TIMESTAMP SYNC frame check (ipv6)",
+        txt: "ORIGIN-TIMESTAMP SYNC and REQUEST check (ipv6)",
         cfg: -> () { {ip: "ipv6"} },
-        fun: -> (t) { c = t[:cfg].call; ptp_sync_test(c[:ip]) }
-    },
-    {
-        txt: "ORIGIN-TIMESTAMP REQUEST correction field check (ipv6)",
-        cfg: -> () { {ip: "ipv6"} },
-        fun: -> (t) { c = t[:cfg].call; ptp_origin_request_test(c[:ip]) }
+        fun: -> (t) { c = t[:cfg].call; ptp_origin_timestamp_test(c[:ip]) }
     },
     {
         txt: "ONE-STEP REQUEST correction field check (ipv6)",
@@ -101,6 +91,48 @@ def ptp_domain_tod_set(seconds, domain)
     tod_ts[0]["seconds"] = seconds
     tod_ts[0]["nanoseconds"] = 0
     $ts.dut.call("mesa_ts_domain_timeofday_set", domain, tod_ts[0])
+end
+
+# Transmit a PTP frame through the NPI port and return the PTP fields captured on port0.
+def ptp_frame_tx_fields(ip, ptp_act, ptp_ts, pdu)
+    p = ptp_ip_offsets(ip)
+    time_a = Time.now()
+
+    frameHdrTx = frame_create("00:02:03:04:05:06", "00:08:09:0a:0b:0c", "#{ip} udp")
+    frametx = tx_ifh_create($ts.dut.port_list[$port0], ptp_act, ptp_ts, 0, 0, ip) + frameHdrTx.dup + pdu
+
+    frame_cfg = { frame: frametx, port: $npi_port, capture_size: p[:size], port0: $port0, port1: $port1, npi_port: $npi_port }
+    frame_tx(frame_cfg)
+    time_b = Time.now()
+
+    pkts = $ts.pc.get_pcap("#{$ts.links[$port0][:pc]}.pcap")
+    data = pkts[0][:data].each_byte.map{|c| c.to_i}
+    t_i("data #{data}")
+
+    off = p[:off]
+    nano_correction = ((data[off+8]<<40) + (data[off+9]<<32) + (data[off+10]<<24) + (data[off+11]<<16) + (data[off+12]<<8) + (data[off+13]))
+    origin_sec = ((data[off+34]<<40) + (data[off+35]<<32) + (data[off+36]<<24) + (data[off+37]<<16) + (data[off+38]<<8) + (data[off+39]))
+    origin_nsec = ((data[off+40]<<24) + (data[off+41]<<16) + (data[off+42]<<8) + (data[off+43]))
+
+    {
+        corr: nano_correction,
+        origin_sec: origin_sec,
+        origin_nsec: origin_nsec,
+        origin_f: origin_sec.to_f + origin_nsec/1_000_000_000.0,
+        execution: time_b - time_a
+    }
+end
+
+# Origin is the live TOD written by HW, so its upper bound must track the
+# measured console round trip, not a fixed window.
+def ptp_origin_check(name, r, seconds)
+    tolerance_s = 0.5
+
+    t_i("#{name} origin_f #{r[:origin_f]}")
+    t_i("#{name} execution #{r[:execution]}  tolerance_s #{tolerance_s}")
+    if ((r[:origin_f] > (seconds + r[:execution] + tolerance_s)) || (r[:origin_f] < seconds))
+        t_e("#{name}: origin not as expected.  origin_sec #{r[:origin_sec]}  origin_nsec #{r[:origin_nsec]}")
+    end
 end
 
 ################################################
@@ -143,68 +175,26 @@ test "test_conf" do
     $ts.dut.call("mesa_vlan_port_members_set", $vlan, port_list)
 end
 
-def ptp_sync_test(ip)
-    seconds = 10
-    domain = 0
-    p = ptp_ip_offsets(ip)
-    ptp_domain_tod_set(seconds, domain)
-
-    frameHdrTx = frame_create("00:02:03:04:05:06", "00:08:09:0a:0b:0c", "#{ip} udp")
-    frametx = tx_ifh_create($ts.dut.port_list[$port0], "MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP_SEQ", 0xFEFEFEFE0000, 0, 0, ip) + frameHdrTx.dup + sync_pdu_create()
-
-    frame_cfg = { frame: frametx, port: $npi_port, capture_size: p[:size], port0: $port0, port1: $port1, npi_port: $npi_port }
-    frame_tx(frame_cfg)
-    pkts = $ts.pc.get_pcap "#{$ts.links[$port0][:pc]}.pcap"
-    data = pkts[0][:data].each_byte.map{|c| c.to_i}
-    t_i("data #{data}")
-
-    off = p[:off]
-    origin_sec = ((data[off+34]<<40) + (data[off+35]<<32) + (data[off+36]<<24) + (data[off+37]<<16) + (data[off+38]<<8) + (data[off+39]))
-    t_i("origin_sec #{origin_sec}")
-    if (origin_sec != seconds+3)
-        t_e("Origin not as expected")
-    end
-end
-
-def ptp_origin_request_test(ip)
+def ptp_origin_timestamp_test(ip)
     seconds = 10
     domain = 0
     requestClockId = 0xAABBCCDDEEFFAABB
     requestPortNumber = 0xABCD
-    p = ptp_ip_offsets(ip)
+
+    # SYNC frame carrying the origin timestamp of the sequence action
     ptp_domain_tod_set(seconds, domain)
-    time_a = Time.now()
+    r = ptp_frame_tx_fields(ip, "MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP_SEQ", 0xFEFEFEFE0000, sync_pdu_create())
+    ptp_origin_check("SYNC", r, seconds)
 
-    frameHdrTx = frame_create("00:02:03:04:05:06", "00:08:09:0a:0b:0c", "#{ip} udp")
-    frametx = tx_ifh_create($ts.dut.port_list[$port0], "MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP", 0xFEFEFEFE0000, 0, 0, ip) + frameHdrTx.dup + request_pdu_create(requestClockId, requestPortNumber)
+    # REQUEST frame carrying both the origin timestamp and the correction field
+    ptp_domain_tod_set(seconds, domain)
+    r = ptp_frame_tx_fields(ip, "MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP", 0xFEFEFEFE0000, request_pdu_create(requestClockId, requestPortNumber))
 
-    frame_cfg = { frame: frametx, port: $npi_port, capture_size: p[:size], port0: $port0, port1: $port1, npi_port: $npi_port }
-    frame_tx(frame_cfg)
-    time_b = Time.now()
-    pkts = $ts.pc.get_pcap "#{$ts.links[$port0][:pc]}.pcap"
-    data = pkts[0][:data].each_byte.map{|c| c.to_i}
-    t_i("data #{data}")
-
-    off = p[:off]
-    nano_correction = ((data[off+8]<<40) + (data[off+9]<<32) + (data[off+10]<<24) + (data[off+11]<<16) + (data[off+12]<<8) + (data[off+13]))
-    origin_sec = ((data[off+34]<<40) + (data[off+35]<<32) + (data[off+36]<<24) + (data[off+37]<<16) + (data[off+38]<<8) + (data[off+39]))
-    origin_nsec = ((data[off+40]<<24) + (data[off+41]<<16) + (data[off+42]<<8) + (data[off+43]))
-    origin_f = origin_sec.to_f + origin_nsec/1_000_000_000.0
-
-    # Origin is the live TOD written by HW, so its upper bound must track the
-    # measured console round trip, not a fixed window.
-    execution = time_b - time_a
-    tolerance_s = 0.5
-
-    t_i("nano_correction #{nano_correction}")
-    t_i("origin_f #{origin_f}")
-    t_i("execution #{execution}  tolerance_s #{tolerance_s}")
-    if (nano_correction > 1000) || (nano_correction < 300)
-        t_e("Origin not as expected")
+    t_i("REQUEST nano_correction #{r[:corr]}")
+    if (r[:corr] > 1000) || (r[:corr] < 300)
+        t_e("REQUEST: correction not as expected")
     end
-    if ((origin_f > (seconds + execution + tolerance_s)) || (origin_f < seconds))
-        t_e("Origin not as expected.  origin_sec #{origin_sec}  origin_nsec #{origin_nsec}")
-    end
+    ptp_origin_check("REQUEST", r, seconds)
 end
 
 def ptp_one_step_request_test(ip)
@@ -212,41 +202,25 @@ def ptp_one_step_request_test(ip)
     domain = 0
     requestClockId = 0xAABBCCDDEEFFAABB
     requestPortNumber = 0xABCD
-    p = ptp_ip_offsets(ip)
     ptp_domain_tod_set(seconds, domain)
-    time_a = Time.now()
 
-    frameHdrTx = frame_create("00:02:03:04:05:06", "00:08:09:0a:0b:0c", "#{ip} udp")
-    frametx = tx_ifh_create($ts.dut.port_list[$port0], "MESA_PACKET_PTP_ACTION_ONE_STEP", (seconds * 1_000_000_000) << 16, 0, 0, ip) + frameHdrTx.dup + request_pdu_create(requestClockId, requestPortNumber)
-
-    frame_cfg = { frame: frametx, port: $npi_port, capture_size: p[:size], port0: $port0, port1: $port1, npi_port: $npi_port }
-    frame_tx(frame_cfg)
-    time_b = Time.now()
-    pkts = $ts.pc.get_pcap "#{$ts.links[$port0][:pc]}.pcap"
-    data = pkts[0][:data].each_byte.map{|c| c.to_i}
-    t_i("data #{data}")
-
-    off = p[:off]
-    nano_correction = ((data[off+8]<<40) + (data[off+9]<<32) + (data[off+10]<<24) + (data[off+11]<<16) + (data[off+12]<<8) + (data[off+13]))
-    origin_sec = ((data[off+34]<<40) + (data[off+35]<<32) + (data[off+36]<<24) + (data[off+37]<<16) + (data[off+38]<<8) + (data[off+39]))
-    origin_nsec = ((data[off+40]<<24) + (data[off+41]<<16) + (data[off+42]<<8) + (data[off+43]))
-    origin_f = origin_sec.to_f + origin_nsec/1_000_000_000.0
+    r = ptp_frame_tx_fields(ip, "MESA_PACKET_PTP_ACTION_ONE_STEP", (seconds * 1_000_000_000) << 16, request_pdu_create(requestClockId, requestPortNumber))
 
     # Correction is the live TOD minus the fixed IFH timestamp, so its expected
     # value must track the measured console round trip, not a fixed window.
-    execution = time_b - time_a
+    execution = r[:execution]
     expected_ns = execution * 1_000_000_000
     tolerance_ns = 500_000_000
     floor_ns = 300
 
-    t_i("nano_correction #{nano_correction}")
-    t_i("origin_f #{origin_f}")
+    t_i("nano_correction #{r[:corr]}")
+    t_i("origin_f #{r[:origin_f]}")
     t_i("execution #{execution}  expected_ns #{expected_ns}  tolerance_ns #{tolerance_ns}")
-    if (nano_correction > (expected_ns + tolerance_ns)) || (nano_correction < floor_ns)
-        t_e("Origin not as expected")
+    if (r[:corr] > (expected_ns + tolerance_ns)) || (r[:corr] < floor_ns)
+        t_e("Correction not as expected")
     end
-    if (origin_f != 0)
-        t_e("Origin not as expected.  origin_sec #{origin_sec}  origin_nsec #{origin_nsec}")
+    if (r[:origin_f] != 0)
+        t_e("Origin not as expected.  origin_sec #{r[:origin_sec]}  origin_nsec #{r[:origin_nsec]}")
     end
 end
 
