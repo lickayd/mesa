@@ -2024,7 +2024,6 @@ static mepa_rc lan8814_if_get(mepa_device_t *dev, mepa_port_speed_t speed,
     return MEPA_RC_OK;
 }
 
-#if !defined MEPA_LAN8814_LIGHT
 const lan8814_pvt_lut_t lan8814_pvt_lut[] = {
     {0x036, -40}, {0x06C, -25}, {0x07F, -20}, {0x092, -15}, {0x0A6, -10},
     {0x0BA,  -5}, {0x0CF,   0}, {0x0E4,   5}, {0x0FA,  10}, {0x110,  15},
@@ -2124,7 +2123,6 @@ static mepa_rc lan8814_chip_temp_get(mepa_device_t *dev, i16 *const temp)
 
     return MEPA_RC_OK;
 }
-#endif
 
 static mepa_device_t *lan8814_probe(mepa_driver_t *drv,
                                     const mepa_callout_t    MEPA_SHARED_PTR *callout,
@@ -3367,8 +3365,8 @@ mepa_drivers_t mepa_lan8814_driver_init(void)
             .mepa_driver_prbs_monitor_set = lan8814_prbs_monitor_set,
             .mepa_driver_prbs_monitor_get = lan8814_prbs_monitor_get,
             .mepa_driver_sqi_read = lan8814_sqi_read,
-#if !defined MEPA_LAN8814_LIGHT
             .mepa_driver_chip_temp_get = lan8814_chip_temp_get,
+#if !defined MEPA_LAN8814_LIGHT
             .mepa_driver_eee_mode_conf_set = lan8814_eee_mode_conf_set,
             .mepa_driver_eee_mode_conf_get = lan8814_eee_mode_conf_get,
             .mepa_driver_eee_status_get = lan8814_eee_status_get,
@@ -3422,8 +3420,8 @@ mepa_drivers_t mepa_lan8814_driver_init(void)
             .mepa_driver_prbs_monitor_set = lan8814_prbs_monitor_set,
             .mepa_driver_prbs_monitor_get = lan8814_prbs_monitor_get,
             .mepa_driver_sqi_read = lan8814_sqi_read,
-#if !defined MEPA_LAN8814_LIGHT
             .mepa_driver_chip_temp_get = lan8814_chip_temp_get,
+#if !defined MEPA_LAN8814_LIGHT
             .mepa_driver_eee_mode_conf_set = lan8814_eee_mode_conf_set,
             .mepa_driver_eee_mode_conf_get = lan8814_eee_mode_conf_get,
             .mepa_driver_eee_status_get = lan8814_eee_status_get,
