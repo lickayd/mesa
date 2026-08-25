@@ -866,6 +866,9 @@ typedef struct {
     // one-shot ANEG restart in vsc8574_phy_pass_through_speed_mode() only happens
     // on the first entry into pass-through. Cleared on a forced port reset.
     BOOL cu_sfp_config_complete;
+    // Set once the temperature sensor has been initialised, see
+    // vsc8574_chip_temp_get()
+    BOOL temp_init_flag;
 } vsc8574_data_t;
 
 #endif

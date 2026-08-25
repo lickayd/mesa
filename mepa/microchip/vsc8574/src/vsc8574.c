@@ -2139,6 +2139,41 @@ static mepa_rc vsc8574_reset_phy_priv(mepa_device_t *dev)
     return MEPA_RC_OK;
 }
 
+// The temperature sensor sits in the GPIO page, which is shared by all four
+// PHYs of the package, so this configures the sensor for the whole chip even
+// though the one-shot flag is kept per port.
+static mepa_rc vsc8574_chip_temp_init(mepa_device_t *dev)
+{
+    MEPA_RC(vsc8574_phy_page_gpio(dev));
+
+    // 28G.15:12 = 0
+    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_TEMP_VAL, 0x0U, 0xf000U));
+    // Deassert TMON0, reset and enable background monitoring
+    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_TEMP_CONF, 0x0080U, 0x0080U));
+    // Disable TMON1
+    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_TEMP_CONF, 0x00C0U, 0x00C0U));
+
+    return vsc8574_phy_page_std(dev);
+}
+
+// Trigger a conversion and read the raw ADC value.
+static mepa_rc vsc8574_temp_read(mepa_device_t *dev, u8 *temp_reading)
+{
+    u16 reg;
+
+    MEPA_RC(vsc8574_phy_page_gpio(dev));
+
+    // Workaround because background temperature monitoring does not work: pulse
+    // 26G.6 to start a new conversion
+    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_TEMP_CONF, 0x0U, 0x0040U));
+    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_TEMP_CONF, 0x0040U, 0x0040U));
+
+    MEPA_RC(PHY_RD_PAGE(dev, VTSS_PHY_TEMP_VAL, &reg));
+    *temp_reading = (u8)(reg & 0xffU); // adc_val, only the bottom 8 bits
+
+    return vsc8574_phy_page_std(dev);
+}
+
 // Public API bellow
 
 static mepa_device_t *vsc8574_probe(mepa_driver_t *drv,
@@ -2192,6 +2227,10 @@ static mepa_rc vsc8574_reset(mepa_device_t *dev,
 {
     vsc8574_data_t *data = (vsc8574_data_t *)(dev->data);
     mepa_rc            rc = MEPA_RC_OK;
+
+    // The temperature sensor configuration does not survive a PHY reset, so
+    // force vsc8574_chip_temp_get() to initialise it again
+    data->temp_init_flag = FALSE;
 
     switch (rst_conf->reset_point) {
     case MEPA_RESET_POINT_DEFAULT:
@@ -2371,6 +2410,28 @@ static mepa_rc vsc8574_poll(mepa_device_t *dev,
     return MEPA_RC_OK;
 }
 
+static mepa_rc vsc8574_chip_temp_get(mepa_device_t *dev, i16 *const temp)
+{
+    vsc8574_data_t *data = (vsc8574_data_t *)dev->data;
+    u8 temp_reading = 0;
+
+    if (temp == NULL) {
+        return MEPA_RC_ERROR;
+    }
+
+    if (!data->temp_init_flag) {
+        MEPA_RC(vsc8574_chip_temp_init(dev));
+        data->temp_init_flag = TRUE;
+    }
+
+    MEPA_RC(vsc8574_temp_read(dev, &temp_reading));
+
+    // 135.3 degC - 0.71 degC * ADCOUT, see the datasheet section on register 28G
+    *temp = (i16)((13530 - (71 * (int)temp_reading)) / 100);
+
+    return MEPA_RC_OK;
+}
+
 mepa_drivers_t mepa_vsc8574_driver_init(void)
 {
     static const int nr_vsc8574_drivers = 1;
@@ -2386,6 +2447,7 @@ mepa_drivers_t mepa_vsc8574_driver_init(void)
             .mepa_driver_conf_set = vsc8574_conf_set,
             .mepa_driver_conf_get = vsc8574_conf_get,
             .mepa_driver_poll = vsc8574_poll,
+            .mepa_driver_chip_temp_get = vsc8574_chip_temp_get,
         },
     };
 
