@@ -431,13 +431,9 @@ static mepa_rc lan80xx_ts_mode_set(mepa_device_t *dev, const mepa_bool_t enable)
     return rc;
 }
 
-static mepa_rc lan80xx_ts_ltc_get(mepa_device_t *dev, mepa_timestamp_t *const ts)
+static mepa_rc lan80xx_ts_ltc_get_priv(mepa_device_t *dev, mepa_timestamp_t *const ts, phy25g_phy_state_t *base_data)
 {
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
-    mepa_device_t *base_dev;
-    phy25g_phy_state_t *base_data;
-    LAN80XX_BASE_DEV(data, base_dev, base_data);
-    MEPA_ENTER(dev);
     u32 value = 0;
 
     LAN80XX_CSR_RD(dev, data->port_no, LAN80XX_PTP_LTC_PTP_TOD_NSEC(base_data->lsc_select), &value);
@@ -463,9 +459,20 @@ static mepa_rc lan80xx_ts_ltc_get(mepa_device_t *dev, mepa_timestamp_t *const ts
         }
     }
 
-    MEPA_EXIT(dev);
-
     return MEPA_RC_OK;
+}
+
+static mepa_rc lan80xx_ts_ltc_get(mepa_device_t *dev, mepa_timestamp_t *const ts)
+{
+    mepa_rc rc;
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
+    mepa_device_t *base_dev;
+    phy25g_phy_state_t *base_data;
+    LAN80XX_BASE_DEV(data, base_dev, base_data);
+    MEPA_ENTER(dev);
+    rc = lan80xx_ts_ltc_get_priv(dev, ts, base_data);
+    MEPA_EXIT(dev);
+    return rc;
 }
 
 static mepa_rc lan80xx_ts_ltc_set(mepa_device_t *dev, const mepa_timestamp_t *const ts)

@@ -21,25 +21,29 @@ mepa_rc lan80xx_mcu_mailbox_init(const mepa_device_t *dev, u32 u32McuIntMask, u3
     return rc;
 }
 
-mepa_rc lan80xx_MB_INTR_register_callback(const mepa_device_t *dev, gpio_callback_t gpio_cb)
+static mepa_rc lan80xx_MB_INTR_register_callback_priv(const mepa_device_t *dev, gpio_callback_t gpio_cb)
 {
-    mepa_rc rc = MEPA_RC_OK;
-
-    if (!dev) {
-        T_E(MEPA_TRACE_GRP_GEN, "Device not created!\n");
-        rc = MEPA_RC_ERR_PARM;
-        return rc;
-    }
-    MEPA_ENTER(dev);
-    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;;
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
     mepa_device_t *base_dev;
     phy25g_phy_state_t *base_data;
     LAN80XX_BASE_DEV(data, base_dev, base_data);
 
     T_I(MEPA_TRACE_GRP_GEN, "%s\n", __FUNCTION__);
     base_data->ft_gpio_read = gpio_cb;
-    MEPA_EXIT(dev);
+    return MEPA_RC_OK;
+}
 
+mepa_rc lan80xx_MB_INTR_register_callback(const mepa_device_t *dev, gpio_callback_t gpio_cb)
+{
+    mepa_rc rc;
+
+    if (!dev) {
+        T_E(MEPA_TRACE_GRP_GEN, "Device not created!\n");
+        return MEPA_RC_ERR_PARM;
+    }
+    MEPA_ENTER(dev);
+    rc = lan80xx_MB_INTR_register_callback_priv(dev, gpio_cb);
+    MEPA_EXIT(dev);
     return rc;
 }
 

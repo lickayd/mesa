@@ -7458,12 +7458,11 @@ On each linkup, the register LINE_PCS25G (Device 0x3 slice registers):VENDOR_PCS
 Value added: 2 * gb_shift_1 * 0.09697ns
 */
 
-mepa_rc lan80xx_linkup_delay(mepa_device_t *dev)
+static mepa_rc lan80xx_linkup_delay_priv(mepa_device_t *dev)
 {
     u32 gb_shift_1, in_delay_ns, in_delay_sns, dly, value = 0;
     float delay;
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
-    MEPA_ENTER(dev);
     LAN80XX_CSR_RD(dev, data->port_no, LAN80XX_LINE_PCS25G_GB_SHIFT, &dly);
     gb_shift_1 = LAN80XX_X_LINE_PCS25G_GB_SHIFT_GB_SHIFT_1(dly);
     delay = (2 * gb_shift_1 * 0.09697);
@@ -7477,9 +7476,20 @@ mepa_rc lan80xx_linkup_delay(mepa_device_t *dev)
     dly += in_delay_sns;
     value = LAN80XX_X_PTP_PROC_INGR_PCS_SERDES_LOCAL_LATENCY_SNS_INGR_PS_LOCAL_LATENCY_SNS(dly);
     MEPA_RC(LAN80XX_PHY_TS_WRITE_CSR(data->port_no, LAN80XX_PHY_TS_PROC_BLK_ID(0), LAN80XX_PTP_PROC_INGR_PCS_SERDES_LOCAL_LATENCY_SNS, &value));
-    MEPA_EXIT(dev);
     return MEPA_RC_OK;
+}
 
+mepa_rc lan80xx_linkup_delay(mepa_device_t *dev)
+{
+    mepa_rc rc;
+    if (!dev) {
+        T_E(MEPA_TRACE_GRP_GEN, "Device not created!\n");
+        return MEPA_RC_ERR_PARM;
+    }
+    MEPA_ENTER(dev);
+    rc = lan80xx_linkup_delay_priv(dev);
+    MEPA_EXIT(dev);
+    return rc;
 }
 
 mepa_rc lan80xx_ptp_reg_dump(mepa_device_t            *dev,

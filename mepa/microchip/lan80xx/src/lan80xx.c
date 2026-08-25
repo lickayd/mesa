@@ -412,6 +412,7 @@ static mepa_rc lan80xx_phy_info_get(mepa_device_t *dev, mepa_phy_info_t *const p
 
     if (base_data == NULL) {
         T_E(MEPA_TRACE_GRP_GEN, "\n Base Port not linked for port : %d\n", data->port_no);
+        MEPA_EXIT(dev);
         return MEPA_RC_ERROR;
     }
 
