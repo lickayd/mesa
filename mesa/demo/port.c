@@ -1485,6 +1485,42 @@ static void cli_cmd_phy_dump(cli_req_t *req)
     }
 }
 
+static void cli_cmd_phy_temp(cli_req_t *req)
+{
+    uint32_t       port_cnt = mesa_port_cnt(NULL);
+    mesa_port_no_t iport, uport;
+    mesa_bool_t    first = TRUE;
+    int16_t        temp;
+    mesa_rc        rc;
+
+    for (iport = 0; iport < port_cnt; iport++) {
+        uport = iport2uport(iport);
+        if (req->port_list[uport] == 0) {
+            continue;
+        }
+
+        // Skip ports without a PHY, otherwise every such port reports
+        // "not supported"
+        if (meba_global_inst->phy_devices[iport] == NULL) {
+            continue;
+        }
+
+        rc = meba_phy_chip_temp_get(meba_global_inst, iport, &temp);
+        if (rc != MESA_RC_OK) {
+            cli_printf("Port %u: %s\n", uport,
+                       rc == MESA_RC_NOT_IMPLEMENTED ? "temperature not supported"
+                                                     : "temperature read failed");
+            continue;
+        }
+
+        if (first) {
+            cli_table_header("Port  Temperature");
+            first = FALSE;
+        }
+        cli_printf("%-6u%d (C)\n", uport, temp);
+    }
+}
+
 static void cli_cmd_phy_trace(cli_req_t *req)
 {
     uint32_t        port_cnt = mesa_port_cnt(NULL);
@@ -1600,6 +1636,7 @@ static cli_cmd_t cli_cmd_table[] = {
      cli_cmd_phy_scan},
     {"Debug phy id", "Shows all probed phys", cli_cmd_phy_id},
     {"Debug phy dump [<port_list>]", "Dumps debug info for phy", cli_cmd_phy_dump},
+    {"Debug phy temp [<port_list>]", "Shows the chip temperature of the phy", cli_cmd_phy_temp},
     {"Debug phy trace [<port_list>] [short|medium|long|custom]",
      "Set SerDes trace-length tuning profile", cli_cmd_phy_trace},
     {"Debug Port 10G oper-mode [<port_list>] [lan|1g|repeater]",
