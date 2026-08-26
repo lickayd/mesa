@@ -927,6 +927,9 @@ typedef struct {
 typedef struct {
     uint8_t level; /**< Adjust the amplitude of the Signal(eye hieght). Maximum value is 127 */
     uint8_t boost; /**< Boost the signal strength upon frequency loss.  Maximum value is 127 */
+    uint8_t pre;   /**< Pre-cursor FIR tap, for a PHY whose transmitter is described by taps
+                        rather than by a single boost. Maximum value is 127 */
+    uint8_t post;  /**< Post-cursor FIR tap. Maximum value is 127 */
 } mepa_serdes_tx_conf_t;
 
 /** \brief Capability info */
