@@ -247,7 +247,7 @@ end
 
 # Teardown for a KR test: KR off, then back to a plain 'mode' link.
 def kr_teardown(port0, port1, mode)
-    kr_aneg_disable(port0, port1)
+    kr_aneg_set(port0, port1, "disable")
     port_mode_setup(port0, port1, mode)
 end
 
@@ -300,10 +300,6 @@ def kr_aneg_r_fec(port0, port1, adv)
     kr_aneg_set(port0, port1, "#{adv} rfec train")
     kr_aneg_wait(port0, port1)
     kr_status_check(port0, port1)
-end
-
-def kr_aneg_disable(port0, port1)
-    kr_aneg_set(port0, port1, "disable")
 end
 
 def nano_delay_measure(port0, port1)
@@ -362,87 +358,6 @@ def nano_delay_measure(port0, port1)
     t_i("nano_delay = #{$nano_delay}  tod_nano_tx = #{tod_nano_tx}  tod_nano_rx = #{tod_nano_rx}")
 
     return $nano_delay
-end
-
-def tx_two_step_sync(port0, port1)
-    # This function is not in use, it was called like this:
-    #8.times {
-    #    tx_two_step_sync(port0, port1)
-    #}
-    #tx_fifo_print(port0)
-    #exit 0
-    $nano_delay
-
-    t_i("tx_two_step_sync")
-
-    # Allocate a timestamp id
-    conf = {port_mask: 1<<port0, context: 0, cb: 0}
-    idx = $ts.dut.call("mesa_tx_timestamp_idx_alloc", conf)
-
-    t_i("transmit SYNC frame on NPI against loop port and receive again on NPI port")
-    frameHdrTx = frame_create("00:02:03:04:05:06", "00:08:09:0a:0b:0c")
-    frametx = tx_ifh_create(port0, "MESA_PACKET_PTP_ACTION_TWO_STEP", idx["ts_id"]<<16) + frameHdrTx.dup + sync_pdu_create()
-    framerx = rx_ifh_create(port1) + frameHdrTx.dup + sync_pdu_rx_create()
-    frame_cfg = { frame: frametx, port: $npi_port, port0: nil, port1: nil, npi_port: $npi_port }
-    frame_tx(frame_cfg)
-end
-
-def tx_fifo_print(port0)
-    # This function is not in use
-    $ts.dut.run ("mesa-cmd deb sym write HSCH:SYSTEM:PORT_MODE[#{port0}] 0x00")
-    sleep 1
-
-    t_i("Update the TX FIFO in AIL. This will cause callback to json with the TX timestamp")
-    $ts.dut.call("mesa_tx_timestamp_update")
-
-    t_i("Get the TX timestamps. This is not a MESA API function, only a json implementation to get the TX timestamp delivered through callback")
-    tod_nano_tx = []
-    loop do
-        ts_tx = $ts.dut.call("mesa_tx_timestamp_get")
-        if (ts_tx["ts_valid"] != true)
-            t_i("Not valid")
-            break;
-        end
-        tod_nano_tx << (ts_tx["ts"] >> 16)
-    end
-    t_i("tod_nano_tx #{tod_nano_tx}")
-
-    tod_nano_diff = []
-    value = 0
-    for i in tod_nano_tx do
-        if value != 0
-            tod_nano_diff << (i - value)
-        end
-        value = i
-    end
-    t_i("tod_nano_diff #{tod_nano_diff}")
-end
-
-def multiple_measure(port0, port1)
-    # This function is not in use
-    delays = []
-    10.times {
-        nano_delay = nano_delay_measure(port0, port1)
-
-        delays << nano_delay
-        $ts.dut.run ("mesa-cmd port state #{port0} disable")
-        sleep 1
-        $ts.dut.run ("mesa-cmd port state #{port0} enable")
-        sleep 2
-        $ts.dut.call("mesa_ts_status_change", port0)
-        $ts.dut.call("mesa_ts_status_change", port1)
-    }
-    t_i("delays = #{delays}")
-
-    delays_diff = []
-    value = 0
-    for i in delays do
-        if value != 0
-            delays_diff << (i - value)
-        end
-        value = i
-    end
-    t_i("delays_diff #{delays_diff}")
 end
 
 ################################################
