@@ -71,6 +71,7 @@ typedef struct {
     uint8_t  model;
     uint8_t  rev;
     uint16_t sku;
+    mepa_bool_t lp;
 } lan8814_dev_info_t;
 
 typedef enum {

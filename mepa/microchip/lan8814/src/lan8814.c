@@ -184,10 +184,19 @@ static mepa_rc lan8814_get_device_info(mepa_device_t *dev)
     lan8814_data_t *data = (lan8814_data_t *)dev->data;
     uint16_t id;
 
-    (void)RD(dev, LAN8814_DEVICE_ID_2, &id);
+    MEPA_RC(RD(dev, LAN8814_DEVICE_ID_2, &id));
 
     data->dev.model = (uint8_t)LAN8814_X_DEV_ID_MODEL(id);
     data->dev.rev = (uint8_t)LAN8814_X_DEV_ID_REV(id);
+
+    MEPA_RC(EP_RD(dev, LAN8814_STRAP_STATUS_2, &id));
+    id = LAN8814_X_STRAP_STATUS_2_BOND(id);
+    // According to the DOS the LP devices are the devices which have this bond
+    // values. The register description says that these values are reserved but
+    // the DOS says otherwise
+    if (id == 0x4U || id == 0x5U || id == 0xcU || id == 0xdU) {
+        data->dev.lp = TRUE;
+    }
     T_I(MEPA_TRACE_GRP_GEN, "model 0x%x rev %d\n", data->dev.model, data->dev.rev);
 
     return MEPA_RC_OK;
@@ -318,9 +327,15 @@ static mepa_rc lan8814_rev_workaround(mepa_device_t *dev)
 
 static mepa_rc lan8814_workaround_after_reset(mepa_device_t *dev)
 {
+    lan8814_data_t *data = (lan8814_data_t *) dev->data;
+
     //737 Clause 14 UNH Fix
     (void)EP_WR(dev, LAN8814_AFED_CONTROL, 0xe214);
-    (void)EP_WR(dev, LAN8814_ANALOG_CONTROL_4, 0x81e0);
+    if (data->dev.lp == TRUE) {
+        (void)EP_WR(dev, LAN8814_ANALOG_CONTROL_4, 0x00fd);
+    } else {
+        (void)EP_WR(dev, LAN8814_ANALOG_CONTROL_4, 0x81e0);
+    }
 
     //639 Clause 40 EEE Fix
     (void)EP_WR(dev, LAN8814_EEE_WAKE_TX_TIMER, 0x1f);
