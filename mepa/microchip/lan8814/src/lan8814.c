@@ -2024,7 +2024,7 @@ static mepa_rc lan8814_if_get(mepa_device_t *dev, mepa_port_speed_t speed,
     return MEPA_RC_OK;
 }
 
-const lan8814_pvt_lut_t lan8814_pvt_lut[] = {
+static const lan8814_pvt_lut_t lan8814_pvt_lut[] = {
     {0x036, -40}, {0x06C, -25}, {0x07F, -20}, {0x092, -15}, {0x0A6, -10},
     {0x0BA,  -5}, {0x0CF,   0}, {0x0E4,   5}, {0x0FA,  10}, {0x110,  15},
     {0x127,  20}, {0x13E,  25}, {0x156,  30}, {0x16E,  35}, {0x187,  40},
@@ -2042,20 +2042,25 @@ static i16 lan8814_pvt_code_to_temp(uint16_t code)
     if (code <= lan8814_pvt_lut[0].code) {
         return lan8814_pvt_lut[0].temp;
     }
-    if (code >= lan8814_pvt_lut[n - 1].code) {
-        return lan8814_pvt_lut[n - 1].temp;
+    if (code >= lan8814_pvt_lut[n - 1U].code) {
+        return lan8814_pvt_lut[n - 1U].temp;
     }
-    for (i = 1; i < n; i++) {
+    for (i = 1U; i < n; i++) {
         if (code <= lan8814_pvt_lut[i].code) {
-            const lan8814_pvt_lut_t *lo = &lan8814_pvt_lut[i - 1];
+            const lan8814_pvt_lut_t *lo = &lan8814_pvt_lut[i - 1U];
             const lan8814_pvt_lut_t *hi = &lan8814_pvt_lut[i];
-            int dcode = hi->code - lo->code;
-            int dtemp = hi->temp - lo->temp;
+            // The interpolation is done in signed 32-bit throughout: the code
+            // deltas are unsigned 16-bit and the temperatures signed 16-bit, so
+            // mixing them needs one common type.
+            int32_t dcode = (int32_t)hi->code - (int32_t)lo->code;
+            int32_t dtemp = (int32_t)hi->temp - (int32_t)lo->temp;
+            int32_t dsum = (((int32_t)code - (int32_t)lo->code) * dtemp) +
+                           (dcode / 2);
             // Rounded linear interpolation.
-            return (i16)(lo->temp + (((code - lo->code) * dtemp + (dcode / 2)) / dcode));
+            return (i16)((int32_t)lo->temp + (dsum / dcode));
         }
     }
-    return lan8814_pvt_lut[n - 1].temp;
+    return lan8814_pvt_lut[n - 1U].temp;
 }
 
 // One-time initialisation of the AB PVT IP for die-temperature measurement (AN4284).
@@ -2065,13 +2070,13 @@ static mepa_rc lan8814_pvt_init(mepa_device_t *base_dev, mepa_bool_t vddah_2v5)
     // EP4.406 PSEL25: VDDAH select. 0x0000 = 3.3V, 0x0001 = 2.5V. Must match the
     // board's actual VDDAH rail for the conversion table to be valid.
     MEPA_RC(EP_WR(base_dev, LAN8814_AB_PVT_PSEL25,
-                  LAN8814_AB_PVT_PSEL25_PSEL25(vddah_2v5)));
+                  LAN8814_AB_PVT_PSEL25_PSEL25(vddah_2v5 ? 1U : 0U)));
     // EP4.396 Thermal Comparator Control: THERM_COMP_CTL = 0x01 (enabled).
     MEPA_RC(EP_WR(base_dev, LAN8814_AB_PVT_THERMAL_COMP_CTRL,
                   LAN8814_AB_PVT_THERMAL_COMP_CTRL_THERM_COMP_CTL));
     // EP4.394 Sample Time: 10 ms between samples.
     MEPA_RC(EP_WR(base_dev, LAN8814_AB_PVT_SAMPLE_TIME,
-                  LAN8814_AB_PVT_SAMPLE_TIME_SAMPLE_TIME(10)));
+                  LAN8814_AB_PVT_SAMPLE_TIME_SAMPLE_TIME(10U)));
     // EP4.384 Control Register 1: SEL_ENA=0, PVT_EN=0, VSAMPLE=0, PSAMPLE=0, SEL_TRIM=0x0F.
     MEPA_RC(EP_WRM(base_dev, LAN8814_AB_PVT_CTRL1,
                    0, LAN8814_AB_PVT_CTRL1_SEL_ENA));
