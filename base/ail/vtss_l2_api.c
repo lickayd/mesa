@@ -7342,17 +7342,26 @@ static char *vtss_opt_prio_str(vtss_opt_prio_t *p, lmu_fmt_buf_t *buf)
 static char *vtss_ts_str(vtss_timestamp_t *ts, lmu_fmt_buf_t *buf)
 {
     char str[64];
+    /* The seconds field of a PTP timestamp is 48 bits wide: sec_msb holds the
+       upper 16 bits and seconds the lower 32 */
+    u64 seconds = ((u64)ts->sec_msb << 32) | (u64)ts->seconds;
 #if defined(VTSS_OPSYS_LINUX)
-    time_t     tm = (time_t)ts->seconds;
+    time_t     tm = (time_t)seconds;
     struct tm  timeinfo;
     struct tm *t = localtime_r(&tm, &timeinfo);
-    (void)strftime(str, sizeof(str), "%Y-%m-%d %H:%M:%S", t);
+
+    /* localtime_r() returns NULL if the time cannot be represented */
+    str[0] = '\0';
+    if (t != NULL) {
+        (void)strftime(str, sizeof(str), "%Y-%m-%d %H:%M:%S", t);
+    }
 #else
     str[0] = '\0';
 #endif
 
     lmu_fmt_buf_init(buf);
-    LMU_SS_FMT(&buf->ss, "%s.%09u (%u-%u)", str, ts->nanoseconds, ts->seconds, ts->nanoseconds);
+    LMU_SS_FMT(&buf->ss, "%s.%09u (%" PRIu64 "-%u)", str, ts->nanoseconds, seconds,
+               ts->nanoseconds);
     return buf->s;
 }
 
