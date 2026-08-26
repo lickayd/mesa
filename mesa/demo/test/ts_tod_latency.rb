@@ -72,24 +72,21 @@ test_table =
         txt: "10G_FDX - NO FEC",
         fun: -> (t) {
             each_sfp_pair("10G_FDX") do |port0, port1|
-                next unless port_mode_set(port0, port1, "10g", "MESA_SPEED_10G", 1.0)
+                next unless port_mode_setup(port0, port1, "10g", "MESA_SPEED_10G")
                 tod_latency_test(port0, port1, t[:txt])
             end
         }
     },
     {
-        txt: "10G_FDX - KR RS-FEC",
+        txt: "10G_FDX - KR aneg overrides forced 10G port mode",
         fun: -> (t) {
-            if (cap_get("MISC_CHIP_FAMILY") != chip_family_to_id("MESA_CHIP_FAMILY_SPARX5"))
-                test_skip()
-                return
-            end
-
             each_sfp_pair("10G_FDX") do |port0, port1|
-                next unless port_mode_set(port0, port1, "10g", "MESA_SPEED_10G", 1.0)
-                kr_aneg_rs_fec(port0, port1)
+                next unless port_mode_setup(port0, port1, "10g", "MESA_SPEED_10G")
+                kr_aneg_set(port0, port1, "all")
+                kr_aneg_wait(port0, port1)
+                kr_status_check(port0, port1)
                 tod_latency_test(port0, port1, t[:txt])
-                kr_aneg_disable(port0, port1)
+                kr_teardown(port0, port1, "10g")
             end
         }
     },
@@ -97,10 +94,10 @@ test_table =
         txt: "10G_FDX - KR R-FEC",
         fun: -> (t) {
             each_sfp_pair("10G_FDX") do |port0, port1|
-                next unless port_mode_set(port0, port1, "10g", "MESA_SPEED_10G", 1.0)
+                next unless port_mode_setup(port0, port1, "10g", "MESA_SPEED_10G")
                 kr_aneg_r_fec(port0, port1, "adv-10g")
                 tod_latency_test(port0, port1, t[:txt])
-                kr_aneg_disable(port0, port1)
+                kr_teardown(port0, port1, "10g")
             end
         }
     },
@@ -108,7 +105,7 @@ test_table =
         txt: "5G_FDX",
         fun: -> (t) {
             each_sfp_pair(" 5G_FDX") do |port0, port1|
-                port_mode_set(port0, port1, "5g")
+                port_mode_setup(port0, port1, "5g")
                 tod_latency_test(port0, port1, t[:txt])
             end
         }
@@ -117,7 +114,7 @@ test_table =
         txt: "2_5G_FDX",
         fun: -> (t) {
             each_sfp_pair("2_5G_FDX") do |port0, port1|
-                port_mode_set(port0, port1, "2500")
+                port_mode_setup(port0, port1, "2500")
                 tod_latency_test(port0, port1, t[:txt])
             end
         }
@@ -126,7 +123,7 @@ test_table =
         txt: "1G_FDX",
         fun: -> (t) {
             each_sfp_pair("1G_FDX") do |port0, port1|
-                port_mode_set(port0, port1, "1000fdx")
+                port_mode_setup(port0, port1, "1000fdx")
                 tod_latency_test(port0, port1, t[:txt])
             end
         }
@@ -135,7 +132,7 @@ test_table =
         txt: "25G_FDX - NO FEC",
         fun: -> (t) {
             each_sfp_pair("25G_FDX") do |port0, port1|
-                next unless port_mode_set(port0, port1, "25g", "MESA_SPEED_25G", 0.5)
+                next unless port_mode_setup(port0, port1, "25g", "MESA_SPEED_25G")
                 tod_latency_test(port0, port1, t[:txt])
             end
         }
@@ -144,10 +141,10 @@ test_table =
         txt: "25G_FDX - KR RS-FEC",
         fun: -> (t) {
             each_sfp_pair("25G_FDX") do |port0, port1|
-                next unless port_mode_set(port0, port1, "25g", "MESA_SPEED_25G", 0.5)
-                kr_aneg_rs_fec(port0, port1)
+                next unless port_mode_setup(port0, port1, "25g", "MESA_SPEED_25G")
+                kr_aneg_rs_fec(port0, port1, "adv-25g")
                 tod_latency_test(port0, port1, t[:txt])
-                kr_aneg_disable(port0, port1)
+                kr_teardown(port0, port1, "25g")
             end
         }
     },
@@ -155,10 +152,10 @@ test_table =
         txt: "25G_FDX - KR R-FEC",
         fun: -> (t) {
             each_sfp_pair("25G_FDX") do |port0, port1|
-                next unless port_mode_set(port0, port1, "25g", "MESA_SPEED_25G", 0.5)
+                next unless port_mode_setup(port0, port1, "25g", "MESA_SPEED_25G")
                 kr_aneg_r_fec(port0, port1, "adv-25g")
                 tod_latency_test(port0, port1, t[:txt])
-                kr_aneg_disable(port0, port1)
+                kr_teardown(port0, port1, "25g")
             end
         }
     },
@@ -178,7 +175,7 @@ test_table =
                 return
             end
 
-            port_mode_set(port0, port1, "10g")
+            port_mode_setup(port0, port1, "10g")
             tod_latency_test(port0, port1, t[:txt])
         }
     },
@@ -211,14 +208,26 @@ def each_sfp_pair(cap_txt)
     test_skip() unless found
 end
 
+# Wait for the link on both ports. This is the raw link, unlike
+# dut_port_state_up() which also requires KR aneg to have completed.
+def port_link_wait(ports, timeout = 20)
+    ts = Time.now.to_i
+    ports.each do |port|
+        until $ts.dut.call("mesa_port_status_get", port)["link"]
+            return false if ((Time.now.to_i - ts) > timeout)
+            sleep 1
+        end
+    end
+    true
+end
+
 # Switch both ports to 'mode'. When 'speed' is given, verify the switch took
 # effect and return false if it did not.
-def port_mode_set(port0, port1, mode, speed = nil, delay = 0)
+def port_mode_set(port0, port1, mode, speed = nil)
     $ts.dut.run("mesa-cmd port mode #{port0+1} #{mode}")
     $ts.dut.run("mesa-cmd port mode #{port1+1} #{mode}")
     return true if speed.nil?
 
-    sleep delay
     conf = $ts.dut.call("mesa_port_conf_get", port0)
     return true if (conf["speed"] == speed)
 
@@ -226,25 +235,75 @@ def port_mode_set(port0, port1, mode, speed = nil, delay = 0)
     false
 end
 
-def kr_aneg_wait(port0, port1)
-    t_e("Link did not come up after KR aneg train  port0 #{port0}  port1 #{port1}") unless dut_port_state_up([port0, port1])
+# Bring the pair to 'mode' with the link up. Returns false if the port does not
+# support 'mode'. KR is deliberately not touched here: disabling KR on a port that
+# never ran it also clears the FEC config, which skews the TS latency defaults.
+def port_mode_setup(port0, port1, mode, speed = nil)
+    return false unless port_mode_set(port0, port1, mode, speed)
+
+    t_e("Link did not come up in #{mode}  port0 #{port0}  port1 #{port1}") unless port_link_wait([port0, port1])
+    true
 end
 
-def kr_aneg_rs_fec(port0, port1)
-    $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} all")
-    $ts.dut.run("mesa-cmd Port KR aneg #{port0+1} all")
+# Teardown for a KR test: KR off, then back to a plain 'mode' link.
+def kr_teardown(port0, port1, mode)
+    kr_aneg_disable(port0, port1)
+    port_mode_setup(port0, port1, mode)
+end
+
+def kr_aneg_wait(port0, port1, stage = "train")
+    t_e("Link did not come up after KR aneg #{stage}  port0 #{port0}  port1 #{port1}") unless dut_port_state_up([port0, port1])
+end
+
+# Wait for KR aneg and training to complete on both ports, and log what was
+# negotiated. Two consecutive reads must agree: the state machine can still be
+# settling just after aneg completes, while a link that keeps retraining never
+# gives two good reads in a row.
+def kr_status_check(port0, port1, timeout = 20)
+    [port0, port1].each do |port|
+        ts = Time.now.to_i
+        good = 0
+        sts = $ts.dut.call("mesa_port_kr_status_get", port)
+        until (good == 2)
+            good = (sts["aneg"]["complete"] && sts["train"]["complete"]) ? (good + 1) : 0
+            break if (good == 2)
+            if ((Time.now.to_i - ts) > timeout)
+                t_e("KR aneg/training did not complete  port #{port}  aneg #{sts["aneg"]["complete"]}  train #{sts["train"]["complete"]}")
+                break
+            end
+            sleep 1
+            sts = $ts.dut.call("mesa_port_kr_status_get", port)
+        end
+        conf = $ts.dut.call("mesa_port_conf_get", port)
+        t_i("KR port #{port}  speed #{conf["speed"]}  r_fec #{sts["fec"]["r_fec_enable"]}  rs_fec #{sts["fec"]["rs_fec_enable"]}")
+    end
+end
+
+# Both ends are configured in one command. Two commands leave a window where one
+# end anegs against a partner that is not anegging yet.
+def kr_aneg_set(port0, port1, args)
+    $ts.dut.run("mesa-cmd Port KR aneg #{port0+1},#{port1+1} #{args}")
+end
+
+# RS-FEC (Clause 108) is 25G only, so 'adv' must advertise 25G.
+def kr_aneg_rs_fec(port0, port1, adv)
+    kr_aneg_set(port0, port1, "#{adv} rsfec train")
     kr_aneg_wait(port0, port1)
+    kr_status_check(port0, port1)
 end
 
+# R-FEC is requested on a link that is already anegging, as the KR state machine
+# does not train when it is enabled straight into a narrow advertisement.
 def kr_aneg_r_fec(port0, port1, adv)
-    $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} #{adv} rfec train")
-    $ts.dut.run("mesa-cmd Port KR aneg #{port0+1} #{adv} rfec train")
+    kr_aneg_set(port0, port1, "all")
+    kr_aneg_wait(port0, port1, "warm-up")
+    kr_aneg_set(port0, port1, "#{adv} rfec train")
     kr_aneg_wait(port0, port1)
+    kr_status_check(port0, port1)
 end
 
 def kr_aneg_disable(port0, port1)
-    $ts.dut.run("mesa-cmd Port KR aneg #{port1+1} disable")
-    $ts.dut.run("mesa-cmd Port KR aneg #{port0+1} disable")
+    kr_aneg_set(port0, port1, "disable")
 end
 
 def nano_delay_measure(port0, port1)
