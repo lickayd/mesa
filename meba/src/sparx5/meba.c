@@ -589,6 +589,11 @@ static void fa_pcb8415_init_port(meba_inst_t          inst,
         port_cnt += slots[i]->port_count;
     }
     fa_init_port_table(inst, port_cnt, 1, port_table_npi_port, false);
+    // NPI port must reference itself as phy_base_port. The default (0) would
+    // incorrectly link it to a plugin-module PHY (e.g. AQR-based AIS21010)
+    // whose private data is not phy_data_t, causing a type-punning crash in
+    // phy_1g_link_base_port when it reads the device pointer as port_no.
+    board->port[port_cnt].map.phy_base_port = port_cnt;
 }
 
 static void fa_pcb134_init_port(meba_inst_t inst, mesa_port_no_t port_no, meba_port_entry_t *entry)
