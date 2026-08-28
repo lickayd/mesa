@@ -288,7 +288,9 @@ def vce_tag_set(k, tag)
     vcap_bit_set(k, "s_tag", tag, :s_tag)
 end
 
-def vce_test(t)
+# 'key_sel' is the key type selected by the rule itself (nil: selected by the port)
+# 'port_conf' is the VCL port configuration to apply after the rule has been added
+def vce_test(t, key_sel = nil, port_conf = nil)
     v = t[:vce]
     vid = v[:vid]
 
@@ -347,9 +349,21 @@ def vce_test(t)
     else
     end
     key["port_list"] = "#{$ts.dut.port_list[v[:port_idx]]}"
+    if (key_sel != nil)
+        # The rule determines the key encoding instead of the ingress port
+        key["key_enable"] = true
+        key["key_type"] = ("MESA_VCAP_KEY_TYPE_" + key_sel)
+        key["dmac_dip"] = (v[:port_idx] == 1)
+    end
     conf["action"]["vid"] = vid
     $ts.dut.call("mesa_vce_add", 0, conf)
     $vce_added = true
+
+    if (port_conf != nil)
+        # The rule encoding does not depend on the port, so the port key
+        # generation can be setup after the rule has been added
+        $ts.dut.call("mesa_vcl_port_conf_set", port_conf[:port], port_conf[:conf])
+    end
 
     for i in 0..1 do
         f = (i == 0 ? t[:f_0] : t[:f_1])
@@ -470,7 +484,8 @@ test_table.each do |t|
         txt = (t[:txt] + " (#{k})")
         test txt do
             if ($vce_added)
-                # Delete VCE before setting up port key
+                # Delete VCE before setting up port key, as the rule encoding
+                # depends on the port key generation
                 $vce_added = false
                 $ts.dut.call("mesa_vce_del", 1)
             end
@@ -480,6 +495,20 @@ test_table.each do |t|
             conf["key_type"] = ("MESA_VCAP_KEY_TYPE_" + k)
             $ts.dut.call("mesa_vcl_port_conf_set", port, conf)
             vce_test(t)
+        end
+    end
+
+    if ($cap_key_sel != 0 and key_list.length > 1)
+        # The rule selects the key encoding, so the port key generation is
+        # changed from the last to the first key type after the rule is added
+        k = key_list.first
+        test (t[:txt] + " (#{k}, selected by rule)") do
+            if ($vce_added)
+                $vce_added = false
+                $ts.dut.call("mesa_vce_del", 1)
+            end
+            conf["key_type"] = ("MESA_VCAP_KEY_TYPE_" + k)
+            vce_test(t, k, {port: port, conf: conf})
         end
     end
 end

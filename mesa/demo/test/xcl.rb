@@ -61,6 +61,25 @@ test_table = [
               {cmd: "ipv6", fwd: [{idx_tx: 0}, {idx_rx: 2}]}],
     },
     {
+        # IPv4/IPv6 frames are matched by rules selecting the key encoding.
+        # The port key generation is configured after the rules are added.
+        txt: "vcl-rule-keys",
+        vpc_last: true,
+        vpc: [{idx: 0, tab: [{i: 0, key_type: "DOUBLE_TAG"},
+                             {i: 1, key_type: "NORMAL", dmac_dip: true},
+                             {i: 2, key_type: "IP_ADDR"},
+                             {i: 3, key_type: "MAC_IP_ADDR"}]}],
+        vcl: [{id: 1, key: {lookup: 0, key_type: "DOUBLE_TAG"}, act: {gkey_mode: "ADD", gkey: 1}},
+              {id: 2, key: {lookup: 1, type: "IPV4", key_type: "NORMAL", dmac_dip: true}, act: {gkey_mode: "ADD", gkey: 1}},
+              {id: 3, key: {lookup: 2, type: "IPV4", key_type: "IP_ADDR"}, act: {gkey_mode: "ADD", gkey: 1}},
+              {id: 4, key: {lookup: 3, type: "IPV4", gkey: 3, key_type: "MAC_IP_ADDR"}, act: {port_action: "FILTER", idx: 1}},
+              {id: 5, key: {lookup: 1, type: "IPV6", key_type: "NORMAL", dmac_dip: true}, act: {gkey_mode: "ADD", gkey: 2}},
+              {id: 6, key: {lookup: 2, type: "IPV6", key_type: "IP_ADDR"}, act: {gkey_mode: "ADD", gkey: 2}},
+              {id: 7, key: {lookup: 3, type: "IPV6", gkey: 5, key_type: "MAC_IP_ADDR"}, act: {port_action: "FILTER", idx: 2}}],
+        frm: [{cmd: "ipv4", fwd: [{idx_tx: 0}, {idx_rx: 1}]},
+              {cmd: "ipv6", fwd: [{idx_tx: 0}, {idx_rx: 2}]}],
+    },
+    {
         # Frames are matched in different lookups and actions are combined
         txt: "acl-lookup",
         npi: {idx: 3, queue: 5},
@@ -125,6 +144,30 @@ def xcl_port_list(key, is_action = false)
     return port_idx_list_str(idx)
 end
 
+def xcl_vcl_port_conf(t, vpc_old)
+    fld_get(t, :vpc, []).each do |e|
+        idx = fld_get(e, :idx)
+        port = $ts.dut.p[idx]
+        c = $ts.dut.call("mesa_vcl_port_conf_get", port)
+        # Deep copy of configuration
+        vpc_old.push({port: port, conf: Marshal.load(Marshal.dump(c))})
+        e[:tab].each do |k|
+            i = fld_get(k, :i)
+            dmac_dip = fld_get(k, :dmac_dip, false)
+            key_type = ("MESA_VCAP_KEY_TYPE_" + fld_get(k, :key_type, "NORMAL"))
+            if (i == 0)
+                c["dmac_dip"] = dmac_dip
+                c["key_type"] = key_type
+            else
+                l = c["lookup"][i - 1]
+                l["dmac_dip"] = dmac_dip
+                l["key_type"] = key_type
+            end
+        end
+        $ts.dut.call("mesa_vcl_port_conf_set", port, c)
+    end
+end
+
 def xcl_test(t)
     # NPI port
     npi = fld_get(t, :npi, nil)
@@ -154,29 +197,11 @@ def xcl_test(t)
         $ts.dut.call("mesa_vlan_port_conf_set", port, c)
     end
 
-    # VCL port configuration
+    # VCL port configuration, done before the rules unless 'vpc_last' is set
     vpc_old = []
-    vpc = fld_get(t, :vpc, [])
-    vpc.each do |e|
-        idx = fld_get(e, :idx)
-        port = $ts.dut.p[idx]
-        c = $ts.dut.call("mesa_vcl_port_conf_get", port)
-        # Deep copy of configuration
-        vpc_old.push({port: port, conf: Marshal.load(Marshal.dump(c))})
-        e[:tab].each do |k|
-            i = fld_get(k, :i)
-            dmac_dip = fld_get(k, :dmac_dip, false)
-            key_type = ("MESA_VCAP_KEY_TYPE_" + fld_get(k, :key_type, "NORMAL"))
-            if (i == 0)
-                c["dmac_dip"] = dmac_dip
-                c["key_type"] = key_type
-            else
-                l = c["lookup"][i - 1]
-                l["dmac_dip"] = dmac_dip
-                l["key_type"] = key_type
-            end
-        end
-        $ts.dut.call("mesa_vcl_port_conf_set", port, c)
+    vpc_last = fld_get(t, :vpc_last, false)
+    if (!vpc_last)
+        xcl_vcl_port_conf(t, vpc_old)
     end
 
     # Add VCL rules
@@ -196,6 +221,14 @@ def xcl_test(t)
             k["gkey"]["mask"][1] = 0xff
         end
 
+        # If the key encoding is present, it is selected by the rule instead of
+        # the ingress port key generation
+        if (key.key?(:key_type) or key.key?(:dmac_dip))
+            k["key_enable"] = true
+            k["key_type"] = ("MESA_VCAP_KEY_TYPE_" + fld_get(key, :key_type, "NORMAL"))
+            k["dmac_dip"] = fld_get(key, :dmac_dip, false)
+        end
+
         # Action fields
         act = fld_get(e, :act, {})
         a = c["action"]
@@ -210,7 +243,12 @@ def xcl_test(t)
         $ts.dut.call("mesa_vce_add", 0, c)
     end
 
-    # VCL port configuration
+    # VCL port configuration after the rules have been added
+    if (vpc_last)
+        xcl_vcl_port_conf(t, vpc_old)
+    end
+
+    # ACL port configuration
     apc_old = []
     apc = fld_get(t, :apc, [])
     apc.each do |e|
