@@ -517,7 +517,8 @@ static mesa_rc ev96d50a_sfp_status_read(meba_inst_t        inst,
 #define MEBA_CAP_AIS21010                                                                          \
     (MEBA_PORT_CAP_COPPER_10G | MEBA_PORT_CAP_100M_FDX | MEBA_PORT_CAP_1G_FDX |                    \
      MEBA_PORT_CAP_2_5G_FDX | MEBA_PORT_CAP_5G_FDX | MEBA_PORT_CAP_10G_FDX |                       \
-     MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_OUT_BAND_STATUS | MEBA_PORT_CAP_NO_FORCE)
+     MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_OUT_BAND_STATUS | MEBA_PORT_CAP_NO_FORCE |            \
+     MEBA_PORT_CAP_AUTONEG)
 
 static port_map_t port_table_ais21010_slot_1[] = {
     {56, 24, MESA_MIIM_CONTROLLER_0, MESA_PORT_INTERFACE_SFI, MESA_BW_10G, MEBA_CAP_AIS21010, 0,
