@@ -1005,6 +1005,38 @@ char *misc_mem_print(const uint8_t *in_buf, size_t in_sz, char *out_buf, size_t 
     return out_buf;
 }
 
+// Print the SFF-8472 alarm/warning flag byte pair (Table 9-17) as the names
+// of the bits that are set, e.g. "RxPowerLo", or "none" if none are set.
+static void sfp_ddm_print_flags(const char *label, const uint8_t bytes[2])
+{
+    static const struct {
+        int         byte; // Index into 'bytes'
+        uint8_t     mask;
+        const char *name;
+    } aw_bits[] = {
+        {0, MEBA_SFP_DDM_AW0_TEMP_HI,     "TempHi"   },
+        {0, MEBA_SFP_DDM_AW0_TEMP_LO,     "TempLo"   },
+        {0, MEBA_SFP_DDM_AW0_VCC_HI,      "VccHi"    },
+        {0, MEBA_SFP_DDM_AW0_VCC_LO,      "VccLo"    },
+        {0, MEBA_SFP_DDM_AW0_TX_BIAS_HI,  "TxBiasHi" },
+        {0, MEBA_SFP_DDM_AW0_TX_BIAS_LO,  "TxBiasLo" },
+        {0, MEBA_SFP_DDM_AW0_TX_POWER_HI, "TxPowerHi"},
+        {0, MEBA_SFP_DDM_AW0_TX_POWER_LO, "TxPowerLo"},
+        {1, MEBA_SFP_DDM_AW1_RX_POWER_HI, "RxPowerHi"},
+        {1, MEBA_SFP_DDM_AW1_RX_POWER_LO, "RxPowerLo"},
+    };
+    int any = 0;
+
+    cli_printf("  %s:", label);
+    for (size_t i = 0; i < sizeof(aw_bits) / sizeof(aw_bits[0]); i++) {
+        if (bytes[aw_bits[i].byte] & aw_bits[i].mask) {
+            cli_printf(" %s", aw_bits[i].name);
+            any = 1;
+        }
+    }
+    cli_printf(any ? "\n" : " none\n");
+}
+
 static void cli_cmd_sfp_dump(cli_req_t *req)
 {
     uint32_t                port_cnt = mesa_port_cnt(NULL);
@@ -1013,6 +1045,7 @@ static void cli_cmd_sfp_dump(cli_req_t *req)
     mesa_port_conf_t        conf;
     port_entry_t           *entry;
     meba_sfp_device_info_t *info;
+    meba_sfp_ddm_info_t     ddm;
     int                     found = 0, pre;
     uint8_t                 rom[255] = {};
     char                    out_buf[4096] = {};
@@ -1056,6 +1089,43 @@ static void cli_cmd_sfp_dump(cli_req_t *req)
                                                         rom, sizeof(rom), FALSE) == MESA_RC_OK) {
                 cli_printf("Rom content at 0x50:\n%s\n",
                            misc_mem_print(rom, sizeof(rom), out_buf, sizeof(out_buf)));
+
+                if (info != NULL && info->ddm_implemented &&
+                    meba_sfp_ddm_info_get(meba_global_inst, iport, info->ddm_int_cal,
+                                          info->ddm_ext_cal, &ddm)) {
+                    const char *cal_str = info->ddm_int_cal   ? "internal"
+                                          : info->ddm_ext_cal ? "external"
+                                                              : "unknown";
+
+                    cli_printf("DDM: cal=%s\n", cal_str);
+                    cli_printf("  alarm/warn=%s\n", info->ddm_alarm_warn_impl ? "yes" : "no");
+                    cli_printf("  a2h-read=%s\n", ddm.valid ? "ok" : "failed");
+                    // 0 only when neither ddm_int_cal nor ddm_ext_cal is set.
+                    // Sign handled separately: |value| < 1 whole unit would
+                    // otherwise print e.g. -0.4C as "0.4C".
+                    int32_t t = ddm.temp_mc, t_abs = t < 0 ? -t : t;
+                    int32_t v = ddm.vcc_uv, v_abs = v < 0 ? -v : v;
+                    int32_t b = ddm.tx_bias_ua, b_abs = b < 0 ? -b : b;
+                    int32_t tp = ddm.tx_power_nw, tp_abs = tp < 0 ? -tp : tp;
+                    int32_t rp = ddm.rx_power_nw, rp_abs = rp < 0 ? -rp : rp;
+
+                    cli_printf("  temp=%s%d.%03dC\n", t < 0 ? "-" : "", t_abs / 1000, t_abs % 1000);
+                    cli_printf("  vcc=%s%d.%03dmV\n", v < 0 ? "-" : "", v_abs / 1000, v_abs % 1000);
+                    cli_printf("  tx_bias=%s%d.%03dmA\n", b < 0 ? "-" : "", b_abs / 1000,
+                               b_abs % 1000);
+                    cli_printf("  tx_power=%s%d.%03dmW\n", tp < 0 ? "-" : "", tp_abs / 1000000,
+                               (tp_abs % 1000000) / 1000);
+                    cli_printf("  rx_power=%s%d.%03dmW\n", rp < 0 ? "-" : "", rp_abs / 1000000,
+                               (rp_abs % 1000000) / 1000);
+                    cli_printf("  status=0x%02x\n", ddm.status);
+                    cli_printf("  alarm=0x%02x%02x\n", ddm.alarm[0], ddm.alarm[1]);
+                    cli_printf("  warning=0x%02x%02x\n", ddm.warning[0], ddm.warning[1]);
+                    sfp_ddm_print_flags("Alarm", ddm.alarm);
+                    sfp_ddm_print_flags("Warning", ddm.warning);
+                } else {
+                    cli_printf("DDM: not supported\n");
+                }
+
                 if (entry->sfp_type == MEBA_SFP_TRANSRECEIVER_1000BASE_T ||
                     entry->sfp_type == MEBA_SFP_TRANSRECEIVER_2G5_T ||
                     entry->sfp_type == MEBA_SFP_TRANSRECEIVER_10GBASE_T) {
