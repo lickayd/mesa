@@ -292,7 +292,17 @@ class SbomModel
         file_of[name] = File.basename(p["TARGET_FILE"]) if p["TARGET_FILE"] && !p["TARGET_FILE"].empty?
         util[$1] = p["MANUALLY_ADDED_DEPENDENCIES"].split(";") if name =~ /\A(.+)_target\z/ && p["TYPE"] == "UTILITY" && p["MANUALLY_ADDED_DEPENDENCIES"]
       end
-      tstem = lambda { |t| strip.call(file_of[t] || "lib#{t}.a") }
+      # Map a target to its produced library-file stem. Prefer the authoritative
+      # TARGET_FILE; otherwise reconstruct from the lib<name>.a convention. The
+      # meba merge macro names its wrapper 'meba_<x>_static' but produces
+      # 'libmeba_<x>.a' (merge_static_libs: TARGET meba_<x>_static, FILENAME
+      # libmeba_<x>.a), so a trailing '_static' must be dropped -- the shipped
+      # filename never carries it. Without this, merge targets that are absent
+      # from the target db (the EXCLUDE_FROM_ALL macsec/bringup meba variants have
+      # no TARGET_FILE recorded) key their CONTAINS edges under 'libmeba_<x>_static',
+      # which never matches the produced 'libmeba_<x>.a' and so the mepa collection
+      # they merge in is silently dropped from the containment graph.
+      tstem = lambda { |t| strip.call(file_of[t] || "lib#{t.sub(/_static\z/, "")}.a") }
       util.each { |base, deps| comp[tstem.call(base)].concat(deps.map { |d| tstem.call(d) }) }
     end
 
