@@ -893,7 +893,13 @@ uint32_t mesa_capability(mesa_inst_t inst, mesa_cap_t cap)
 
     case MESA_CAP_L2_VCL_EXT_LOOKUP:
 #if defined(VTSS_ARCH_FA)
-        c = 1;
+        c = 1U;
+#endif
+        break;
+
+    case MESA_CAP_L2_VCL_KEY_SEL:
+#if defined(VTSS_FEATURE_VCL_KEY_SEL)
+        c = 1U;
 #endif
         break;
 

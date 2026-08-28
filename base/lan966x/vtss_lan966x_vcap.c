@@ -632,7 +632,6 @@ static vtss_rc lan966x_is1_entry_add(vtss_state_t     *vtss_state,
     vtss_vcap_vr_t      *dscp, *sport, *dport;
     vtss_vcap_key_size_t key_size;
     vtss_vcap_u16_t      et, sip_msb, dip_msb;
-    vtss_port_no_t       port_no;
     u32                  i, n;
     BOOL                 ip = 0, l4_used = 0, dmac_dip = 0, half_any = 0;
 
@@ -899,10 +898,7 @@ static vtss_rc lan966x_is1_entry_add(vtss_state_t     *vtss_state,
         } else {
             half_any = (key->type == VTSS_IS1_TYPE_ANY ? 1 : 0);
             f.key = VTSS_LAN966X_VCAP_IS1_KEY_S1_NORMAL;
-            if ((port_no = vtss_cmn_first_port_no_get(vtss_state, key->port_list)) !=
-                VTSS_PORT_NO_NONE) {
-                dmac_dip = vtss_state->vcap.dmac_dip_conf[port_no].dmac_dip[is1->lookup];
-            }
+            dmac_dip = key->dmac_dip;
             f.u.s1_normal.l2_smac = (dmac_dip ? def.l2_dmac : def.l2_smac);
             f.u.s1_normal.etype_len = def.etype_len;
             f.u.s1_normal.etype = def.etype;
@@ -2127,6 +2123,10 @@ static vtss_rc lan966x_vcap_port_key_addr_set(vtss_state_t        *vtss_state,
                     // Skip if lookup differs or not first port in port list
                     continue;
                 }
+                if (copy->key.key_enable) {
+                    // Skip if the rule determines the key encoding
+                    continue;
+                }
                 if (step == 1) {
                     // Update ressource information
                     add = 1;
@@ -2140,6 +2140,7 @@ static vtss_rc lan966x_vcap_port_key_addr_set(vtss_state_t        *vtss_state,
                     vcap_entry.data.u.is1.entry = &is1_entry;
                     vcap_entry.data.key_size = key_size_new;
                     is1_entry.key.key_type = key_new;
+                    is1_entry.key.dmac_dip = dmac_dip_new;
 
                     /* Update IS1 entry */
                     next = cur->next;

@@ -6487,7 +6487,7 @@ vtss_vcap_key_type_t vtss_vcl_key_type_get(vtss_vcap_key_type_t key_type_a,
 }
 #endif
 
-#if !defined(VTSS_ARCH_LUTON26)
+#if defined(VTSS_FEATURE_VCL_KEY_SEL)
 static void vtss_cmn_key_type_get(vtss_state_t         *vtss_state,
                                   vtss_port_no_t        port_no,
                                   u8                    lookup,
@@ -6505,6 +6505,8 @@ static void vtss_cmn_key_type_get(vtss_state_t         *vtss_state,
         if (lookup == 1) {
             key->key_type = vtss_state->vcap.port_conf[port_no].key_type_is1_1;
         }
+        // The aggregated port state holds the DMAC/DIP selection per lookup
+        key->dmac_dip = vtss_state->vcap.dmac_dip_conf[port_no].dmac_dip[lookup];
 #else
         key->dmac_dip = conf->dmac_dip;
 #endif
@@ -6520,25 +6522,7 @@ static void vtss_cmn_key_type_get(vtss_state_t         *vtss_state,
     }
     *key_size = vtss_vcap_key_type2size(key->key_type);
 }
-#endif /* VTSS_ARCH_LUTON26 */
-
-vtss_rc vtss_cmn_vcl_port_conf_set(struct vtss_state_s *vtss_state, const vtss_port_no_t port_no)
-{
-    vtss_vcap_obj_t   *obj = vtss_vcap_is1_obj_get(vtss_state);
-    vtss_vcap_entry_t *cur;
-
-    if (vtss_state->l2.vcl_port_conf[port_no].key_type !=
-        vtss_state->l2.vcl_port_conf_old.key_type) {
-        /* Key type changed, check if port used in VCL/VLAN translation rules */
-        for (cur = obj->used_list; cur != NULL; cur = cur->next) {
-            if (cur->data.u.is1.port_no == port_no) {
-                VTSS_I("port_no: %u is used in VCAP rules, key type can not be changed", port_no);
-                return VTSS_RC_ERROR;
-            }
-        }
-    }
-    return VTSS_RC_OK;
-}
+#endif /* VTSS_FEATURE_VCL_KEY_SEL */
 
 static void vtss_vce2is1_tag(const vtss_vce_tag_t *vce, vtss_is1_tag_t *tag)
 {
@@ -6602,8 +6586,17 @@ vtss_rc vtss_cmn_vce_add(struct vtss_state_s    *vtss_state,
     is1->port_no = vtss_cmn_first_port_no_get(vtss_state, vce->key.port_list);
     is1->flags = VTSS_IS1_FLAG_TRI_VID;
 
-#if !defined(VTSS_ARCH_LUTON26)
-    vtss_cmn_key_type_get(vtss_state, is1->port_no, lookup, key, &data.key_size);
+#if defined(VTSS_FEATURE_VCL_KEY_SEL)
+    if (vce->key.key_enable) {
+        /* The rule determines the key encoding */
+        key->key_enable = TRUE;
+        key->key_type = vce->key.key_type;
+        key->dmac_dip = vce->key.dmac_dip;
+        data.key_size = vtss_vcap_key_type2size(key->key_type);
+    } else {
+        /* The key generation of the first ingress port determines the key encoding */
+        vtss_cmn_key_type_get(vtss_state, is1->port_no, lookup, key, &data.key_size);
+    }
 #endif
     is1->lookup = (lookup & 1U);
 
@@ -7683,7 +7676,7 @@ static vtss_rc vtss_vt_is1_entry_add(vtss_state_t                          *vtss
 #if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_LAN966X)
     is1->lookup = 1; /* Second lookup */
 #endif
-#if !defined(VTSS_ARCH_LUTON26)
+#if defined(VTSS_FEATURE_VCL_KEY_SEL)
     vtss_cmn_key_type_get(vtss_state, is1->port_no, is1->lookup, key, &key_size);
 #endif
     data.key_size = key_size;
@@ -8048,7 +8041,7 @@ static void vtss_vlan_trans_group_trans_cnt(vtss_state_t *vtss_state,
 static vtss_vcap_key_size_t vtss_vx_key_size_get(vtss_state_t *vtss_state, vtss_port_no_t port_no)
 {
     vtss_vcap_key_size_t key_size = VTSS_VCAP_KEY_SIZE_FULL;
-#if !defined(VTSS_ARCH_LUTON26)
+#if defined(VTSS_FEATURE_VCL_KEY_SEL)
     vtss_is1_key_t key;
 #if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_LAN966X)
     u8 lookup = 1;

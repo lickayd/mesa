@@ -1754,6 +1754,7 @@ vtss_rc vtss_cmn_qce_add(vtss_state_t           *vtss_state,
                 key->key_type = vtss_state->l2.vcl_port_conf[0].lookup[is1->lookup].key_type;
 #else
                 key->key_type = vtss_state->qos.port_conf[port_no].key_type;
+                key->dmac_dip = vtss_state->qos.port_conf[port_no].dmac_dip;
 #endif
                 VTSS_D("Using key_type %u from port %u", key->key_type, port_no);
                 break; /* Stop after first port */

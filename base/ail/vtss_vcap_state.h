@@ -565,10 +565,6 @@ typedef struct {
 typedef struct {
     vtss_is1_type_t type; /**< Frame type */
 
-#if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_FA) ||           \
-    defined(VTSS_ARCH_LAN966X)
-    vtss_vcap_key_type_t key_type; /**< Key type */
-#endif /* VTSS_ARCH_OCELOT/JAGUAR_2/VTSS_ARCH_SPARX5/VTSS_ARCH_LAN966X */
 #if defined(VTSS_ARCH_OCELOT)
     vtss_vcap_u16_t isdx; /**< ISDX */
 #endif                    /* VTSS_ARCH_OCELOT */
@@ -579,8 +575,12 @@ typedef struct {
     BOOL looped;           /**< Only Frames looped can hit */
     BOOL port_hit;         /**< Only Frames from port can hit */
     BOOL masqueraded;      /**< Only Frames masqueraded on port_list can hit */
-    BOOL dmac_dip;         /**< DMAC/DIP selection instead of SMAC/SIP for NORMAL rules */
 #endif                     /* JAGUAR_2 */
+#if defined(VTSS_FEATURE_VCL_KEY_SEL)
+    BOOL                 key_enable; /**< Rule determines the key encoding */
+    vtss_vcap_key_type_t key_type;   /**< Key type */
+    BOOL                 dmac_dip;   /**< DMAC/DIP instead of SMAC/SIP for NORMAL rules */
+#endif                               /* VTSS_FEATURE_VCL_KEY_SEL */
 
     BOOL           port_list[VTSS_PORT_ARRAY_SIZE]; /**< Port list */
     vtss_is1_mac_t mac;                             /**< MAC header */

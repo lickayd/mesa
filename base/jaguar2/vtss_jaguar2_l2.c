@@ -831,8 +831,6 @@ vtss_rc vtss_cil_l2_vcl_port_conf_set(vtss_state_t *vtss_state, vtss_port_no_t p
 {
     vtss_vcl_port_conf_t *conf = &vtss_state->l2.vcl_port_conf[port_no];
 
-    VTSS_RC(vtss_cmn_vcl_port_conf_set(vtss_state, port_no));
-
     /* Set port key */
     return vtss_jr2_vcap_port_key_set(vtss_state, port_no, 2, conf->key_type, conf->dmac_dip,
                                       FALSE);

@@ -1779,11 +1779,8 @@ static vtss_rc srvl_is1_entry_add(vtss_state_t     *vtss_state,
                           key->type == VTSS_IS1_TYPE_ANY ? 0 : VTSS_BITMASK(IS1_HKL_TYPE));
         srvl_is1_base_key_set(vtss_state, data, is1, &info, IS1_HKO_LOOKUP);
         if (type == IS1_TYPE_NORMAL) {
-            BOOL           dmac_dip = FALSE;
-            vtss_port_no_t first_port = vtss_cmn_first_port_no_get(vtss_state, key->port_list);
-            if (first_port != VTSS_PORT_NO_NONE) {
-                dmac_dip = vtss_state->vcap.dmac_dip_conf[first_port].dmac_dip[is1->lookup];
-            }
+            BOOL dmac_dip = key->dmac_dip;
+
             srvl_vcap_key_u48_set(data, IS1_HKO_NORMAL_L2_SMAC,
                                   dmac_dip ? &key->mac.dmac : &key->mac.smac);
             srvl_vcap_key_ipv4_set(data, IS1_HKO_NORMAL_L3_IP4_SIP,
@@ -3604,6 +3601,10 @@ static vtss_rc srvl_vcap_port_key_addr_set(vtss_state_t        *vtss_state,
                     /* Skip if lookup differs or not first port in port list */
                     continue;
                 }
+                if (copy->key.key_enable) {
+                    /* Skip if the rule determines the key encoding */
+                    continue;
+                }
                 if (step == 1) {
                     /* Update ressource information */
                     add = 1;
@@ -3617,6 +3618,7 @@ static vtss_rc srvl_vcap_port_key_addr_set(vtss_state_t        *vtss_state,
                     vcap_entry.data.u.is1.entry = &is1_entry;
                     vcap_entry.data.key_size = key_size_new;
                     is1_entry.key.key_type = key_new;
+                    is1_entry.key.dmac_dip = dmac_dip_new;
 
                     /* Update IS1 entry */
                     next = cur->next;

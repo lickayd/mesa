@@ -1007,7 +1007,6 @@ vtss_rc vtss_cmn_ipv6_mc_del(struct vtss_state_s *vtss_state,
 vtss_vcap_key_type_t vtss_vcl_key_type_get(vtss_vcap_key_type_t key_type_a,
                                            vtss_vcap_key_type_t key_type_b);
 #endif
-vtss_rc vtss_cmn_vcl_port_conf_set(struct vtss_state_s *vtss_state, const vtss_port_no_t port_no);
 vtss_rc vtss_cmn_vce_add(struct vtss_state_s    *vtss_state,
                          const vtss_vce_id_t     vce_id,
                          const vtss_vce_t *const vce);
