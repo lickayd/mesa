@@ -372,7 +372,8 @@ typedef struct {
     // The configuration below controls VCAP IS2 lookup 1-3.
     // The default key generation supports HACLs.
     // If the key generation is changed, HACLs may not work as expected.
-    // Key generation configuration must be done before ACL rules are added.
+    // The key generation must match the type of the ACL rules using the port,
+    // but the two can be configured in any order.
     // VCAP IS2 lookup 3 is used for IP mulicast forwarding with a fixed key generation.
     // In this lookup, IP multicast frames can not be matched by ACL rules.
     vtss_acl_frame_key_t lookup[3]; // ACL key generation for VCAP IS2 lookup 1-3

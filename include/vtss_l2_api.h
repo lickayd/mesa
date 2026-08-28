@@ -771,7 +771,8 @@ typedef struct {
 #if defined(VTSS_ARCH_FA)
     // The configuration above controls VCAP CLM lookup 0.
     // The configuration below controls VCAP CLM lookup 1-3.
-    // Key generation configuration must be done before VCL rules are added.
+    // The key generation must match the encoding of the VCL rules using the
+    // port, but the two can be configured in any order.
     vtss_vcl_port_lookup_conf_t lookup[3]; // Configuration for VCAP CLM lookup 1-3
 #endif
 } vtss_vcl_port_conf_t;
@@ -889,6 +890,16 @@ typedef struct {
 #if defined(VTSS_ARCH_FA)
     u8              lookup; // VCAP CLM lookup (0-3)
     vtss_vcap_u16_t gkey;   // Generic key (for linking lookups)
+#endif
+#if defined(VTSS_FEATURE_VCL_KEY_SEL)
+    // By default, the rule encoding is based on the key generation of the first
+    // port in the port list, which must then be configured before the rule is
+    // added. If 'key_enable' is set, the 'key_type' and 'dmac_dip' fields below
+    // determine the rule encoding, and the rules and the port key generation
+    // can be configured in any order.
+    BOOL                 key_enable; // Enable rule encoding selection below
+    vtss_vcap_key_type_t key_type;   // Key type ('key_enable' is set)
+    BOOL                 dmac_dip;   // DMAC/DIP matching ('key_enable' is set)
 #endif
     BOOL           port_list[VTSS_PORT_ARRAY_SIZE]; /**< Port list */
     vtss_vce_mac_t mac;                             /**< MAC header */

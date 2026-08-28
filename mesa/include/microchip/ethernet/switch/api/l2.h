@@ -372,7 +372,8 @@ typedef struct {
     mesa_vcap_key_type_t key_type; // Key type for VCL lookup
     // The configuration above controls VCAP CLM lookup 0.
     // The configuration below controls VCAP CLM lookup 1-3.
-    // Key generation configuration must be done before VCL rules are added.
+    // The key generation must match the encoding of the VCL rules using the
+    // port, but the two can be configured in any order.
     mesa_vcl_port_lookup_conf_t lookup[3] CAP(L2_VCL_EXT_LOOKUP); // Configuration for VCAP CLM
                                                                   // lookup 1-3
 } mesa_vcl_port_conf_t;
@@ -471,11 +472,19 @@ typedef struct {
 typedef struct {
     uint8_t lookup       CAP(L2_VCL_EXT_LOOKUP); // VCAP CLM lookup (0-3)
     mesa_vcap_u16_t gkey CAP(L2_VCL_EXT_LOOKUP); // Generic key (for linking lookups)
-    mesa_port_list_t     port_list;              // Port list
-    mesa_vce_mac_t       mac;                    // MAC header
-    mesa_vce_tag_t       tag;                    // Outer tag
-    mesa_vce_tag_t       inner_tag;              // Inner tag
-    mesa_vce_type_t      type;                   // VCE frame type
+    // By default, the rule encoding is based on the key generation of the first
+    // port in the port list, which must then be configured before the rule is
+    // added. If 'key_enable' is set, the 'key_type' and 'dmac_dip' fields below
+    // determine the rule encoding, and the rules and the port key generation can
+    // be configured in any order.
+    mesa_bool_t key_enable        CAP(L2_VCL_KEY_SEL); // Enable rule encoding selection below
+    mesa_vcap_key_type_t key_type CAP(L2_VCL_KEY_SEL); // Key type ('key_enable' is set)
+    mesa_bool_t dmac_dip          CAP(L2_VCL_KEY_SEL); // DMAC/DIP matching ('key_enable' is set)
+    mesa_port_list_t              port_list;           // Port list
+    mesa_vce_mac_t                mac;                 // MAC header
+    mesa_vce_tag_t                tag;                 // Outer tag
+    mesa_vce_tag_t                inner_tag;           // Inner tag
+    mesa_vce_type_t               type;                // VCE frame type
 
     union {
         // MESA_VCE_TYPE_ANY: No specific fields

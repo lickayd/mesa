@@ -164,6 +164,7 @@ typedef enum {
     MESA_CAP_L2_TCL_ACT_FWD,           /**< TCL forwarding action */
     MESA_CAP_L2_BUM_POL_CNT,           /**< Number of BUM policers */
     MESA_CAP_L2_VCL_EXT_LOOKUP,        /**< VCL extended lookups */
+    MESA_CAP_L2_VCL_KEY_SEL,           /**< VCL key encoding selection per rule */
 
     // Layer 3
     MESA_CAP_L3 = 500,    /**< Layer 3 switching */
