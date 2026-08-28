@@ -1144,7 +1144,6 @@ mepa_rc as2xxxx_priv_get_temp_monitor_last_sample(as2xxxx_priv_data_t *const pd,
     int32_t              temp_hundredths;
 
     NULL_CHECK(temp_celsius);
-    NULL_CHECK(temp_celsius_frac);
 
     msg.opcode = AS2XXXX_IPC_CMD_CFG_PARAM;
     msg.get_response = true;
