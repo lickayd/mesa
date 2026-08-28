@@ -13,6 +13,7 @@ $port_idx_tx = 3
 
 $cap_dmac = cap_get("L2_VCL_KEY_DMAC")
 $cap_dip = cap_get("L2_VCL_KEY_DIP")
+$cap_key_sel = cap_get("L2_VCL_KEY_SEL")
 $vce_added = false
 
 test "conf" do
@@ -429,8 +430,15 @@ test_table.each do |t|
         skip_ip_addr = true
     end
 
-    if (epid == 7 or epid == 9 or epid == 11)
-        # Jaguar-2/Serval-T/FireAnt
+    if ($cap_key_sel == 0)
+        # Luton26, only the NORMAL key is supported
+        skip_double_tag = true
+        skip_ip_addr = true
+        skip_mac_ip_addr = true
+        if (vce.key?:it)
+            # Inner tag matching not possible
+            skip_normal = true
+        end
     elsif (epid == 10 or epid == 13)
         # Ocelot/Maserati
         if (vce.key?:it)
@@ -439,14 +447,7 @@ test_table.each do |t|
             skip_ip_addr = true
         end
     else
-        # Luton26, key not supported
-        skip_double_tag = true
-        skip_ip_addr = true
-        skip_mac_ip_addr = true
-        if (vce.key?:it)
-            # Inner tag matching not possible
-            skip_normal = true
-        end
+        # Jaguar-2/Serval-T/FireAnt/Laguna, all keys are supported
     end
 
     key_list = []
