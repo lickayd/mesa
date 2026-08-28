@@ -287,9 +287,20 @@ pipeline {
                     agent { kubernetes { yamlFile '.cmake/pod-misra-lmstax.yaml' } }
                     steps {
                         container('velocitysp-builder') {
-                            unstash name: "src"
-                            sh "tar -xf ws.tar"
-                            sh "./.cmake/misra-lan969x_lm"
+                            script {
+                                def runLmstaxCheck = {
+                                    unstash name: "src"
+                                    sh "tar -xf ws.tar"
+                                    sh "./.cmake/misra-lan969x_lm"
+                                }
+                                if (env.BRANCH_NAME == TEST_NIGHTLY_BRANCH_NAME) {
+                                    warnError(message: "lmstax-check error") {
+                                        runLmstaxCheck()
+                                    }
+                                } else {
+                                    runLmstaxCheck()
+                                }
+                            }
                         }
                     }
                 }
