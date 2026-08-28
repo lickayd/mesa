@@ -1751,11 +1751,13 @@ vtss_rc vtss_cmn_qce_add(vtss_state_t           *vtss_state,
         for (port_no = VTSS_PORT_NO_START; port_no < vtss_state->port_count; port_no++) {
             if (qce->key.port_list[port_no]) {
 #if defined(VTSS_ARCH_FA)
-                key->key_type = vtss_state->l2.vcl_port_conf[0].lookup[is1->lookup].key_type;
+                /* QCEs are matched in CLM lookup 1, controlled by the 'lookup[0]' entry */
+                vtss_vcl_port_lookup_conf_t *c = &vtss_state->l2.vcl_port_conf[port_no].lookup[0];
 #else
-                key->key_type = vtss_state->qos.port_conf[port_no].key_type;
-                key->dmac_dip = vtss_state->qos.port_conf[port_no].dmac_dip;
+                vtss_qos_port_conf_t *c = &vtss_state->qos.port_conf[port_no];
 #endif
+                key->key_type = c->key_type;
+                key->dmac_dip = c->dmac_dip;
                 VTSS_D("Using key_type %u from port %u", key->key_type, port_no);
                 break; /* Stop after first port */
             }
