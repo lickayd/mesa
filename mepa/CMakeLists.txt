@@ -113,6 +113,10 @@ MEPA_LIB(LIB_NAME mepa_velocitysp_lan969x_auto ADVANCED
          DEFS     -DMEPA_HAS_LAN887X -DMEPA_HAS_LAN884x -DMEPA_HAS_LAN867X -DMEPA_HAS_LAN8X8X -DMEPA_HAS_DUMMY_PHY
          DRVS     mepa_drv_lan887x   mepa_drv_lan884x   mepa_drv_lan867x   mepa_drv_lan8x8x   mepa_drv_dummy_phy)
 
+MEPA_LIB(LIB_NAME mepa_velocitysp_p64h ADVANCED
+         DEFS     -DMEPA_HAS_VSC8574 -DMEPA_HAS_DUMMY_PHY
+         DRVS     mepa_drv_vsc8574   mepa_drv_dummy_phy)
+
 MEPA_LIB(LIB_NAME mepa_p64h ADVANCED
          DEFS     -DMEPA_HAS_VTSS      -DMEPA_HAS_DUMMY_PHY
          DRVS     mepa_drv_vtss_10g_ts mepa_drv_dummy_phy)
