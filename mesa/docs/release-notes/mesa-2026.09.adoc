@@ -34,3 +34,22 @@ For SparX-5 and LAN969x families, the lookup and key generation for ACL has been
 * ACE lookup parameter (0-3) added in the `mesa_ace_t::lookup` field.
 ** Lookup 0 and 1 map to VCAP IS2-A.
 ** Lookup 2 and 3 map to VCAP IS2-B.
+* ACL rules and port key generation can be configured in any order.
+
+=== VCL key encoding selection
+
+For devices with a non-zero `MESA_CAP_L2_VCL_KEY_SEL` capability, that is all devices
+supporting VCL except the SparX-III/Caracal family, the key encoding can be selected per rule:
+
+* `mesa_vce_key_t::key_enable` enables the encoding selection for the rule.
+* `mesa_vce_key_t::key_type` and `mesa_vce_key_t::dmac_dip` determine the encoding.
+
+By default, `key_enable` is disabled and the encoding of a rule is based on the key
+generation of the first ingress port of the rule, as in previous releases.
+
+The VCL port configuration (`mesa_vcl_port_conf_set()`) no longer fails if the port is
+used as ingress port in existing VCL or VLAN translation rules. This applies to all
+devices supporting VCL.
+
+It is now up to the application to ensure that the port key generation matches the key
+encoding of the rules using the port, and the two can be configured in any order.

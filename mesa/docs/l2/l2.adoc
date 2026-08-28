@@ -151,8 +151,14 @@ Each VCE includes a key structure (`mesa_vce_key_t`) with fields used for
 matching received frames and an action structure (`mesa_vce_action_t`) with the
 classified VLAN ID. It is also possible to override the tag pop count. +
 The VCL port configuration (`mesa_vcl_port_conf_t`) affects the key generated
-for frames received on an ingress port. The key type field must be setup
-before adding VCE rules including the ingress port.
+for frames received on an ingress port. The port key generation must match the
+key encoding of the VCE rules using the port. By default, the encoding of a rule
+is based on the key generation of the first ingress port of the rule, so the port
+must be setup before the rule is added. +
+If the capability `MESA_CAP_L2_VCL_KEY_SEL` is non-zero, the encoding can be
+selected per rule instead (`mesa_vce_key_t::key_enable`, `mesa_vce_key_t::key_type`
+and `mesa_vce_key_t::dmac_dip`). The rules and the port key generation can then
+be configured in any order.
 
 === VLAN Filtering
 For each VLAN, the port member list can be configured (`mesa_vlan_port_members_set()`).
