@@ -142,7 +142,47 @@ typedef struct sfp_device_info {
     char                     date_code[9];    // Date code
     meba_sfp_transreceiver_t transceiver;     // Transceiver type
     meba_sfp_connector_t     connector;       // Connector type
+
+    // SFF-8472 digital diagnostics (DDM) capability, from the A0h read above.
+    mesa_bool_t ddm_implemented;     // A0h[92] bit6
+    mesa_bool_t ddm_int_cal;         // A0h[92] bit5
+    mesa_bool_t ddm_ext_cal;         // A0h[92] bit4
+    mesa_bool_t ddm_rx_pwr_avg;      // A0h[92] bit3; 1=avg power, 0=OMA
+    mesa_bool_t ddm_alarm_warn_impl; // A0h[93] bit7
 } meba_sfp_device_info_t;
+
+// SFF-8472 digital diagnostics (DDM) A2h payload. temp_mc/vcc_uv/tx_bias_ua/
+// tx_power_nw/rx_power_nw are converted per the calibration flag passed to
+// meba_sfp_ddm_info_get() (fixed LSB for internally calibrated, slope/offset
+// + Rx-power polynomial for externally calibrated - else 0). All integer.
+// status/alarm/warning are raw bit fields, not numeric quantities.
+// SFF-8472 Table 9-17: bit layout of alarm[0]/warning[0] (A2h byte 112/116).
+#define MEBA_SFP_DDM_AW0_TEMP_HI     0x80
+#define MEBA_SFP_DDM_AW0_TEMP_LO     0x40
+#define MEBA_SFP_DDM_AW0_VCC_HI      0x20
+#define MEBA_SFP_DDM_AW0_VCC_LO      0x10
+#define MEBA_SFP_DDM_AW0_TX_BIAS_HI  0x08
+#define MEBA_SFP_DDM_AW0_TX_BIAS_LO  0x04
+#define MEBA_SFP_DDM_AW0_TX_POWER_HI 0x02
+#define MEBA_SFP_DDM_AW0_TX_POWER_LO 0x01
+// SFF-8472 Table 9-17: bit layout of alarm[1]/warning[1] (A2h byte 113/117).
+// Bits 5-2 (optional laser temp/TEC current alarms) are not decoded here.
+#define MEBA_SFP_DDM_AW1_RX_POWER_HI 0x80
+#define MEBA_SFP_DDM_AW1_RX_POWER_LO 0x40
+
+typedef struct sfp_ddm_info {
+    mesa_bool_t valid; // A2h read OK; fields below are populated
+
+    int32_t temp_mc;     // Module temperature, milli-degrees C, A2h[96:97]
+    int32_t vcc_uv;      // Supply voltage, microvolts, A2h[98:99]
+    int32_t tx_bias_ua;  // Tx laser bias current, microamps, A2h[100:101]
+    int32_t tx_power_nw; // Tx output power, nanowatts, A2h[102:103]
+    int32_t rx_power_nw; // Rx received power, nanowatts, A2h[104:105]
+
+    uint8_t status;     // Status/control byte, A2h[110]
+    uint8_t alarm[2];   // Alarm flags, A2h[112:113]
+    uint8_t warning[2]; // Warning flags, A2h[116:117]
+} meba_sfp_ddm_info_t;
 
 // Clears up the data allocated in the probe function.
 typedef mesa_rc (*meba_sfp_driver_delete_t)(struct meba_sfp_device *dev);
@@ -266,10 +306,18 @@ mesa_bool_t meba_fill_driver(struct meba_inst       *meba_inst,
                              meba_sfp_driver_t      *driver,
                              meba_sfp_device_info_t *device_info);
 
-// Read the SFP ROM and return device-specific info.
+// Read the SFP ROM (A0h) and return device-specific info.
 mesa_bool_t meba_sfp_device_info_get(struct meba_inst       *meba_inst,
                                      mesa_port_no_t          port_no,
                                      meba_sfp_device_info_t *device_info);
+
+// Read SFF-8472 DDM data from A2h.
+// 'int_cal' and 'ext_cal' comes from the A0h page above (in device_info).
+mesa_bool_t meba_sfp_ddm_info_get(struct meba_inst    *meba_inst,
+                                  mesa_port_no_t       port_no,
+                                  mesa_bool_t          int_cal,
+                                  mesa_bool_t          ext_cal,
+                                  meba_sfp_ddm_info_t *ddm_info);
 
 // Read cage-level SFP status (presence, tx_fault, los) via SGPIO. Always
 // callable - does not require a bound SFP device. Used by the polling

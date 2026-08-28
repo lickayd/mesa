@@ -1082,6 +1082,26 @@ typedef mesa_rc (*conf_func_t)(meba_sfp_device_t *dev, const meba_sfp_driver_con
 #define SFP_LEN_SMF_100M_MAX 0xFF // Saturated marker in byte 15 (>= 25.5 km)
 #define SFP_LEN_OM_2KM       0xC8 // 2000 m in OM length byte (units of 10 m)
 
+// SFF-8472 I2C addresses. A0h = static ID/capability EEPROM; A2h = digital
+// diagnostics (DDM), present only if advertised in A0h[92].
+#define SFP_I2C_ADDR_A0 0x50
+#define SFP_I2C_ADDR_A2 0x51
+
+// A0h byte 92: Diagnostic Monitoring Type
+#define SFP_DIAG_DDM_IMPL   0x40 // bit6: DDM implemented
+#define SFP_DIAG_INT_CAL    0x20 // bit5: internally calibrated
+#define SFP_DIAG_EXT_CAL    0x10 // bit4: externally calibrated
+#define SFP_DIAG_RX_PWR_AVG 0x08 // bit3: 0 = OMA, 1 = average optical power
+
+// A0h byte 93: Enhanced Options
+#define SFP_ENH_ALARM_WARN 0x80 // bit7: alarm/warning flags implemented
+
+// A2h byte 110: Status/Control
+#define SFP_DDM_STATUS_DATA_NOT_READY 0x01 // bit0
+#define SFP_DDM_STATUS_RX_LOS         0x02 // bit1
+#define SFP_DDM_STATUS_TX_FAULT       0x04 // bit2
+#define SFP_DDM_STATUS_TX_DISABLE     0x80 // bit7
+
 typedef struct {
     // Vendor strings
     char vendor_name[20]; // [20..35]
@@ -1103,10 +1123,18 @@ typedef struct {
     uint8_t len_om1;        // [17]
     uint8_t len_om4_or_dac; // [18]
     uint8_t ext_compl;      // [36]  SFF-8024 extended compliance
-    uint8_t dmi_type;       // [65]
+    uint8_t dmi_type;       // [65]  NB: Option Values byte (LOS/TX-fault bits)
+    uint8_t diag_mon_type;  // [92]  Diagnostic Monitoring Type
+    uint8_t enhanced_opts;  // [93]  Enhanced Options
+    uint8_t sff8472_compl;  // [94]  SFF-8472 compliance revision
 
     // Derived flags
-    mesa_bool_t los_implemented; // (dmi_type & 0x02) != 0
+    mesa_bool_t los_implemented;     // (dmi_type & 0x02) != 0
+    mesa_bool_t ddm_implemented;     // [92] bit6 - gates get_sfp_ddm()
+    mesa_bool_t ddm_int_calibrated;  // [92] bit5
+    mesa_bool_t ddm_ext_calibrated;  // [92] bit4
+    mesa_bool_t ddm_rx_pwr_avg;      // [92] bit3 (0 = OMA, 1 = average power)
+    mesa_bool_t ddm_alarm_warn_impl; // [93] bit7
 } sfp_rom_t;
 
 static tr_func_t tr_func_get(const sfp_rom_t *const rom)
@@ -1324,14 +1352,15 @@ static void sfp_strncpy(char *dest, uint8_t *rom, uint32_t len)
     dest[len] = '\0';
 }
 
+// Read the SFF-8472 A0h static info page.
 static mesa_bool_t read_raw_sfp_rom(meba_inst_t    meba_inst,
                                     mesa_port_no_t port_no,
                                     uint8_t *const rom,
                                     const size_t   rom_size)
 {
     for (int i = 0; i < 10; ++i) {
-        if ((meba_inst->api.meba_sfp_i2c_xfer(meba_inst, port_no, false, 0x50, 0, rom, rom_size,
-                                              false) == MESA_RC_OK)) {
+        if ((meba_inst->api.meba_sfp_i2c_xfer(meba_inst, port_no, false, SFP_I2C_ADDR_A0, 0, rom,
+                                              rom_size, false) == MESA_RC_OK)) {
             // rom[0] == 0x03 means SFP or SFP+
             if (rom[0] == 0x03) {
                 return true;
@@ -1344,9 +1373,130 @@ static mesa_bool_t read_raw_sfp_rom(meba_inst_t    meba_inst,
     return false;
 }
 
+// Read 'size' bytes from A2h at 'addr'.
+static mesa_bool_t read_raw_sfp_a2h(meba_inst_t    meba_inst,
+                                    mesa_port_no_t port_no,
+                                    uint8_t        addr,
+                                    uint8_t *const buf,
+                                    const size_t   size)
+{
+    return meba_inst->api.meba_sfp_i2c_xfer(meba_inst, port_no, false, SFP_I2C_ADDR_A2, addr, buf,
+                                            size, false) == MESA_RC_OK;
+}
+
+// Big-endian 16-bit value from an A2h byte pair.
+static uint16_t sfp_be16(const uint8_t *const p) { return (uint16_t)((p[0] << 8) | p[1]); }
+
+// Big-endian IEEE-754 float from 4 A2h bytes.
+static float sfp_be32f(const uint8_t *const p)
+{
+    uint32_t bits =
+        ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+    float f;
+
+    memcpy(&f, &bits, sizeof(f));
+    return f;
+}
+
+// SFF-8472 Table 9-6: external-calibration constants, A2h bytes 56..91.
+typedef struct {
+    float    rx_pwr4, rx_pwr3, rx_pwr2, rx_pwr1, rx_pwr0; // A2h [56:75]
+    uint16_t tx_i_slope;                                  // A2h [76:77], unsigned Q8.8
+    int16_t  tx_i_offset;   // A2h [78:79], signed, raw-LSB units (2 uA)
+    uint16_t tx_pwr_slope;  // A2h [80:81], unsigned Q8.8
+    int16_t  tx_pwr_offset; // A2h [82:83], signed, raw-LSB units (0.1 uW)
+    uint16_t t_slope;       // A2h [84:85], unsigned Q8.8
+    int16_t  t_offset;      // A2h [86:87], signed, raw-LSB units (1/256 degC)
+    uint16_t v_slope;       // A2h [88:89], unsigned Q8.8
+    int16_t  v_offset;      // A2h [90:91], signed, raw-LSB units (100 uV)
+} sfp_ddm_cal_t;
+
+static void get_sfp_ddm_cal(const uint8_t *const cal, sfp_ddm_cal_t *const out)
+{
+    out->rx_pwr4 = sfp_be32f(&cal[0]);
+    out->rx_pwr3 = sfp_be32f(&cal[4]);
+    out->rx_pwr2 = sfp_be32f(&cal[8]);
+    out->rx_pwr1 = sfp_be32f(&cal[12]);
+    out->rx_pwr0 = sfp_be32f(&cal[16]);
+    out->tx_i_slope = sfp_be16(&cal[20]);
+    out->tx_i_offset = (int16_t)sfp_be16(&cal[22]);
+    out->tx_pwr_slope = sfp_be16(&cal[24]);
+    out->tx_pwr_offset = (int16_t)sfp_be16(&cal[26]);
+    out->t_slope = sfp_be16(&cal[28]);
+    out->t_offset = (int16_t)sfp_be16(&cal[30]);
+    out->v_slope = sfp_be16(&cal[32]);
+    out->v_offset = (int16_t)sfp_be16(&cal[34]);
+}
+
+// Read the A2h diagnostics page into 'out'
+static void get_sfp_ddm(meba_inst_t                meba_inst,
+                        mesa_port_no_t             port_no,
+                        mesa_bool_t                int_cal,
+                        mesa_bool_t                ext_cal,
+                        meba_sfp_ddm_info_t *const out)
+{
+    const uint8_t addr = ext_cal ? 56 : 96;
+    const size_t  size = ext_cal ? 62 : 22; // 56..117 vs just 96..117
+    const size_t  live = 96 - addr;         // index of byte 96 within the transfer
+    uint8_t       ddm[62];
+
+    if (!read_raw_sfp_a2h(meba_inst, port_no, addr, ddm, size) ||
+        (ddm[live + 14] & SFP_DDM_STATUS_DATA_NOT_READY) != 0) {
+        return;
+    }
+
+    uint16_t temp_raw = sfp_be16(&ddm[live + 0]);     // byte 96
+    uint16_t vcc_raw = sfp_be16(&ddm[live + 2]);      // byte 98
+    uint16_t tx_bias_raw = sfp_be16(&ddm[live + 4]);  // byte 100
+    uint16_t tx_power_raw = sfp_be16(&ddm[live + 6]); // byte 102
+    uint16_t rx_power_raw = sfp_be16(&ddm[live + 8]); // byte 104
+
+    if (int_cal) {
+        // Fixed LSB, exact integer scaling - no per-module constants needed.
+        out->temp_mc = ((int32_t)(int16_t)temp_raw * 1000) / 256; // 1/256 degC
+        out->vcc_uv = (int32_t)vcc_raw * 100;                     // 100 uV
+        out->tx_bias_ua = (int32_t)tx_bias_raw * 2;               // 2 uA
+        out->tx_power_nw = (int32_t)tx_power_raw * 100;           // 0.1 uW
+        out->rx_power_nw = (int32_t)rx_power_raw * 100;           // 0.1 uW
+    } else if (ext_cal) {
+        // Calibration constants start at absolute byte 56, i.e. ddm[0].
+        sfp_ddm_cal_t cal;
+
+        get_sfp_ddm_cal(ddm, &cal);
+
+        // Linear terms: slope is Q8.8, so raw*slope/256 is already integer
+        // math; int64_t avoids overflow (raw and slope both up to 65535).
+        int64_t temp_corr = ((int64_t)(int16_t)temp_raw * cal.t_slope) / 256 + cal.t_offset;
+        int64_t vcc_corr = ((int64_t)vcc_raw * cal.v_slope) / 256 + cal.v_offset;
+        int64_t bias_corr = ((int64_t)tx_bias_raw * cal.tx_i_slope) / 256 + cal.tx_i_offset;
+        int64_t txpwr_corr = ((int64_t)tx_power_raw * cal.tx_pwr_slope) / 256 + cal.tx_pwr_offset;
+
+        // Rx power: 4th-order polynomial, IEEE-754 coefficients (Table 9-6) -
+        // the one place SFF-8472 itself is float-based, kept in double.
+        double ad = rx_power_raw;
+        double rxpwr_corr = cal.rx_pwr4 * ad * ad * ad * ad + cal.rx_pwr3 * ad * ad * ad +
+                            cal.rx_pwr2 * ad * ad + cal.rx_pwr1 * ad + cal.rx_pwr0;
+
+        out->temp_mc = (int32_t)((temp_corr * 1000) / 256);
+        out->vcc_uv = (int32_t)(vcc_corr * 100);
+        out->tx_bias_ua = (int32_t)(bias_corr * 2);
+        out->tx_power_nw = (int32_t)(txpwr_corr * 100);
+        out->rx_power_nw = (int32_t)(rxpwr_corr * 100.0);
+    }
+
+    out->status = ddm[live + 14];     // byte 110
+    out->alarm[0] = ddm[live + 16];   // byte 112
+    out->alarm[1] = ddm[live + 17];   // byte 113
+    out->warning[0] = ddm[live + 20]; // byte 116
+    out->warning[1] = ddm[live + 21]; // byte 117
+    out->valid = true;
+}
+
 static mesa_bool_t get_sfp_rom(meba_inst_t meba_inst, mesa_port_no_t port_no, sfp_rom_t *const out)
 {
-    uint8_t rom[92];
+    uint8_t rom[95]; // A0h bytes 0..94: [92]/[93] diag capability, [94] rev
+
+    memset(out, 0, sizeof(*out));
 
     if (!read_raw_sfp_rom(meba_inst, port_no, rom, sizeof(rom))) {
         return false;
@@ -1373,6 +1523,16 @@ static mesa_bool_t get_sfp_rom(meba_inst_t meba_inst, mesa_port_no_t port_no, sf
     out->dmi_type = rom[65];
     out->los_implemented = (rom[65] & 0x02) != 0;
 
+    // Diagnostics capability advertisement (A0h [92..94])
+    out->diag_mon_type = rom[92];
+    out->enhanced_opts = rom[93];
+    out->sff8472_compl = rom[94];
+    out->ddm_implemented = (rom[92] & SFP_DIAG_DDM_IMPL) != 0;
+    out->ddm_int_calibrated = (rom[92] & SFP_DIAG_INT_CAL) != 0;
+    out->ddm_ext_calibrated = (rom[92] & SFP_DIAG_EXT_CAL) != 0;
+    out->ddm_rx_pwr_avg = (rom[92] & SFP_DIAG_RX_PWR_AVG) != 0;
+    out->ddm_alarm_warn_impl = (rom[93] & SFP_ENH_ALARM_WARN) != 0;
+
     return true;
 }
 
@@ -1398,6 +1558,13 @@ static mesa_bool_t device_info_get(struct meba_inst       *meba_inst,
     transceiver_func = tr_func_get(&sfp_rom);
     transceiver_func(NULL, &device_info->transceiver);
     device_info->connector = sfp_rom.connector;
+
+    // DDM capability
+    device_info->ddm_implemented = sfp_rom.ddm_implemented;
+    device_info->ddm_int_cal = sfp_rom.ddm_int_calibrated;
+    device_info->ddm_ext_cal = sfp_rom.ddm_ext_calibrated;
+    device_info->ddm_rx_pwr_avg = sfp_rom.ddm_rx_pwr_avg;
+    device_info->ddm_alarm_warn_impl = sfp_rom.ddm_alarm_warn_impl;
 
     if (tr_func) {
         *tr_func = transceiver_func;
@@ -1453,6 +1620,23 @@ mesa_bool_t meba_sfp_device_info_get(struct meba_inst       *meba_inst,
         return false;
     }
     return device_info_get(meba_inst, port_no, device_info, NULL);
+}
+
+mesa_bool_t meba_sfp_ddm_info_get(struct meba_inst    *meba_inst,
+                                  mesa_port_no_t       port_no,
+                                  mesa_bool_t          int_cal,
+                                  mesa_bool_t          ext_cal,
+                                  meba_sfp_ddm_info_t *ddm_info)
+{
+    if (meba_inst == NULL || ddm_info == NULL) {
+        return false;
+    }
+
+    // A2h only
+    memset(ddm_info, 0, sizeof(*ddm_info));
+    get_sfp_ddm(meba_inst, port_no, int_cal, ext_cal, ddm_info);
+
+    return true;
 }
 
 mesa_rc meba_sfp_cage_status_get(struct meba_inst  *meba_inst,
