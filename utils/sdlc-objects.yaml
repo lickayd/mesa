@@ -1,22 +1,28 @@
 # Copyright (c) 2006-2025 Microsemi Corporation "Microsemi". All Rights Reserved.
 # SPDX-License-Identifier: MIT
 ---
-# The lm_utils library (compiled into the MESA library) and the third-party it
-# vendors. Migrated from utils/.module_info.
+# The lm_utils utility library and the third-party it vendors. lm_utils is its own
+# cmake target (mapped below); the vendored sources are compiled into lm_utils rather
+# than built as separate cmake targets, so they are attached via sbom_add_kids.
+
+cmake-targets:
+  - id: cmake-target-lm_utils
+    name: lm_utils
+    spdx:
+      id: SPDXRef-ut-utils
+      name: "LIB: ut-utils"
+      directory: .
+      license: MIT
+      license_file: LICENSE
+      copyright: Copyright (c) 2006-2025 Microchip Technology Inc. and its subsidiaries.
+      source_info: Microchip internal development
+      use_packet_version: true
+      description: Utility functions for embedded systems.
+      sbom_add_kids:
+        - SPDXRef-arm-optimized-routines
+        - SPDXRef-arm-tf-memset
 
 spdx-elements:
-  - id: SPDXRef-ut-utils
-    name: "LIB: ut-utils"
-    directory: .
-    license: MIT
-    license_file: LICENSE
-    copyright: Copyright (c) 2006-2025 Microchip Technology Inc. and its subsidiaries.
-    source_info: Microchip internal development
-    use_packet_version: true
-    description: Utility functions for embedded systems, compiled into the MESA library.
-    sbom_add_kids:
-      - SPDXRef-arm-optimized-routines
-      - SPDXRef-arm-tf-memset
 
   - id: SPDXRef-arm-optimized-routines
     name: "LIB: Arm Optimized Routines"

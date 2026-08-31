@@ -1,11 +1,13 @@
 # Copyright (c) 2004-2022 Microchip Technology Inc. and its subsidiaries.
 # SPDX-License-Identifier: MIT
 ---
-# MESA (MSCC Ethernet Switch API) is the shipped library. Every per-chip
+# MESA (MSCC Ethernet Switch API) is the shipped switch library. Every per-chip
 # <LIB>_static build target is the same library compiled for a different chip,
-# so they all map to the single SPDXRef-mesa-api component. The third-party that
-# compiles into the library (utils and the vendored PHY/crypto drivers) is
-# attached via sbom_add_kids, as it is not built as separate cmake targets.
+# so they all map to the single SPDXRef-mesa-api component. MESA is a switch API
+# and does not contain the PHY/utility components: the PHY drivers (Intel GPY211,
+# Aquantia, Microchip LAN80xx + its vendored SHA-256) are attributed to their own
+# mepa_drv_* cmake targets under mepa/, and lm_utils is its own component under
+# utils/ -- each via its own sdlc-objects.yaml, not force-added here.
 
 cmake-targets:
   # Internal build-time code-generation targets (produce the mesa-ag wrapper).
@@ -160,11 +162,6 @@ spdx-elements:
     description: >-
       MSCC Ethernet Switch API (MESA) and Ethernet PHY API (MEPA); the C library
       that is the MESA deliverable.
-    sbom_add_kids:
-      - SPDXRef-ut-utils
-      - SPDXRef-intel-gpy211
-      - SPDXRef-aquantia-phy
-      - SPDXRef-sha256
 
   # The buildroot 'xstax' root filesystem embedded in the bootable demo images,
   # one per arch. Its component breakdown is imported (merged) from the BSP's own

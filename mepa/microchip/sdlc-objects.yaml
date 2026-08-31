@@ -1,10 +1,29 @@
 # Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
 # SPDX-License-Identifier: MIT
 ---
-# SHA-256 implementation vendored into the LAN80xx PHY driver and compiled into
-# the MESA library. Migrated from mepa/microchip/.module_info.
+# The Microchip LAN80xx PHY driver and the SHA-256 implementation vendored into it.
+# The produced driver libraries (libmepa_drv_lan80xx_ts[_msec].a) are attributed to
+# the LAN80xx PHY driver component, which in turn contains the vendored SHA-256.
+
+cmake-targets:
+  - id: cmake-target-mepa_drv_lan80xx_ts
+    name: mepa_drv_lan80xx_ts
+    spdx-id: SPDXRef-lan80xx-phy
+  - id: cmake-target-mepa_drv_lan80xx_ts_msec
+    name: mepa_drv_lan80xx_ts_msec
+    spdx-id: SPDXRef-lan80xx-phy
 
 spdx-elements:
+  - id: SPDXRef-lan80xx-phy
+    name: "LIB: Microchip LAN80xx PHY"
+    directory: lan80xx
+    license: MIT
+    copyright: Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+    use_packet_version: true
+    description: Microchip LAN80xx Ethernet PHY driver.
+    sbom_add_kids:
+      - SPDXRef-sha256
+
   - id: SPDXRef-sha256
     name: "LIB: SHA-256"
     directory: lan80xx/src/sha256
