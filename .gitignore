@@ -19,3 +19,4 @@ mesa/demo/docs/html
 .multi-work
 mesa-*.spdx.json
 mesa-sbom-outline.html
+bsp-spdx/

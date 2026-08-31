@@ -255,6 +255,21 @@ if c[:brsdk_arch]
     end
   end
 
+  # Carry the BSP's own SPDX -- the copy embedded in the BSP tarball we just
+  # extracted -- into the workspace (bsp-spdx/). The per-arch CI build stage
+  # stashes bsp-spdx/ alongside its binaries, and the aggregate stage (which runs
+  # in a container without a provisioned /opt/mchp BSP) reads it from there to
+  # import the buildroot rootfs breakdown into the release SBOM. This keeps the
+  # component data sourced from the tarball, not a separate artifactory fetch.
+  # See .cmake/aggr-artifacts.rb.
+  bsp_spdx = "#{brsdk_base}/#{brsdk_name}.spdx.json"
+  if File.exist?(bsp_spdx)
+    run "mkdir -p #{$top}/bsp-spdx"
+    run "cp #{bsp_spdx} #{$top}/bsp-spdx/#{brsdk_name}.spdx.json"
+  else
+    puts "WARN: #{bsp_spdx} not found; release SBOM rootfs import will fail for #{c[:arch]}"
+  end
+
   $tc = JSON.load_file("#{brsdk_base}/.deps.json").find{|x| x["id"] == "toolchain"}
   if is_internal?
     $tc_name = "mchp-toolchain-bin-#{$tc["build-artifact-version-string"]}"

@@ -126,18 +126,25 @@ try "tar -C #{$out_name}/bin -f mipsel.tar -x"
 #
 # The BSP SPDX is REQUIRED: a release SBOM that silently shipped an empty rootfs
 # placeholder would misrepresent the buildroot components embedded in the bootable
-# images. So a missing/unresolvable BSP SPDX is a hard build failure -- install the
-# pinned BSP (from .cmake/deps-bsp.json) under /opt/mchp before building the release.
+# images. So a missing BSP SPDX is a hard build failure.
+#
+# The SPDX is sourced from the BSP tarball (not a separate artifactory fetch):
+# create_cmake_project.rb copies the tarball's embedded <bsp>.spdx.json into
+# bsp-spdx/ during each per-arch build stage, and the CI build stage stashes that
+# dir so it reaches this aggregate stage. Prefer that carried copy; fall back to a
+# locally-installed BSP under /opt/mchp (dev machines / build containers).
 ext = []
 bsp_ver = JSON.parse(File.read("#{$top}/.cmake/deps-bsp.json"))[0]["build-artifact-version-string"]
 ["arm", "arm64", "mipsel"].each do |a|
   name = "mchp-brsdk-#{a}-#{bsp_ver}"
-  spdx = "/opt/mchp/#{name}/#{name}.spdx.json"
-  unless File.exist?(spdx)
-    raise "BSP SPDX not found for #{a}: #{spdx}\n" \
-          "The release SBOM must import the buildroot rootfs component breakdown from " \
-          "the BSP's SPDX. Install the pinned BSP (#{bsp_ver}, per .cmake/deps-bsp.json) " \
-          "so that file exists, then re-run."
+  candidates = ["#{$top}/bsp-spdx/#{name}.spdx.json", "/opt/mchp/#{name}/#{name}.spdx.json"]
+  spdx = candidates.find { |p| File.exist?(p) }
+  unless spdx
+    raise "BSP SPDX not found for #{a} (looked in: #{candidates.join(', ')}).\n" \
+          "The release SBOM must import the buildroot rootfs component breakdown from the " \
+          "BSP's SPDX (embedded in the BSP tarball). Ensure the per-arch build stage carried " \
+          "bsp-spdx/#{name}.spdx.json (via create_cmake_project.rb), or install the pinned BSP " \
+          "(#{bsp_ver}, per .cmake/deps-bsp.json) under /opt/mchp, then re-run."
   end
   ext << "--ext-spdx brsdk-#{a}:#{spdx}"
 end
