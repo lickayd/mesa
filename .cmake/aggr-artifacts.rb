@@ -123,20 +123,23 @@ try "tar -C #{$out_name}/bin -f mipsel.tar -x"
 # BSP's own SPDX, and includes the source components. The per-arch BSP SPDX is
 # resolved from the pinned BSP version in .cmake/deps-bsp.json. stderr is merged
 # into stdout so the logcmd wrapper (which fails on any stderr) is happy.
+#
+# The BSP SPDX is REQUIRED: a release SBOM that silently shipped an empty rootfs
+# placeholder would misrepresent the buildroot components embedded in the bootable
+# images. So a missing/unresolvable BSP SPDX is a hard build failure -- install the
+# pinned BSP (from .cmake/deps-bsp.json) under /opt/mchp before building the release.
 ext = []
-begin
-  bsp_ver = JSON.parse(File.read("#{$top}/.cmake/deps-bsp.json"))[0]["build-artifact-version-string"]
-  ["arm", "arm64", "mipsel"].each do |a|
-    name = "mchp-brsdk-#{a}-#{bsp_ver}"
-    spdx = "/opt/mchp/#{name}/#{name}.spdx.json"
-    if File.exist?(spdx)
-      ext << "--ext-spdx brsdk-#{a}:#{spdx}"
-    else
-      puts "WARN: BSP SPDX not found for #{a}: #{spdx} (rootfs left as placeholder)"
-    end
+bsp_ver = JSON.parse(File.read("#{$top}/.cmake/deps-bsp.json"))[0]["build-artifact-version-string"]
+["arm", "arm64", "mipsel"].each do |a|
+  name = "mchp-brsdk-#{a}-#{bsp_ver}"
+  spdx = "/opt/mchp/#{name}/#{name}.spdx.json"
+  unless File.exist?(spdx)
+    raise "BSP SPDX not found for #{a}: #{spdx}\n" \
+          "The release SBOM must import the buildroot rootfs component breakdown from " \
+          "the BSP's SPDX. Install the pinned BSP (#{bsp_ver}, per .cmake/deps-bsp.json) " \
+          "so that file exists, then re-run."
   end
-rescue => e
-  puts "WARN: could not resolve BSP SPDX paths: #{e}"
+  ext << "--ext-spdx brsdk-#{a}:#{spdx}"
 end
 # Use sys (streams to the console) rather than run (captures and discards the
 # child's output): sbom-spdx's progress and any validation/attribution errors
