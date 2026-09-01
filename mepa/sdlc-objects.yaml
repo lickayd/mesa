@@ -1,0 +1,177 @@
+# Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# The MEPA collection libraries. Each MEPA_LIB(...) in mepa/CMakeLists.txt emits
+# three cmake targets -- <name>, <name>_target and <name>_common -- all
+# transparent pass-throughs; the PHY components are attributed by the per-PHY
+# drivers under mepa/microchip, mepa/aqr and mepa/intel.
+
+cmake-targets:
+
+  # MEPA_LIB: mepa
+  - id: cmake-target-mepa
+    name: mepa
+  - id: cmake-target-mepa_target
+    name: mepa_target
+  - id: cmake-target-mepa_common
+    name: mepa_common
+
+  # MEPA_LIB: mepa_caracal
+  - id: cmake-target-mepa_caracal
+    name: mepa_caracal
+  - id: cmake-target-mepa_caracal_target
+    name: mepa_caracal_target
+  - id: cmake-target-mepa_caracal_common
+    name: mepa_caracal_common
+
+  # MEPA_LIB: mepa_caracal_macsec
+  - id: cmake-target-mepa_caracal_macsec
+    name: mepa_caracal_macsec
+  - id: cmake-target-mepa_caracal_macsec_target
+    name: mepa_caracal_macsec_target
+  - id: cmake-target-mepa_caracal_macsec_common
+    name: mepa_caracal_macsec_common
+
+  # MEPA_LIB: mepa_jr2
+  - id: cmake-target-mepa_jr2
+    name: mepa_jr2
+  - id: cmake-target-mepa_jr2_target
+    name: mepa_jr2_target
+  - id: cmake-target-mepa_jr2_common
+    name: mepa_jr2_common
+
+  # MEPA_LIB: mepa_jr2_macsec
+  - id: cmake-target-mepa_jr2_macsec
+    name: mepa_jr2_macsec
+  - id: cmake-target-mepa_jr2_macsec_target
+    name: mepa_jr2_macsec_target
+  - id: cmake-target-mepa_jr2_macsec_common
+    name: mepa_jr2_macsec_common
+
+  # MEPA_LIB: mepa_jr2_bringup
+  - id: cmake-target-mepa_jr2_bringup
+    name: mepa_jr2_bringup
+  - id: cmake-target-mepa_jr2_bringup_target
+    name: mepa_jr2_bringup_target
+  - id: cmake-target-mepa_jr2_bringup_common
+    name: mepa_jr2_bringup_common
+
+  # MEPA_LIB: mepa_servalt
+  - id: cmake-target-mepa_servalt
+    name: mepa_servalt
+  - id: cmake-target-mepa_servalt_target
+    name: mepa_servalt_target
+  - id: cmake-target-mepa_servalt_common
+    name: mepa_servalt_common
+
+  # MEPA_LIB: mepa_servalt_macsec
+  - id: cmake-target-mepa_servalt_macsec
+    name: mepa_servalt_macsec
+  - id: cmake-target-mepa_servalt_macsec_target
+    name: mepa_servalt_macsec_target
+  - id: cmake-target-mepa_servalt_macsec_common
+    name: mepa_servalt_macsec_common
+
+  # MEPA_LIB: mepa_ocelot
+  - id: cmake-target-mepa_ocelot
+    name: mepa_ocelot
+  - id: cmake-target-mepa_ocelot_target
+    name: mepa_ocelot_target
+  - id: cmake-target-mepa_ocelot_common
+    name: mepa_ocelot_common
+
+  # MEPA_LIB: mepa_ocelot_macsec
+  - id: cmake-target-mepa_ocelot_macsec
+    name: mepa_ocelot_macsec
+  - id: cmake-target-mepa_ocelot_macsec_target
+    name: mepa_ocelot_macsec_target
+  - id: cmake-target-mepa_ocelot_macsec_common
+    name: mepa_ocelot_macsec_common
+
+  # MEPA_LIB: mepa_ocelot_pcb121
+  - id: cmake-target-mepa_ocelot_pcb121
+    name: mepa_ocelot_pcb121
+  - id: cmake-target-mepa_ocelot_pcb121_target
+    name: mepa_ocelot_pcb121_target
+  - id: cmake-target-mepa_ocelot_pcb121_common
+    name: mepa_ocelot_pcb121_common
+
+  # MEPA_LIB: mepa_sparx5
+  - id: cmake-target-mepa_sparx5
+    name: mepa_sparx5
+  - id: cmake-target-mepa_sparx5_target
+    name: mepa_sparx5_target
+  - id: cmake-target-mepa_sparx5_common
+    name: mepa_sparx5_common
+
+  # MEPA_LIB: mepa_sparx5_macsec
+  - id: cmake-target-mepa_sparx5_macsec
+    name: mepa_sparx5_macsec
+  - id: cmake-target-mepa_sparx5_macsec_target
+    name: mepa_sparx5_macsec_target
+  - id: cmake-target-mepa_sparx5_macsec_common
+    name: mepa_sparx5_macsec_common
+
+  # MEPA_LIB: mepa_sparx5_bringup
+  - id: cmake-target-mepa_sparx5_bringup
+    name: mepa_sparx5_bringup
+  - id: cmake-target-mepa_sparx5_bringup_target
+    name: mepa_sparx5_bringup_target
+  - id: cmake-target-mepa_sparx5_bringup_common
+    name: mepa_sparx5_bringup_common
+
+  # MEPA_LIB: mepa_lan966x
+  - id: cmake-target-mepa_lan966x
+    name: mepa_lan966x
+  - id: cmake-target-mepa_lan966x_target
+    name: mepa_lan966x_target
+  - id: cmake-target-mepa_lan966x_common
+    name: mepa_lan966x_common
+
+  # MEPA_LIB: mepa_lan966x_macsec
+  - id: cmake-target-mepa_lan966x_macsec
+    name: mepa_lan966x_macsec
+  - id: cmake-target-mepa_lan966x_macsec_target
+    name: mepa_lan966x_macsec_target
+  - id: cmake-target-mepa_lan966x_macsec_common
+    name: mepa_lan966x_macsec_common
+
+  # MEPA_LIB: mepa_velocitysp_lan966x
+  - id: cmake-target-mepa_velocitysp_lan966x
+    name: mepa_velocitysp_lan966x
+  - id: cmake-target-mepa_velocitysp_lan966x_target
+    name: mepa_velocitysp_lan966x_target
+  - id: cmake-target-mepa_velocitysp_lan966x_common
+    name: mepa_velocitysp_lan966x_common
+
+  # MEPA_LIB: mepa_velocitysp_lan969x
+  - id: cmake-target-mepa_velocitysp_lan969x
+    name: mepa_velocitysp_lan969x
+  - id: cmake-target-mepa_velocitysp_lan969x_target
+    name: mepa_velocitysp_lan969x_target
+  - id: cmake-target-mepa_velocitysp_lan969x_common
+    name: mepa_velocitysp_lan969x_common
+
+  # MEPA_LIB: mepa_velocitysp_lan969x_auto
+  - id: cmake-target-mepa_velocitysp_lan969x_auto
+    name: mepa_velocitysp_lan969x_auto
+  - id: cmake-target-mepa_velocitysp_lan969x_auto_target
+    name: mepa_velocitysp_lan969x_auto_target
+  - id: cmake-target-mepa_velocitysp_lan969x_auto_common
+    name: mepa_velocitysp_lan969x_auto_common
+
+  # MEPA_LIB: mepa_velocitysp_p64h
+  - id: cmake-target-mepa_velocitysp_p64h
+    name: mepa_velocitysp_p64h
+  - id: cmake-target-mepa_velocitysp_p64h_target
+    name: mepa_velocitysp_p64h_target
+  - id: cmake-target-mepa_velocitysp_p64h_common
+    name: mepa_velocitysp_p64h_common
+
+  # MEPA_LIB: mepa_p64h
+  - id: cmake-target-mepa_p64h
+    name: mepa_p64h
+  - id: cmake-target-mepa_p64h_target
+    name: mepa_p64h_target
+  - id: cmake-target-mepa_p64h_common
+    name: mepa_p64h_common

@@ -1,19 +1,86 @@
 # Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
 # SPDX-License-Identifier: MIT
 ---
-# The Microchip LAN80xx PHY driver and the SHA-256 implementation vendored into it.
-# The produced driver libraries (libmepa_drv_lan80xx_ts[_msec].a) are attributed to
-# the LAN80xx PHY driver component, which in turn contains the vendored SHA-256.
+# The Microchip MEPA PHY drivers, one per PHY family. Each produced driver
+# library (libmepa_drv_<phy>.a) is attributed to its own PHY component so the
+# SBOM shows exactly which PHYs are covered. Drivers with a single cmake target
+# inline their component; where two targets share one component (lan80xx ts/msec,
+# lan8814 full/light) the component is a standalone spdx-element referenced by
+# spdx-id. The LAN80xx driver additionally contains a vendored SHA-256.
 
 cmake-targets:
+  # lan80xx: the ts and ts_msec builds share one component -> standalone.
   - id: cmake-target-mepa_drv_lan80xx_ts
     name: mepa_drv_lan80xx_ts
     spdx-id: SPDXRef-lan80xx-phy
   - id: cmake-target-mepa_drv_lan80xx_ts_msec
     name: mepa_drv_lan80xx_ts_msec
     spdx-id: SPDXRef-lan80xx-phy
+  # lan8814: the full and 'light' builds share one component -> standalone.
+  - id: cmake-target-mepa_drv_lan8814
+    name: mepa_drv_lan8814
+    spdx-id: SPDXRef-lan8814-phy
+  - id: cmake-target-mepa_drv_lan8814_light
+    name: mepa_drv_lan8814_light
+    spdx-id: SPDXRef-lan8814-phy
+  # One cmake target, one component -> inline.
+  - id: cmake-target-mepa_drv_lan884x
+    name: mepa_drv_lan884x
+    spdx:
+      id: SPDXRef-lan884x-phy
+      name: "LIB: Microchip LAN884x PHY"
+      directory: lan884x
+      license: MIT
+      copyright: Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+      use_packet_version: true
+      description: Microchip LAN884x Ethernet PHY driver.
+  - id: cmake-target-mepa_drv_lan887x
+    name: mepa_drv_lan887x
+    spdx:
+      id: SPDXRef-lan887x-phy
+      name: "LIB: Microchip LAN887x PHY"
+      directory: lan887x
+      license: MIT
+      copyright: Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+      use_packet_version: true
+      description: Microchip LAN887x Ethernet PHY driver.
+  - id: cmake-target-mepa_drv_lan867x
+    name: mepa_drv_lan867x
+    spdx:
+      id: SPDXRef-lan867x-phy
+      name: "LIB: Microchip LAN867x PHY"
+      directory: lan867x
+      license: MIT
+      copyright: Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+      use_packet_version: true
+      description: Microchip LAN867x Ethernet PHY driver.
+  - id: cmake-target-mepa_drv_lan8x8x
+    name: mepa_drv_lan8x8x
+    spdx:
+      id: SPDXRef-lan8x8x-phy
+      name: "LIB: Microchip LAN8x8x PHY"
+      directory: lan8x8x
+      license: MIT
+      copyright: Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+      use_packet_version: true
+      description: Microchip LAN8x8x Ethernet PHY driver.
+  - id: cmake-target-mepa_drv_vsc8574
+    name: mepa_drv_vsc8574
+    spdx:
+      id: SPDXRef-vsc8574-phy
+      name: "LIB: Microchip VSC8574 PHY"
+      directory: vsc8574
+      license: MIT
+      copyright: Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+      use_packet_version: true
+      description: Microchip (Vitesse) VSC8574 Ethernet PHY driver.
+  # The dummy PHY is a build-time stub (lan_stubs.c), not a shipped PHY driver;
+  # transparent (no SBOM component).
+  - id: cmake-target-mepa_drv_dummy_phy
+    name: mepa_drv_dummy_phy
 
 spdx-elements:
+  # Shared by two cmake targets each, so kept standalone (not inlined).
   - id: SPDXRef-lan80xx-phy
     name: "LIB: Microchip LAN80xx PHY"
     directory: lan80xx
@@ -23,6 +90,14 @@ spdx-elements:
     description: Microchip LAN80xx Ethernet PHY driver.
     sbom_add_kids:
       - SPDXRef-sha256
+
+  - id: SPDXRef-lan8814-phy
+    name: "LIB: Microchip LAN8814 PHY"
+    directory: lan8814
+    license: MIT
+    copyright: Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
+    use_packet_version: true
+    description: Microchip LAN8814 Ethernet PHY driver (also built in the 'light' variant).
 
   - id: SPDXRef-sha256
     name: "LIB: SHA-256"

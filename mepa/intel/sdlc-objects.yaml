@@ -5,20 +5,19 @@
 # MESA library. Migrated from mepa/intel/.module_info.
 
 # The produced driver library (libmepa_drv_intel.a) carries the third-party
-# license, so the release SBOM attributes it to the Intel GPY211 component.
+# license, so the release SBOM attributes it to the Intel GPY211 component. One
+# cmake target, one component -> inline.
 cmake-targets:
   - id: cmake-target-mepa_drv_intel
     name: mepa_drv_intel
-    spdx-id: SPDXRef-intel-gpy211
-
-spdx-elements:
-  - id: SPDXRef-intel-gpy211
-    name: "LIB: Intel GPY211 PHY"
-    directory: GPY_API_v2.7.2.1
-    license: BSD-3-Clause
-    license_file: GPY_API_v2.7.2.1/LICENSE
-    copyright: >-
-      Copyright (c) 2020, MaxLinear, Inc.; Copyright 2016-2020 Intel Corporation;
-      Copyright 2015-2016 Lantiq Beteiligungs-GmbH & Co. KG
-    version: "2.7.2.1"
-    description: Driver for the Intel/MaxLinear GPY211 Ethernet PHY.
+    spdx:
+      id: SPDXRef-intel-gpy211
+      name: "LIB: Intel GPY211 PHY"
+      directory: GPY_API_v2.7.2.1
+      license: BSD-3-Clause
+      license_file: GPY_API_v2.7.2.1/LICENSE
+      copyright: >-
+        Copyright (c) 2020, MaxLinear, Inc.; Copyright 2016-2020 Intel Corporation;
+        Copyright 2015-2016 Lantiq Beteiligungs-GmbH & Co. KG
+      version: "2.7.2.1"
+      description: Driver for the Intel/MaxLinear GPY211 Ethernet PHY.

@@ -5,17 +5,15 @@
 # Migrated from mepa/aqr/.module_info.
 
 # The produced driver library (libmepa_drv_aqr.a) is attributed to the Aquantia
-# PHY component in the release SBOM.
+# PHY component in the release SBOM. One cmake target, one component -> inline.
 cmake-targets:
   - id: cmake-target-mepa_drv_aqr
     name: mepa_drv_aqr
-    spdx-id: SPDXRef-aquantia-phy
-
-spdx-elements:
-  - id: SPDXRef-aquantia-phy
-    name: "LIB: Aquantia PHY"
-    directory: .
-    license: MIT
-    copyright: Copyright (c) 2017 Aquantia Corp.
-    use_packet_version: true
-    description: Driver for the Aquantia Ethernet PHY.
+    spdx:
+      id: SPDXRef-aquantia-phy
+      name: "LIB: Aquantia PHY"
+      directory: .
+      license: MIT
+      copyright: Copyright (c) 2017 Aquantia Corp.
+      use_packet_version: true
+      description: Driver for the Aquantia Ethernet PHY.
