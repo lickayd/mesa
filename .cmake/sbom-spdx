@@ -142,6 +142,7 @@ $opt_source = false
 $opt_release = false
 $opt_bin_tree = nil
 $opt_ext_spdx = {}   # provider => path to an external SPDX json to merge-import
+$opt_set_version = nil
 OptionParser.new do |opts|
   opts.banner = "Usage: sbom-spdx [options]\n\nOptions:"
   opts.on("-o", "--output FILE", "Write SPDX document to FILE (default: stdout)") { |o| $opt_output = o }
@@ -152,7 +153,8 @@ OptionParser.new do |opts|
   opts.on("--release", "Emit the release SBOM (the one shipped in the release tarball): mirror the bin/ tree (--bin-tree) as CONTAINS'd packages -- a package per produced library (with packageFileName) and a placeholder per bootable fw image -- plus the source components. Reads cmake_target_db_full.txt from the build folders for license attribution") { $opt_release = true }
   opts.on("--bin-tree DIR", "For --release: the assembled release bin/ directory to mirror (e.g. <release>/bin)") { |d| $opt_bin_tree = d }
   opts.on("--ext-spdx PROVIDER:PATH", "For --release: merge-import a subtree of an external SPDX for the spdx-element with external-spdx.provider == PROVIDER (repeatable). Arch-specific documents use an arch-qualified provider, e.g. brsdk-arm:/opt/.../mchp-brsdk-arm-....spdx.json") { |a| k, v = a.split(":", 2); $opt_ext_spdx[k] = v }
-  opts.on("--all", "Read every sdlc-objects.yaml on disk (default: only git-tracked, so worktrees/hidden copies are ignored)") { $opt_all = true }
+  opts.on("--all", "Read every sdlc-objects.yaml on disk (default: only git-tracked, so worktrees/hidden copies are ignored). Also lets the tool run outside a git checkout, since discovery no longer calls git ls-files") { $opt_all = true }
+  opts.on("--set-version VERSION", "Use VERSION as the product version instead of deriving it from 'git describe --tags --long'. Lets the SBOM build run on a non-git workspace; pair with --all so sdlc-objects discovery also avoids git") { |v| $opt_set_version = v }
   opts.on("-h", "--help", "Show this message") { puts opts; exit }
 end.parse!(ARGV)
 
@@ -184,14 +186,19 @@ else
   exit 1
 end
 
-# Product version, derived the same way the MESA release scripts do
-# (git describe --tags --long; see .cmake/source-prepare.rb / aggr-artifacts.rb),
-# used by elements flagged with use_packet_version.
-$packet_version = begin
-  v = `git describe --tags --long 2>/dev/null`.strip
-  v.empty? ? "MESA (unknown version)" : v
-rescue
-  "MESA (unknown version)"
+# Product version: use --set-version when given (so the build works on a non-git
+# workspace), otherwise derive it the way the MESA release scripts do
+# (git describe --tags --long; see .cmake/source-prepare.rb / aggr-artifacts.rb).
+# Used by elements flagged with use_packet_version.
+$packet_version = if $opt_set_version && !$opt_set_version.strip.empty?
+  $opt_set_version.strip
+else
+  begin
+    v = `git describe --tags --long 2>/dev/null`.strip
+    v.empty? ? "MESA (unknown version)" : v
+  rescue
+    "MESA (unknown version)"
+  end
 end
 
 model = SbomModel.new(builds, $opt_excludes, all: $opt_all)
