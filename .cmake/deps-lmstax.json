@@ -2,6 +2,6 @@
     {
         "id": "lmstax",
         "type": "generic-file",
-        "generic-file-url": "https://artifacts-aws.devops.microchip.com/artifactory/ung-generic-dev-local/lmstax-src-for-backwards-campatibility/lmstax-internal-9141c936f%40main.mepa_misra.tar.gz"
+        "generic-file-url": "https://artifacts-aws.devops.microchip.com/artifactory/ung-generic-dev-local/lmstax-src-for-backwards-campatibility/lmstax-internal-1d890e4b9@main.remove_mepa_velocity_lan969x_auto.tar.gz"
     }
 ]
