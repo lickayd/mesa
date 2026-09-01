@@ -211,9 +211,15 @@ static vtss_rc lb_config(vtss_state_t  *vtss_state,
 
     /* Calculate the MAX number of tokens allowed in this group (PUP_INTERVAL) */
     max_pup_tokens = (u32)lb_group_lb_pup_token_calc(ir_in_bps, group->pup_interval);
-    if ((inherited_ir_in_bps != 0U) && (ancestor_mode == 1U)) { // Add inherited pup tokens
-        pup_interval = (ancestor_pup_interval <= group->pup_interval) ? group->pup_interval
-                                                                      : ancestor_pup_interval;
+    /* INH_MODE == 1: the ancestor LB is in another LB set (MEF 10.3 envelope).
+     * INH_MODE == 2: the ancestor LB is the sibling LB of this very LB set
+     *                (MEF 10.2 Coupling Flag). That sibling is always a member
+     *                of this same LB group, so this group's PUP_INTERVAL applies. */
+    if ((inherited_ir_in_bps != 0U) &&
+        ((ancestor_mode == 1U) || (ancestor_mode == 2U))) { // Add inherited pup tokens
+        pup_interval = ((ancestor_mode == 2U) || (ancestor_pup_interval <= group->pup_interval))
+                           ? group->pup_interval
+                           : ancestor_pup_interval;
         max_pup_tokens += (u32)lb_group_lb_pup_token_calc(inherited_ir_in_bps, pup_interval);
     }
 
@@ -627,9 +633,12 @@ static void inherent_eir_calc(u32                      cos_id,
 {
     inherent->ancestor_lb = (cos_id == cos_highest) ? 0U : 1U;
     inherent->inheritor_lb = 1U; // EIR share to EIR
-    inherent->inherited_ir = (conf->inherit_eir == 0U)
-                                 ? 0U // Inherited rate includes CIR if CF
-                                 : ((conf->cf ? conf->cir : 0U) + conf->inherit_eir);
+    /* YTRmax, per the API contract of vtss_dlb_policer_conf_t::inherit_eir:
+     *   cf == TRUE  : cir + eir + inherit_eir
+     *   cf == FALSE :       eir + inherit_eir
+     * The CIR term is coupled in from the sibling CIR LB (INH_MODE == 2) and so
+     * applies even when inherit_eir is zero, that is, with no envelope. */
+    inherent->inherited_ir = (conf->cf ? conf->cir : 0U) + conf->inherit_eir;
     if (conf->share_eir) { /* Share the EIR overflow tokens to other COSID */
         /* The EIR COS0 cannot share */
         inherent->mode = (cos_id == 0U) ? 0U : 1U;
