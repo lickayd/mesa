@@ -828,6 +828,19 @@ mepa_rc lan80xx_event_conf_get(mepa_device_t          *dev,
                                phy25g_events_t    *const evt);
 
 /**
+ * Query whether any register drifted from the SW shadow during the current
+ * warmstart cycle.
+ *
+ * \param dev      [IN] mepa driver
+ * \param port_no  [IN] Port number to query
+ *
+ * \return MEPA_RC_OK   No drift detected (hitless warmstart).
+ *         MEPA_RC_ERROR  At least one register required a corrective write.
+ **/
+mepa_rc lan80xx_warm_start_failed_get(mepa_device_t          *dev,
+                                      const mepa_port_no_t   port_no);
+
+/**
  * Extended Event Get
  *
  * \param dev          [IN]  mepa driver

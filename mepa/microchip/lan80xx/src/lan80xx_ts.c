@@ -164,10 +164,11 @@ phy25g_ptp_action_type_t mepa_to_lan80xx_ls_action(mepa_ts_ls_type_t ls_type)
 
 static mepa_rc lan80xx_ts_reset(mepa_device_t *dev, const mepa_ts_reset_conf_t *const tsreset)
 {
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
     mepa_rc rc = MEPA_RC_ERROR;
 
     MEPA_ENTER(dev);
-    rc = lan80xx_ts_reset_priv(dev, tsreset);
+    rc = LAN80XX_RC_COLD(lan80xx_ts_reset_priv(dev, tsreset));
     MEPA_EXIT(dev);
 
     return rc;
@@ -402,7 +403,7 @@ static mepa_rc lan80xx_ts_ltc_ls_en(mepa_device_t *dev, mepa_ts_ls_type_t const 
 
     MEPA_ENTER(dev);
     ltc_ls_action = mepa_to_lan80xx_ls_action(ls_type);
-    rc = lan80xx_phy_ts_ltc_ls_action_set(dev, data->port_no, ltc_ls_action);
+    rc = LAN80XX_RC_COLD(lan80xx_phy_ts_ltc_ls_action_set(dev, data->port_no, ltc_ls_action));
     MEPA_EXIT(dev);
 
     return rc;
@@ -486,7 +487,7 @@ static mepa_rc lan80xx_ts_ltc_set(mepa_device_t *dev, const mepa_timestamp_t *co
     m25gts.nanoseconds = ts->nanoseconds;
     m25gts.subnanoseconds  = ts->picoseconds;
     MEPA_ENTER(dev);
-    rc = lan80xx_ts_csr_ptptime_set_priv(dev, data->port_no, &m25gts);
+    rc = LAN80XX_RC_COLD(lan80xx_ts_csr_ptptime_set_priv(dev, data->port_no, &m25gts));
     MEPA_EXIT(dev);
 
     return rc;
@@ -506,7 +507,7 @@ static mepa_rc lan80xx_ts_fifo_empty(mepa_device_t  *dev)
     mepa_rc rc = MEPA_RC_ERROR;
     MEPA_ENTER(dev);
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
-    rc = lan80xx_phy_ts_fifo_empty(dev, data->port_no, NULL, NULL, TRUE);
+    rc = LAN80XX_RC_COLD(lan80xx_phy_ts_fifo_empty(dev, data->port_no, NULL, NULL, TRUE));
     MEPA_EXIT(dev);
     return rc;
 }
@@ -745,7 +746,7 @@ static mepa_rc lan80xx_phy_ts_csr_write(mepa_device_t               *dev,
     mepa_rc rc = MEPA_RC_ERROR;
     MEPA_ENTER(dev);
 	phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
-    rc = lan80xx_phy_csr_write_priv(dev, data->port_no, mmd, addr, *value);
+    rc = LAN80XX_RC_COLD(lan80xx_phy_csr_write_priv(dev, data->port_no, mmd, addr, *value));
     MEPA_EXIT(dev);
     return rc;
 }

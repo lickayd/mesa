@@ -795,9 +795,10 @@ static mepa_rc lan80xx_macsec_csr_write(mepa_device_t               *dev,
                                         const u32                   addr,
                                         const u32                   value)
 {
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
     mepa_rc rc = MEPA_RC_ERROR;
     MEPA_ENTER(dev);
-    rc = lan80xx_macsec_csr_write_priv(dev, port_no, mmd, addr, value);
+    rc = LAN80XX_RC_COLD(lan80xx_macsec_csr_write_priv(dev, port_no, mmd, addr, value));
     MEPA_EXIT(dev);
     return rc;
 }
@@ -866,9 +867,10 @@ static mepa_rc lan80xx_macsec_frame_capture_set(mepa_device_t                   
                                                 const mepa_port_no_t                port_no,
                                                 const mepa_macsec_frame_capture_t   capture)
 {
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
     mepa_rc rc = MEPA_RC_ERROR;
     MEPA_ENTER(dev);
-    rc = lan80xx_macsec_frame_capture_set_priv(dev, port_no, capture);
+    rc = LAN80XX_RC_COLD(lan80xx_macsec_frame_capture_set_priv(dev, port_no, capture));
     MEPA_EXIT(dev);
     return rc;
 }

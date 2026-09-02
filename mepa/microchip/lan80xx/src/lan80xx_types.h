@@ -200,6 +200,7 @@ typedef struct phy25g_state_s {
     mepa_restart_t                  restart_cur;         /* Current restart configuration */
     mepa_restart_t                  restart_prev;        /* Previous restart configuration */
     mepa_bool_t                     sync_calling_private; /* Used by PHY APIs */
+    mepa_bool_t                     warm_start_reg_changed; /* Set by _lan80xx_csr_warm_wrm when HW drifted from SW shadow during warmstart sync */
     uint8_t                         packet_idx;
     uint8_t                         channel_id;
     uint8_t                         lsc_select;          /* LOAD or STORE LSC Pin */

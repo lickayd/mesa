@@ -186,6 +186,12 @@ mepa_rc lan80xx_event_conf_get(mepa_device_t *dev,
     return MEPA_RC_NOT_IMPLEMENTED;
 }
 
+mepa_rc lan80xx_warm_start_failed_get(mepa_device_t *dev,
+                                      const mepa_port_no_t port_no)
+{
+    return MEPA_RC_NOT_IMPLEMENTED;
+}
+
 mepa_rc lan80xx_event_poll(mepa_device_t *dev,
                            const mepa_port_no_t port_no,
                            phy25g_events_t *const evt)

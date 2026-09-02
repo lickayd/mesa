@@ -416,6 +416,27 @@ mepa_rc lan80xx_event_poll(mepa_device_t          *dev,
     return rc;
 }
 
+mepa_rc lan80xx_warm_start_failed_get(mepa_device_t          *dev,
+                                      const mepa_port_no_t   port_no)
+{
+    phy25g_phy_state_t *data;
+
+    if (dev == NULL) {
+        T_E(MEPA_TRACE_GRP_GEN, "\nPort instance not created in port : %d", port_no);
+        return MEPA_RC_ERROR;
+    }
+    if (!lan80xx_driver_check(dev)) {
+        T_E(MEPA_TRACE_GRP_GEN, "\nAPI not supported for PHY in port : %d", port_no);
+        return MEPA_RC_ERROR;
+    }
+    MEPA_ENTER(dev);
+    data = (phy25g_phy_state_t *)dev->data;
+    mepa_rc rc = data->warm_start_reg_changed ? MEPA_RC_ERROR : MEPA_RC_OK;
+    MEPA_EXIT(dev);
+    return rc;
+}
+
+
 mepa_rc lan80xx_phy_csr_write(mepa_device_t               *dev,
                               const mepa_port_no_t        port_no,
                               const u32                   mmd,

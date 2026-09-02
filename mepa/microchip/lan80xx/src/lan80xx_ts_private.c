@@ -1144,24 +1144,36 @@ mepa_rc lan80xx_phy_ts_init(const mepa_device_t *dev,
 
         T_D(MEPA_TRACE_GRP_TS, "Base port mapping: port %u , baseport %u \n", port_no, base_port_no);
         if (base_port_no == port_no) {
-            /*Reset the 1588 clock gen, STI, LTC module.*/
-            T_D(MEPA_TRACE_GRP_TS, "LTC reset, port init for baseport=%u port=%u", base_port_no, port_no);
-            value = LAN80XX_F_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_CLKGEN(1);
-            value |= LAN80XX_F_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_STI(1);
-            value |= LAN80XX_F_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_LTC(1);
+            if (!data->warm_start_cur) {
+                /* Cold: reset 1588 CLKGEN/STI/LTC and clear shared-resource flags.
+                 * Skipped during warmstart: reset bits are self-clearing â€” the
+                 * warm-aware WRM would see mismatch (HW=0, app writes 1) and
+                 * re-trigger the reset, destroying PTP time sync. */
+                T_D(MEPA_TRACE_GRP_TS, "LTC reset, port init for baseport=%u port=%u", base_port_no, port_no);
+                value = LAN80XX_F_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_CLKGEN(1);
+                value |= LAN80XX_F_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_STI(1);
+                value |= LAN80XX_F_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_LTC(1);
 
-            mask = (LAN80XX_M_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_CLKGEN |
-                    LAN80XX_M_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_STI |
-                    LAN80XX_M_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_LTC);
+                mask = (LAN80XX_M_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_CLKGEN |
+                        LAN80XX_M_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_STI |
+                        LAN80XX_M_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1_SW_RESET_1588_LTC);
 
-            LAN80XX_CSR_WRM(base_port_no, LAN80XX_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1, value, mask);
+                LAN80XX_CSR_WRM(base_port_no, LAN80XX_GLOBAL_BLOCK_LEVEL_SOFTWARE_RESET1, value, mask);
 
-            //Init the base dev datastructure.
-            base_data->ptp_shared_ltc_pll_init =  0;
-            base_data->ptp_shared_sti_interface_init = 0;
-            base_data->ptp_shared_ltc_resource = 0;
-            memset(&base_data->ptp_lsc_input_config, 0, sizeof(phy25g_ptp_lsc_input));
-            memset(&base_data->ptp_lsc_output_config, 0, sizeof(phy25g_ptp_lsc_output));
+                base_data->ptp_shared_ltc_pll_init       = FALSE;
+                base_data->ptp_shared_sti_interface_init = FALSE;
+                base_data->ptp_shared_ltc_resource       = FALSE;
+                memset(&base_data->ptp_lsc_input_config, 0, sizeof(phy25g_ptp_lsc_input));
+                memset(&base_data->ptp_lsc_output_config, 0, sizeof(phy25g_ptp_lsc_output));
+            } else {
+                /* Warmstart: HW is already running. ts_block_init and ts_port_init
+                 * are skipped via LAN80XX_RC_COLD(), so these flags are never set
+                 * by the normal init path. Set them here so non-base ports pass the
+                 * ptp_shared_ltc_pll_init gate */
+                base_data->ptp_shared_ltc_pll_init       = TRUE;
+                base_data->ptp_shared_sti_interface_init = TRUE;
+                base_data->ptp_shared_ltc_resource       = TRUE;
+            }
             if (!base_data->phy_ts_port_conf.port_ts_init_done) {
                 memset(&base_data->phy_ts_port_conf, 0, sizeof(phy25g_phy_ts_port_conf_t));
             }

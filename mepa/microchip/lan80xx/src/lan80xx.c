@@ -93,14 +93,38 @@ static mepa_rc lan80xx_conf_get(mepa_device_t *const dev, mepa_conf_t *const con
 
 static mepa_rc lan80xx_restart_conf_set(struct mepa_device *dev, const mepa_restart_t restart)
 {
-
-    mepa_rc rc = MEPA_RC_OK;
+    mepa_rc rc;
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
     MEPA_ENTER(dev);
     data->restart_cur = restart;
     rc = lan80xx_restart_type_set(dev);
     MEPA_EXIT(dev);
     return rc;
+}
+
+static mepa_rc lan80xx_restart_conf_end(struct mepa_device *dev)
+{
+    phy25g_phy_state_t *data      = (phy25g_phy_state_t *)dev->data;
+    mepa_device_t      *base_dev  = (data->base_dev != NULL) ? (mepa_device_t *)data->base_dev : dev;
+    phy25g_phy_state_t *base_data = (phy25g_phy_state_t *)base_dev->data;
+    uint32_t i;
+
+    MEPA_ENTER(dev);
+    for (i = 0; i < base_data->port_cnt; i++) {
+        mepa_device_t *port_dev = (mepa_device_t *)base_data->other_port_dev[i];
+        if (port_dev != NULL) {
+            phy25g_phy_state_t *port_data = (phy25g_phy_state_t *)port_dev->data;
+            port_data->warm_start_cur       = FALSE;
+            port_data->sync_calling_private = FALSE;
+            port_data->restart_cur          = MEPA_RESTART_COLD;
+        }
+    }
+    data->warm_start_cur       = FALSE;
+    data->sync_calling_private = FALSE;
+    data->restart_cur          = MEPA_RESTART_COLD;
+    (void)lan80xx_restart_type_set(dev);
+    MEPA_EXIT(dev);
+    return MEPA_RC_OK;
 }
 
 static mepa_rc lan80xx_restart_conf_get(struct mepa_device *dev, mepa_restart_t *const restart)
@@ -445,7 +469,7 @@ static mepa_rc lan80xx_loopback_set(mepa_device_t *dev, const mepa_loopback_t *l
     phy25g_phy_state_t *data = (phy25g_phy_state_t *) dev->data;
     mepa_rc rc = MEPA_RC_ERROR;
     MEPA_ENTER(dev);
-    rc = LAN80XX_RC_COLD(lan80xx_loopback_set_priv(dev, data->port_no, loopback));
+    rc = lan80xx_loopback_set_priv(dev, data->port_no, loopback);
     MEPA_EXIT(dev);
     return rc;
 }
@@ -608,6 +632,7 @@ static void lan80xx_driver_create(uint32_t id, mepa_driver_t *drv)
     drv->mepa_driver_chip_temp_get        = lan80xx_chip_temp_get;
     drv->mepa_driver_warmrestart_conf_get = lan80xx_restart_conf_get;
     drv->mepa_driver_warmrestart_conf_set = lan80xx_restart_conf_set;
+    drv->mepa_driver_warmrestart_conf_end = lan80xx_restart_conf_end;
     drv->mepa_driver_capability           = lan80xx_phy_capability;
     drv->mepa_driver_debug_info_dump      = lan80xx_debug_info_dump;
     drv->mepa_driver_synce_clock_conf_set = lan80xx_synce_clk_conf_set;

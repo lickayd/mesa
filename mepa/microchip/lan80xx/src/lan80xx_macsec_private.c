@@ -488,11 +488,6 @@ static mepa_rc lan80xx_macsec_mtu_set_(mepa_device_t        *dev,
         return dbg_counter_incr(dev, port_no, MEPA_RC_ERR_MACSEC_MAX_MTU);
     }
 
-    for (int i = 0 ; i < LAN80XX_MACSEC_SC_REC_PAGE0_NUM; i++) {
-        LAN80XX_CSR_WARM_WR(port_no, LAN80XX_MACSEC_EGR_CORE_MCHP_OPPE_MTU(i),
-                            LAN80XX_F_MACSEC_EGR_CORE_MCHP_OPPE_MTU_MTU_COMPARE(mtu_value) |
-                            (drop ? LAN80XX_M_MACSEC_EGR_CORE_MCHP_OPPE_MTU_MTU_COMP_DROP : 0));
-    }
     /* In VLAN aware mode, VLAN_MTU_CHECK == (NON_VLAN_MTU_CHECK + 4) bytes,
        In VLAN unaware mode, NON_VLAN_MTU_CHECK == VLAN_MTU_CHECK bytes */
     if (!vlan_unaware_en) {
@@ -654,7 +649,7 @@ static mepa_rc lan80xx_macsec_init_set_(mepa_device_t *dev, mepa_port_no_t port_
 
         /* Set the context */
         /* Selcting the Ethertype to be insterted secTag which is 88E5 represented in little endian format and enabling sequence number threshold mode */
-        LAN80XX_CSR_WARM_WR(port_no, LAN80XX_MACSEC_INGR_CORE_CONTEXT_CTRL, LAN80XX_MACSEC_CONTEX_CTRL);
+        LAN80XX_CSR_WR(dev, port_no, LAN80XX_MACSEC_INGR_CORE_CONTEXT_CTRL, LAN80XX_MACSEC_CONTEX_CTRL);
         /* Writing the latency value to LATENCY_CONTROL reg */
         LAN80XX_CSR_COLD_WR(port_no, LAN80XX_MACSEC_INGR_CORE_LATENCY_CONTROL,
                             LAN80XX_F_MACSEC_INGR_MACSEC_INGR_LATENCY_CONTROL_MC_LATENCY_FIX_0(ingr_latency));
@@ -663,14 +658,14 @@ static mepa_rc lan80xx_macsec_init_set_(mepa_device_t *dev, mepa_port_no_t port_
                             LAN80XX_F_MACSEC_INGR_MACSEC_INGR_LATENCY_CONTROL_MC_DYN_LATENCY_WORDS_0(LAN80XX_MACSEC_DYN_LATENCY) |
                             LAN80XX_M_MACSEC_INGR_MACSEC_INGR_DYN_LAT_ENABLE_0);
 
-        LAN80XX_CSR_WARM_WR(port_no, LAN80XX_MACSEC_INGR_CORE_SAM_NM_FLOW_CP, 0x0);
-        LAN80XX_CSR_WARM_WR(port_no, LAN80XX_MACSEC_INGR_CORE_SAM_NM_FLOW_NCP, 0x0);
-        LAN80XX_CSR_WARM_WR(port_no, LAN80XX_MACSEC_EGR_CORE_SAM_NM_FLOW_NCP, 0x0);
-        LAN80XX_CSR_WARM_WR(port_no, LAN80XX_MACSEC_EGR_CORE_SAM_NM_FLOW_CP, 0x0);
+        LAN80XX_CSR_WR(dev, port_no, LAN80XX_MACSEC_INGR_CORE_SAM_NM_FLOW_CP, 0x0);
+        LAN80XX_CSR_WR(dev, port_no, LAN80XX_MACSEC_INGR_CORE_SAM_NM_FLOW_NCP, 0x0);
+        LAN80XX_CSR_WR(dev, port_no, LAN80XX_MACSEC_EGR_CORE_SAM_NM_FLOW_NCP, 0x0);
+        LAN80XX_CSR_WR(dev, port_no, LAN80XX_MACSEC_EGR_CORE_SAM_NM_FLOW_CP, 0x0);
 
         /* Egress */
         /* Selcting the Ethertype to be insterted secTag which is 88E5 represented in little endian format and enabling sequence number threshold mode */
-        LAN80XX_CSR_WARM_WR(port_no, LAN80XX_MACSEC_EGR_CORE_CONTEXT_CTRL, LAN80XX_MACSEC_CONTEX_CTRL);
+        LAN80XX_CSR_WR(dev, port_no, LAN80XX_MACSEC_EGR_CORE_CONTEXT_CTRL, LAN80XX_MACSEC_CONTEX_CTRL);
         /* Writing the latency value to LATENCY_CONTROL reg */
         LAN80XX_CSR_COLD_WR(port_no, LAN80XX_MACSEC_EGR_CORE_LATENCY_CONTROL,
                             LAN80XX_F_MACSEC_EGR_MACSEC_EGR_LATENCY_CONTROL_MC_LATENCY_FIX_0(egr_latency));
@@ -1337,6 +1332,13 @@ static mepa_bool_t check_resources(mepa_device_t *dev, mepa_bool_t is_sc, u32 se
 static mepa_rc lan80xx_macsec_sa_enable(mepa_device_t *dev, mepa_port_no_t port_no, u32 record, mepa_bool_t egr, mepa_bool_t enable)
 {
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
+    /* SAM_ENB_CTRL_ENTRY_SET/CLEAR registers are write-only â€” reads return 0.
+     * LAN80XX_CSR_WRM would always see mismatch, flag false drift, and write.
+     * The CLEAR path would disable a live TCAM entry, dropping active traffic.
+     * During warmstart the HW TCAM state is already correct â€” skip entirely. */
+    if (data->warm_start_cur) {
+        return MEPA_RC_OK;
+    }
     if (enable) {
         if (record < LAN80XX_MACSEC_SAM_ENTRY_SET1_NUM) {
             //Enable TCAM match of the particular SA
@@ -1630,9 +1632,16 @@ static mepa_rc lan80xx_record_empty_get(mepa_device_t *dev, mepa_port_no_t port_
 
 static mepa_rc lan80xx_macsec_sa_xform_set(mepa_device_t *dev, mepa_port_no_t port_no, mepa_bool_t egr, u32 record, phy25g_macsec_internal_secy_t *secy, u16 an, u32 sc)
 {
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
     mepa_bool_t aes_128;
     mepa_bool_t xpn = FALSE;
     u32 i, mmd;
+    /* XFORM records hold encryption keys. During warmstart the HW record is
+     * still valid from before the crash â€” skip rewrite to avoid disrupting
+     * live traffic. Keys are not readable, so drift-detection is not possible. */
+    if (data->warm_start_cur) {
+        return MEPA_RC_OK;
+    }
     mmd = egr ? MMD_ID_MACSEC_EGR : MMD_ID_MACSEC_INGR;
     T_I(MEPA_TRACE_GRP_GEN, "Record:%u SC:%u SA:%u  Dir:%s ", record, sc, an, egr ? "Egress" : "Ingress");
     if (secy->conf.current_cipher_suite == MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128 ||
@@ -1672,7 +1681,13 @@ static mepa_rc lan80xx_macsec_sa_xform_set(mepa_device_t *dev, mepa_port_no_t po
 static mepa_rc lan80xx_macsec_sa_xform_reset(mepa_device_t *dev, mepa_port_no_t port_no, mepa_bool_t egr, u32 record, phy25g_macsec_internal_secy_t *secy,
                                              u16 an, u32 sc)
 {
+    phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
     u32 i = 0, mmd = 0;
+    /* XFORM records hold the SA encryption key/context. During warmstart the
+     * HW record is still valid â€” skip the zero-out to preserve it. */
+    if (data->warm_start_cur) {
+        return MEPA_RC_OK;
+    }
     mmd = egr ? MMD_ID_MACSEC_EGR : MMD_ID_MACSEC_INGR;
 
     for (i = 0; i < LAN80XX_MACSEC_XFORM_REC_SIZE; i++) {

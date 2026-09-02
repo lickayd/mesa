@@ -297,49 +297,64 @@ mepa_rc _lan80xx_csr_warm_wr(const mepa_device_t *dev,
             return __rc;                                               \
     }                                                           \
  
-#define LAN80XX_CSR_WR(dev,port, io_reg, value)                 \
-    {                                                              \
-      mepa_rc __rc = lan80xx_csr_wr(dev, port, io_reg->mmd, io_reg->is32, io_reg->addr, value); \
-        if (__rc != MEPA_RC_OK)           \
-            return __rc;                  \
+#define LAN80XX_CSR_WR(dev,port, io_reg, value)                                            \
+    {                                                                                      \
+        if (!((phy25g_phy_state_t *)(dev)->data)->warm_start_cur) {                        \
+            mepa_rc __rc = lan80xx_csr_wr(dev, port, io_reg->mmd, io_reg->is32,            \
+                                          io_reg->addr, value);                            \
+            if (__rc != MEPA_RC_OK)                                                        \
+                return __rc;                                                               \
+        }                                                                                  \
     }
 
 #define LAN80XX_CSR_WRM(p, io_reg, value, mask) \
     { \
-        mepa_rc __rc = _lan80xx_csr_wrm(dev, p, io_reg, value, mask); \
+        mepa_rc __rc = _lan80xx_csr_warm_wrm(dev, p, io_reg, value, mask,              \
+                                             0xFFFFFFFF, __FUNCTION__, __LINE__);      \
         if (__rc != MEPA_RC_OK)                  \
             return __rc;                         \
     }
 
-#define LAN80XX_CSR_EVENT_WRM(p, io_reg_mask, io_reg_sticky, value, mask) \
-    { \
-        mepa_rc __rc = _lan80xx_csr_wrm(dev, p, io_reg_mask, value, mask); \
-        if (__rc != MEPA_RC_OK)                  \
-            return __rc;                         \
-        __rc = _lan80xx_csr_wrm(dev, p, io_reg_sticky, value, mask); \
-        if (__rc != MEPA_RC_OK)                  \
-            return __rc;                         \
+#define LAN80XX_CSR_EVENT_WRM(p, io_reg_mask, io_reg_sticky, value, mask)              \
+    {                                                                                  \
+        mepa_rc __rc = _lan80xx_csr_warm_wrm(dev, p, io_reg_mask, value, mask,        \
+                                             0xFFFFFFFF, __FUNCTION__, __LINE__);     \
+        if (__rc != MEPA_RC_OK)                                                       \
+            return __rc;                                                              \
+        if (!((phy25g_phy_state_t *)(dev)->data)->warm_start_cur) {                   \
+            __rc = _lan80xx_csr_wrm(dev, p, io_reg_sticky, value, mask);              \
+            if (__rc != MEPA_RC_OK)                                                   \
+                return __rc;                                                          \
+        }                                                                             \
     }
 
-#define LAN80XX_CSR_COLD_WR(p, io_reg, value)                 \
-    {\
-    mepa_rc __rc;\
-      mepa_device_t *dev_temp = (io_reg->mmd == 0x1e) ? data->base_dev : dev; \
-      if (!data->sync_calling_private) {\
-          __rc = lan80xx_csr_wr(dev_temp, p, io_reg->mmd, io_reg->is32, io_reg->addr, value); \
-          if (__rc != MEPA_RC_OK)                                 \
-            return __rc;                  \
-      } \
+/* LAN80XX_CSR_COLD_WR / LAN80XX_CSR_COLD_WRM (deprecated names â€” kept for
+ * source-compatibility).
+ *
+ * They now behave the same as the regular LAN80XX_CSR_WR / LAN80XX_CSR_WRM:
+ *   - LAN80XX_CSR_COLD_WR  : full-register write, skip during warm.
+ *   - LAN80XX_CSR_COLD_WRM : masked write, warm-aware (read-compare-write-
+ *                            on-drift) â€” same path the regular CSR_WRM uses.
+ *
+ * Call sites need not change. New code should use CSR_WR / CSR_WRM directly.
+ */
+#define LAN80XX_CSR_COLD_WR(p, io_reg, value)                                          \
+    {                                                                                  \
+        mepa_device_t *dev_temp = (io_reg->mmd == 0x1e) ? data->base_dev : dev;        \
+        if (!((phy25g_phy_state_t *)(dev_temp)->data)->warm_start_cur) {               \
+            mepa_rc __rc = lan80xx_csr_wr(dev_temp, p, io_reg->mmd, io_reg->is32,      \
+                                          io_reg->addr, value);                        \
+            if (__rc != MEPA_RC_OK)                                                    \
+                return __rc;                                                           \
+        }                                                                              \
     }
 
-#define LAN80XX_CSR_COLD_WRM(p, io_reg, value, mask) \
-    { \
-        mepa_rc __rc;\
-      if (!data->sync_calling_private) {\
-         __rc = _lan80xx_csr_wrm(dev, p, io_reg, value, mask); \
-        if (__rc != MEPA_RC_OK)                  \
-            return __rc;                         \
-      } \
+#define LAN80XX_CSR_COLD_WRM(p, io_reg, value, mask)                                   \
+    {                                                                                  \
+        mepa_rc __rc = _lan80xx_csr_warm_wrm(dev, p, io_reg, value, mask,              \
+                                             0xFFFFFFFF, __FUNCTION__, __LINE__);      \
+        if (__rc != MEPA_RC_OK)                                                        \
+            return __rc;                                                               \
     }
 
 
@@ -354,6 +369,16 @@ mepa_rc _lan80xx_csr_warm_wr(const mepa_device_t *dev,
 /* ================================================================= *
  *  Warm Start Functions
  * ================================================================= */
+
+/* Warmstart marker register convention:
+ * The chip provides four scratch registers (WARM_RESTART_REG ri=0..3) but
+ * warmstart is a chip-wide property â€” the application arms / recovers the
+ * whole chip together, not per channel. We therefore use a single canonical
+ * marker (register index 0) for both arm-time write and probe-time read.
+ * This matches the VTSS pattern (single chip scratch) and avoids depending
+ * on channel_id (set only after mepa_conf_set) or packet_idx (set in
+ * mepa_link_base_port). */
+#define LAN80XX_WARM_MARKER_INDEX 0
 
 #define LAN80XX_CSR_WARM_WR(p, io_reg, value)                 \
     {\

@@ -913,20 +913,28 @@ mepa_rc _lan80xx_csr_warm_wrm(const mepa_device_t *dev,
 {
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
     uint32_t  curr_val;
+
+    /* State 3: SYNC phase - verify HW matches SW shadow, write only on drift. */
     if (data->sync_calling_private) {
-        /* Read the current register value and compare with requested */
         MEPA_RC(lan80xx_csr_rd(dev, port_no, io->mmd, io->is32, io->addr, &curr_val));
         if ((curr_val ^ value) & mask & chk_mask) { /* Change in bit field */
             T_N(MEPA_TRACE_GRP_GEN, "Warm start synch. field changed: Port:%u MMD:%d Register:0x%X\n", port_no, io->mmd, io->addr);
             T_N(MEPA_TRACE_GRP_GEN, "Mask:0x%X Chip value:0x%X API value:0x%X\n", mask, curr_val, value);
             T_N(MEPA_TRACE_GRP_GEN, "Function:%s, Line:%d (chk_mask:0x%X)\n", function, line, chk_mask);
-            //data->warm_start_reg_changed = TRUE; // Signaling that a register for this port has changed.
+            data->warm_start_reg_changed = TRUE; /* Signaling that a register for this port has changed. */
             MEPA_RC(lan80xx_csr_wrm(dev, port_no, io->mmd, io->is32, io->addr, value, mask));
         }
-    } else {
-        /* Normal write */
-        MEPA_RC(lan80xx_csr_wrm(dev, port_no, io->mmd, io->is32, io->addr, value, mask));
+        return MEPA_RC_OK;
     }
+
+    /* State 2: REPLAY phase, warmstart active but sync pass not yet running.
+     * SW shadow is being rebuilt by the application; HW must not be disturbed. */
+    if (data->warm_start_cur) {
+        return MEPA_RC_OK;
+    }
+
+    /* State 1: COLD normal operation, plain write. */
+    MEPA_RC(lan80xx_csr_wrm(dev, port_no, io->mmd, io->is32, io->addr, value, mask));
     return MEPA_RC_OK;
 }
 
@@ -2619,6 +2627,27 @@ mepa_rc lan80xx_operating_mode_set_priv(const mepa_device_t *dev, const mepa_por
     phy25g_phy_state_t *data = (phy25g_phy_state_t *) dev->data;
     phy25g_oper_mode_t old_mode = data->port_state.port_mode.oper_mode;
 
+    if (data->warm_start_cur) {
+        uint32_t val = 0;
+        phy25g_oper_mode_t hw_mode;
+
+        LAN80XX_CSR_RD(dev, port_no, LAN80XX_LINE_SLICE_SLICE_CONFIG, &val);
+
+        hw_mode = (val & LAN80XX_M_LINE_SLICE_SLICE_CONFIG_MAC_RETIMING_MODE) ? MAC_RETIMER : PCS_RETIMER;
+
+        if (hw_mode != phy_mode) {
+            T_I(MEPA_TRACE_GRP_GEN, "Warmstart: HW oper_mode (%s) differs from app-replayed (%s) on port %u â€” flagging drift, HW untouched\n",
+                hw_mode == MAC_RETIMER ? "MAC-RETIMER" : "PCS-RETIMER",
+                phy_mode == MAC_RETIMER ? "MAC-RETIMER" : "PCS-RETIMER",
+                port_no);
+
+            data->warm_start_reg_changed = TRUE;
+        }
+
+        data->port_state.port_mode.oper_mode = phy_mode;
+        return MEPA_RC_OK;
+    }
+
     if (phy_mode == PCS_RETIMER) {
         /* Configuring PHY in PCS Retimer Mode */
         LAN80XX_CSR_COLD_WRM(port_no, LAN80XX_LINE_SLICE_SLICE_CONFIG, 0, LAN80XX_M_LINE_SLICE_SLICE_CONFIG_MAC_RETIMING_MODE);
@@ -2841,7 +2870,14 @@ static mepa_rc lan80xx_traffic_stop(mepa_device_t *dev, const mepa_port_no_t por
 {
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
 
-    T_I(MEPA_TRACE_GRP_GEN, "\n Stopping traffic on port %d", port_no);
+    /* Warmstart: chip is preserving live traffic  do not touch MAC RX enables,
+     * PCS KR resets, or introduce MEPA_MSLEEP delays. Bail out so the caller's
+     * behaviour is a no-op during warm recovery. */
+    if (data->warm_start_cur) {
+        return MEPA_RC_OK;
+    }
+
+    T_I(MEPA_TRACE_GRP_GEN, "Stopping traffic on port %d", port_no);
 
     if (data->port_state.port_mode.oper_mode == MAC_RETIMER) {
         /* Disable HOST_MAC RX - stops egress path */
@@ -2879,7 +2915,14 @@ static mepa_rc lan80xx_traffic_resume(mepa_device_t *dev, const mepa_port_no_t p
 {
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
 
-    T_I(MEPA_TRACE_GRP_GEN, "\n Resuming traffic on port %d", port_no);
+    /* Warmstart: skip entirely. traffic_stop was a no-op during warm, so
+     * there's nothing to un-do here â€” and the MACsec reset assert/deassert
+     * cycle plus the MEPA_MSLEEP(10) inside would disturb the running chip. */
+    if (data->warm_start_cur) {
+        return MEPA_RC_OK;
+    }
+
+    T_I(MEPA_TRACE_GRP_GEN, "Resuming traffic on port %d", port_no);
 
     /* De-assert PCS_KR_RX_RST on both Host and Line side to release PCS from reset */
     LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_PMA_SD_DES_RST, 0,
@@ -2935,21 +2978,10 @@ static mepa_rc lan80xx_mode_set_init(mepa_device_t *dev, const mepa_port_no_t po
         T_E(MEPA_TRACE_GRP_GEN, "Error in configuring lan80xx_mode_conf_set on port no : %d", port_no);
         return MEPA_RC_ERROR;
     }
-    if (data->port_state.port_mode.oper_mode == PCS_RETIMER) {
-        /* Configuring PHY in PCS Retimer Mode */
-        LAN80XX_CSR_COLD_WRM(port_no, LAN80XX_LINE_SLICE_SLICE_CONFIG, 0, LAN80XX_M_LINE_SLICE_SLICE_CONFIG_MAC_RETIMING_MODE);
-        /* Disabling MAC Block */
-        if (lan80xx_phy_mac_conf_set(dev, port_no, FALSE) != MEPA_RC_OK) {
-            T_E(MEPA_TRACE_GRP_GEN, "Error is disabling MAC block in port : %d", port_no);
-            return MEPA_RC_ERROR;
-        }
-        /* 1588 EGR and INGR in PCS Retimer Mode */
-        LAN80XX_CSR_WRM(port_no, LAN80XX_PTP_PROC_EGR_CFG_OPERATION_MODE, LAN80XX_M_PTP_PROC_EGR_CFG_OPERATION_MODE_EGR_CFG_RETIMING_MODE,
-                        LAN80XX_M_PTP_PROC_EGR_CFG_OPERATION_MODE_EGR_CFG_RETIMING_MODE);
-
-        LAN80XX_CSR_WRM(port_no, LAN80XX_PTP_PROC_INGR_CFG_OPERATION_MODE, LAN80XX_M_PTP_PROC_INGR_CFG_OPERATION_MODE_INGR_CFG_RETIMING_MODE,
-                        LAN80XX_M_PTP_PROC_INGR_CFG_OPERATION_MODE_INGR_CFG_RETIMING_MODE);
-    }
+    /* PCS_RETIMER mode requires no register writes here: the chip's default
+     * state (LINE_SLICE_SLICE_CONFIG MAC_RETIMING_MODE=0, PTP_PROC_*_OPERATION_MODE
+     * defaults, MAC block disabled) already matches PCS retimer, so a customer
+     * that never calls lan80xx_operating_mode_set() gets PCS retimer for free */
 
     if (data->port_state.port_mode.oper_mode == MAC_RETIMER) {
         /* Configure FC buffer thresholds based on speed mode */
@@ -3029,10 +3061,29 @@ mepa_rc lan80xx_reset_point(mepa_device_t *dev, const mepa_reset_param_t *rst_co
     phy25g_phy_state_t *base_data;
     LAN80XX_BASE_DEV(data, base_dev, base_data);
     u32 val = 0;
+    u32 marker_val = 0;
     switch (rst_conf->reset_point) {
     case MEPA_RESET_POINT_PRE:
         /* Identify and store the Phy id */
         MEPA_RC(lan80xx_identify_phy(dev, data->port_no));
+
+        /* Warmstart marker detection â€” performed for every channel before any
+         * destructive operation in this case. The chip-wide marker register
+         * (WARM_RESTART_REG index 0; see LAN80XX_WARM_MARKER_INDEX) lives in
+         * chip RAM and survives an application crash. If it reads WARM, the
+         * application previously called mepa_warmstart_conf_set(WARM) and we
+         * are now on the recovery path. Arm the SW flags so subsequent
+         * LAN80XX_CSR_WRMs flow through the read-compare-write-on-drift
+         * path, LAN80XX_CSR_WRs skip, and LAN80XX_RC_COLD() short-circuits
+         * the destructive helpers below. */
+        LAN80XX_CSR_RD(dev, base_data->port_no, LAN80XX_GLOBAL_WARM_RESTART_REG(LAN80XX_WARM_MARKER_INDEX), &marker_val);
+        if (LAN80XX_X_GLOBAL_WARM_RESTART_REG_WARM_RESTART(marker_val) == MEPA_RESTART_WARM) {
+            T_I(MEPA_TRACE_GRP_GEN, "Warmstart marker detected on port %u â€” entering recovery", data->port_no);
+            data->warm_start_cur         = TRUE;
+            data->sync_calling_private   = TRUE;
+            data->warm_start_reg_changed = FALSE;
+            data->restart_cur            = MEPA_RESTART_WARM;
+        }
 
         /* Reset port_cnt for base port to handle re-initialization after CHIP_FAST_RESET.
          * Without this, port_cnt keeps incrementing and RAM_INIT condition fails.
@@ -3055,26 +3106,26 @@ mepa_rc lan80xx_reset_point(mepa_device_t *dev, const mepa_reset_param_t *rst_co
             return MEPA_RC_ERROR;
         }
 
-        /* Following Resets and MCU Configurations are done only for Base Port of the PHY */
-        if (lan80xx_block_reset_priv(dev) != MEPA_RC_OK) {
+        if (LAN80XX_RC_COLD(lan80xx_block_reset_priv(dev)) != MEPA_RC_OK) {
             T_E(MEPA_TRACE_GRP_GEN, "Error in Getting PHY status");
             return MEPA_RC_ERROR;
         }
-        if (lan80xx_a0_a1_revision_serd_init_strap_wrkrd(dev, data->port_no) != MEPA_RC_OK) {
+        if (LAN80XX_RC_COLD(lan80xx_a0_a1_revision_serd_init_strap_wrkrd(dev, data->port_no)) != MEPA_RC_OK) {
             T_E(MEPA_TRACE_GRP_GEN, "Failed to configure Strap over-ride register\n");
             return MEPA_RC_ERROR;
         }
 
+        /* lan80xx_feature_supported is read-only â€” safe during warm. */
         if (lan80xx_feature_supported(dev) != MEPA_RC_OK) {
-            T_E(MEPA_TRACE_GRP_GEN, "\nError in reading feature supported");
+            T_E(MEPA_TRACE_GRP_GEN, "Error in reading feature supported");
             return MEPA_RC_ERROR;
         }
 
-        if (lan80xx_mcu_mailbox_init_priv(dev, MAILBOX_INTR_ENABLE, MAILBOX_HOST_INTR_MASK) != MEPA_RC_OK) {
+        if (LAN80XX_RC_COLD(lan80xx_mcu_mailbox_init_priv(dev, MAILBOX_INTR_ENABLE, MAILBOX_HOST_INTR_MASK)) != MEPA_RC_OK) {
             T_E(MEPA_TRACE_GRP_GEN, "Mailbox init failed");
             return MEPA_RC_ERROR;
         }
-        if (lan80xx_glb_workarround(dev, data->port_no)) {
+        if (LAN80XX_RC_COLD(lan80xx_glb_workarround(dev, data->port_no))) {
             T_E(MEPA_TRACE_GRP_GEN, "Configured Global Workarrounds for A0,A1\n");
             return MEPA_RC_ERROR;
         }
@@ -3082,7 +3133,7 @@ mepa_rc lan80xx_reset_point(mepa_device_t *dev, const mepa_reset_param_t *rst_co
         break;
     case MEPA_RESET_POINT_DEFAULT:
 
-        if (lan80xx_channel_workarround(dev, data->port_no)) {
+        if (LAN80XX_RC_COLD(lan80xx_channel_workarround(dev, data->port_no))) {
             T_E(MEPA_TRACE_GRP_GEN, "Error in Configuring Per Channel Workarrounds \n");
             return MEPA_RC_ERROR;
         }
@@ -3090,12 +3141,13 @@ mepa_rc lan80xx_reset_point(mepa_device_t *dev, const mepa_reset_param_t *rst_co
         /* Read Strap */
         LAN80XX_CSR_RD(dev, data->port_no, LAN80XX_IOREG(MMD_ID_MCU_MAILBOX, 1, STRAP_OVERRIDE_REG), &val);
         if ((base_data->port_cnt == base_data->max_port_cnt) && (val & DFU_STRAP)) {
-            if (lan80xx_fw_update_priv(dev) != MEPA_RC_OK) {
+            if (LAN80XX_RC_COLD(lan80xx_fw_update_priv(dev)) != MEPA_RC_OK) {
                 T_E(MEPA_TRACE_GRP_GEN, "Firware Update Failed on Port %d \n", base_data->port_no);
                 return MEPA_RC_ERROR;
             }
         } else if ((base_data->port_cnt == base_data->max_port_cnt) && (val & SERDES_INIT_STRAP)) {
-            if (lan80xx_post1_init_priv(dev, data->port_no) != MEPA_RC_OK) {
+            /* SerDes POST1 calibration â€” would disturb the link. Skip under warm. */
+            if (LAN80XX_RC_COLD(lan80xx_post1_init_priv(dev, data->port_no)) != MEPA_RC_OK) {
                 T_E(MEPA_TRACE_GRP_GEN, "POST1 Failed on Port %d \n", data->port_no);
                 return MEPA_RC_ERROR;
             }
@@ -3438,7 +3490,8 @@ mepa_rc lan80xx_warmrestart_conf_get_priv(mepa_device_t *dev)
     mepa_device_t *base_dev = (mepa_device_t *)data->base_dev;
     phy25g_phy_state_t *base_data = (phy25g_phy_state_t *)base_dev->data;
 
-    LAN80XX_CSR_RD(dev, base_data->port_no, LAN80XX_GLOBAL_WARM_RESTART_REG(data->channel_id), &val);
+    LAN80XX_CSR_RD(dev, base_data->port_no, LAN80XX_GLOBAL_WARM_RESTART_REG(LAN80XX_WARM_MARKER_INDEX), &val);
+
     data->restart_cur = LAN80XX_X_GLOBAL_WARM_RESTART_REG_WARM_RESTART(val);
     return MEPA_RC_OK;
 }
@@ -3451,8 +3504,9 @@ mepa_rc lan80xx_restart_type_set(mepa_device_t *dev)
     mepa_device_t *base_dev = (mepa_device_t *)data->base_dev;
     phy25g_phy_state_t *base_data = (phy25g_phy_state_t *)base_dev->data;
 
-    /* Set restart information in Malibu25G PHY */
-    LAN80XX_CSR_WARM_WRM(base_data->port_no, LAN80XX_GLOBAL_WARM_RESTART_REG(data->channel_id),
+    /* Set restart information in the chip-wide marker register. */
+    LAN80XX_CSR_WARM_WRM(base_data->port_no,
+                         LAN80XX_GLOBAL_WARM_RESTART_REG(LAN80XX_WARM_MARKER_INDEX),
                          LAN80XX_F_GLOBAL_WARM_RESTART_REG_WARM_RESTART(data->restart_cur),
                          LAN80XX_M_GLOBAL_WARM_RESTART_REG_WARM_RESTART);
     return rc;
@@ -6043,7 +6097,7 @@ mepa_rc lan80xx_glb_workarround(mepa_device_t *dev, mepa_port_no_t port_no)
         LAN80XX_CSR_WRM(port_no, LAN80XX_GLOBAL_IO_PAD_CTRL(i), LAN80XX_M_GLOBAL_IO_PAD_CTRL_PUPD_OVR | LAN80XX_F_GLOBAL_IO_PAD_CTRL_PUPD_EN(1),
                         LAN80XX_M_GLOBAL_IO_PAD_CTRL_PUPD_OVR | LAN80XX_M_GLOBAL_IO_PAD_CTRL_PUPD_EN);
     }
-    T_I(MEPA_TRACE_GRP_GEN, "\nGPIO PAD Configured to Pull Up Mode\n");
+    T_I(MEPA_TRACE_GRP_GEN, "GPIO PAD Configured to Pull Up Mode\n");
 
     /* JIRA "UNG_MALIBU_25G-2454" fix */
     LAN80XX_CSR_WRM(port_no, LAN80XX_CROSS_CONNECT_WPS0_CFG, LAN80XX_F_CROSS_CONNECT_WPS0_CFG_L0_LOCAL_CLK(0),
@@ -6057,7 +6111,7 @@ mepa_rc lan80xx_glb_workarround(mepa_device_t *dev, mepa_port_no_t port_no)
 
     LAN80XX_CSR_WRM(port_no, LAN80XX_CROSS_CONNECT_WPS1_CFG, LAN80XX_F_CROSS_CONNECT_WPS1_CFG_L3_LOCAL_CLK(3),
                     LAN80XX_M_CROSS_CONNECT_WPS1_CFG_L3_LOCAL_CLK);
-    T_I(MEPA_TRACE_GRP_GEN, "\nConfigured Cross-Connect Clock\n");
+    T_I(MEPA_TRACE_GRP_GEN, "Configured Cross-Connect Clock\n");
 
     return MEPA_RC_OK;
 }
@@ -6124,7 +6178,7 @@ mepa_rc lan80xx_phy_csr_read_priv(mepa_device_t               *dev,
 mepa_rc lan80xx_mamcsec_mem_free(mepa_device_t *dev)
 {
     phy25g_phy_state_t *data = (phy25g_phy_state_t *)dev->data;
-    T_I(MEPA_TRACE_GRP_GEN, "\n Deallocating MACsec Memory if allocated on port : %d\n", data->port_no);
+    T_I(MEPA_TRACE_GRP_GEN, "Deallocating MACsec Memory if allocated on port : %d\n", data->port_no);
     if (data->inst_counts.secy_vport != NULL) {
         mepa_mem_free_int(dev->callout, dev->callout_ctx, data->inst_counts.secy_vport);
         data->inst_counts.secy_vport = NULL;
