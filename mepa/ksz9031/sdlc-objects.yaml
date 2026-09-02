@@ -1,0 +1,18 @@
+# Copyright (c) 2004-2026 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# Microchip KSZ9031 PHY driver, compiled into the MEPA collections that select
+# it (mepa_lan966x, mepa_lan966x_macsec).
+
+# One cmake target, one component -> inline.
+cmake-targets:
+  - id: cmake-target-mepa_drv_ksz9031
+    name: mepa_drv_ksz9031
+    spdx:
+      id: SPDXRef-ksz9031-phy
+      name: "LIB: Microchip KSZ9031 PHY"
+      directory: .
+      license: MIT
+      copyright: Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+      use_packet_version: true
+      description: Microchip KSZ9031 Ethernet PHY driver.

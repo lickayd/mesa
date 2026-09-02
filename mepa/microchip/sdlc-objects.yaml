@@ -54,6 +54,18 @@ cmake-targets:
       copyright: Copyright (c) 2004-2023 Microchip Technology Inc. and its subsidiaries.
       use_packet_version: true
       description: Microchip LAN867x Ethernet PHY driver.
+  # Selected by no MEPA_LIB packet, so it links into no shipped library, but the
+  # driver source is part of the source delivery and has to be described.
+  - id: cmake-target-mepa_drv_lan8770
+    name: mepa_drv_lan8770
+    spdx:
+      id: SPDXRef-lan8770-phy
+      name: "LIB: Microchip LAN8770 PHY"
+      directory: lan8770
+      license: MIT
+      copyright: Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+      use_packet_version: true
+      description: Microchip LAN8770 Ethernet PHY driver.
   - id: cmake-target-mepa_drv_lan8x8x
     name: mepa_drv_lan8x8x
     spdx:

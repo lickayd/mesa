@@ -1,0 +1,18 @@
+# Copyright (c) 2004-2026 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# Aeonsemi AS2xxxx PHY driver. Despite the vendor name the code is Microchip
+# authored (MIT), so there is no third-party licence to attribute here.
+
+# One cmake target, one component -> inline.
+cmake-targets:
+  - id: cmake-target-mepa_drv_as2xxxx
+    name: mepa_drv_as2xxxx
+    spdx:
+      id: SPDXRef-as2xxxx-phy
+      name: "LIB: Aeonsemi AS2xxxx PHY"
+      directory: .
+      license: MIT
+      copyright: Copyright (c) 2004-2026 Microchip Technology Inc. and its subsidiaries.
+      use_packet_version: true
+      description: Aeonsemi AS2xxxx Ethernet PHY driver.

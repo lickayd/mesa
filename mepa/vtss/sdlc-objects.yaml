@@ -1,0 +1,41 @@
+# Copyright (c) 2004-2026 Microchip Technology Inc. and its subsidiaries.
+# SPDX-License-Identifier: MIT
+---
+# Microchip (Vitesse) VTSS PHY driver: the 1G/10G PHY families (Cobra, Quattro,
+# Spyder, Luton, Tesla, Viper, Elise, Nano, Malibu, Venice, ...) plus the
+# optional timestamping and MACsec blocks.
+#
+# The six MEPA_DRV targets in mepa/vtss/CMakeLists.txt are the same source
+# compiled with different feature sets (base, 10G-only, +TS, +MACsec, custom),
+# so they all map to one component -- kept standalone and referenced by
+# spdx-id rather than inlined on any single target.
+
+cmake-targets:
+  - id: cmake-target-mepa_drv_vtss
+    name: mepa_drv_vtss
+    spdx-id: SPDXRef-vtss-phy
+  - id: cmake-target-mepa_drv_vtss_10g_only
+    name: mepa_drv_vtss_10g_only
+    spdx-id: SPDXRef-vtss-phy
+  - id: cmake-target-mepa_drv_vtss_ts
+    name: mepa_drv_vtss_ts
+    spdx-id: SPDXRef-vtss-phy
+  - id: cmake-target-mepa_drv_vtss_10g_ts
+    name: mepa_drv_vtss_10g_ts
+    spdx-id: SPDXRef-vtss-phy
+  - id: cmake-target-mepa_drv_vtss_10g_macsec_ts
+    name: mepa_drv_vtss_10g_macsec_ts
+    spdx-id: SPDXRef-vtss-phy
+  - id: cmake-target-mepa_drv_vtss_custom
+    name: mepa_drv_vtss_custom
+    spdx-id: SPDXRef-vtss-phy
+
+spdx-elements:
+  # Shared by all six cmake targets, so kept standalone (not inlined).
+  - id: SPDXRef-vtss-phy
+    name: "LIB: Microchip VTSS PHY"
+    directory: .
+    license: MIT
+    copyright: Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+    use_packet_version: true
+    description: Microchip (Vitesse) VTSS 1G/10G Ethernet PHY driver, including the optional timestamping and MACsec support.
