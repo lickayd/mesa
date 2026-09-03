@@ -1113,7 +1113,7 @@
  *
  * Register: \a LINE_PMA:SD_LANE_CFG_STAT:SD_LANE_STAT_0
  */
-#define LAN80XX_LINE_PMA_SD_LANE_STAT_0                                                             (LAN80XX_IOREG(MMD_ID_HOST_PMA, 0, 0x8006))
+#define LAN80XX_LINE_PMA_SD_LANE_STAT_0                                                             (LAN80XX_IOREG(MMD_ID_LINE_PMA, 0, 0x8006))
 
 /**
  * \brief
@@ -1682,7 +1682,7 @@
  * \details
  * Register: \a LINE_PMA:PMA_INT:PMA_IRQ_VEC
  */
-#define LAN80XX_LINE_PMA_PMA_IRQ_VEC                                                                (LAN80XX_IOREG(MMD_ID_HOST_PMA, 0,0x8018))
+#define LAN80XX_LINE_PMA_PMA_IRQ_VEC                                                                (LAN80XX_IOREG(MMD_ID_LINE_PMA, 0,0x8018))
 
 /**
  * \brief
@@ -1719,7 +1719,7 @@
  * \details
  * Register: \a LINE_PMA:PMA_INT:PMA_IRQ_MASK
  */
-#define LAN80XX_LINE_PMA_PMA_IRQ_MASK                                                               (LAN80XX_IOREG(MMD_ID_HOST_PMA, 0, 0x8019))
+#define LAN80XX_LINE_PMA_PMA_IRQ_MASK                                                               (LAN80XX_IOREG(MMD_ID_LINE_PMA, 0, 0x8019))
 
 /**
  * \brief
