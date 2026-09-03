@@ -2317,8 +2317,8 @@ mepa_rc lan80xx_serdes_configuration(mepa_device_t *dev, mepa_port_no_t port_no,
         LAN80XX_CSR_WR(dev, port_no, LAN80XX_HOST_LINE_REG(LAN80XX, h_l, PMA_8BIT_LANE_43), serdes_data.ln_cfg_tx_reserve_15_8);
         LAN80XX_CSR_WR(dev, port_no, LAN80XX_HOST_LINE_REG(LAN80XX, h_l, PMA_8BIT_LANE_42), serdes_data.ln_cfg_tx_reserve_7_0);
 
-        LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_LINE_REG(LAN80XX, h_l, PMA_8BIT_LANE_05), LAN80XX_F_HOST_PMA_8BIT_CMU_41_L0_CFG_BW_1_0(serdes_data.ln_cfg_bw_1_0),
-                        LAN80XX_M_HOST_PMA_8BIT_CMU_41_L0_CFG_BW_1_0);
+        LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_LINE_REG(LAN80XX, h_l, PMA_8BIT_LANE_05), LAN80XX_F_HOST_PMA_8BIT_LANE_05_LN_CFG_BW_1_0(serdes_data.ln_cfg_bw_1_0),
+                        LAN80XX_M_HOST_PMA_8BIT_LANE_05_LN_CFG_BW_1_0);
 
         LAN80XX_CSR_WRM(port_no, LAN80XX_HOST_LINE_REG(LAN80XX, h_l, PMA_8BIT_LANE_0B),
                         LAN80XX_F_HOST_PMA_8BIT_LANE_0B_LN_CFG_TXCAL_MAN_EN(serdes_data.ln_cfg_txcal_man_en),
