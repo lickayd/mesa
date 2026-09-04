@@ -115,7 +115,7 @@ static vtss_rc lb_config(vtss_state_t  *vtss_state,
 
     VTSS_I("Enter grp_idx %u, set_idx %u lb_idx %u", grp_idx, set_idx, lb_idx);
 
-    if (*ir == 0U) {
+    if ((*ir == 0U) && (inherent->inherited_ir == 0U)) {
         VTSS_D("No IR was requested");
         REG_WR(VTSS_ANA_AC_SDLB_PUP_TOKENS(set_idx, lb_idx),
                VTSS_F_ANA_AC_SDLB_PUP_TOKENS_PUP_TOKENS(0));
@@ -181,7 +181,7 @@ static vtss_rc lb_config(vtss_state_t  *vtss_state,
     max_rate = lb_group_lb_max_rate_calc(bs_in_bytes, group->pup_interval);
 
     /* Adjust the information rate to fit into the group */
-    if (ir_in_bps < min_rate) {
+    if ((ir_in_bps != 0U) && (ir_in_bps < min_rate)) {
         VTSS_D("Group %u.  Information rate %" PRIu64
                " is too low for this group (min_rate %" PRIu64 ")",
                grp_idx, ir_in_bps, min_rate);
@@ -1108,7 +1108,7 @@ vtss_rc vtss_fa_policer_conf_set(vtss_state_t            *vtss_state,
         max_rate = conf->cir + conf->inherit_cir;
         VTSS_RC(lb_group_find(vtss_state, max_rate, conf->cbs, LB_THRES_HYS_NONE, (0 == 1),
                               &grp_idx1));
-        if (conf->eir != 0U) {
+        if ((conf->eir != 0U) || (conf->inherit_eir != 0U)) {
             /* EIR present, create LB 2. In case of coupling, the max rate is
              * the sum of CIR and EIR */
             max_rate = (conf->cf ? conf->cir : 0U) + conf->eir + conf->inherit_eir;
