@@ -2183,6 +2183,10 @@ static BOOL fa_vrfy_spd_iface(vtss_state_t         *vtss_state,
             VTSS_E("QSGMII/USGMII port interface only supports 10/100/1000M/2.5G speeds (port:%u)",
                    port);
             rc = FALSE;
+        } else if (!fdx && speed != VTSS_SPEED_10M && speed != VTSS_SPEED_100M) {
+            VTSS_E("Half duplex only supported at 10/100 Mbps (port:%u speed:%s)", port,
+                   vtss_port_spd_txt(speed));
+            rc = FALSE;
         } else {
             // Empty on purpose
         }
@@ -2204,6 +2208,12 @@ static BOOL fa_vrfy_spd_iface(vtss_state_t         *vtss_state,
             speed != VTSS_SPEED_2500M) {
             VTSS_E("SGMII port interface only supports 10/100/1000M/2.5G speeds (port:%u)", port);
             rc = FALSE;
+        } else if (!fdx && speed != VTSS_SPEED_10M && speed != VTSS_SPEED_100M) {
+            VTSS_E("Half duplex only supported at 10/100 Mbps (port:%u speed:%s)", port,
+                   vtss_port_spd_txt(speed));
+            rc = FALSE;
+        } else {
+            // Empty on purpose
         }
         break;
     case VTSS_PORT_INTERFACE_100FX:
