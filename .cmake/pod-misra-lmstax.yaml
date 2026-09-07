@@ -16,9 +16,17 @@ spec:
         cpu: '8'
         memory: 16Gi
       limits:
-        cpu: '8'
+        cpu: '12'
         memory: 16Gi
     securityContext:
       runAsNonRoot: true
       runAsUser: 1000
       runAsGroup: 1000
+  - name: jnlp
+    resources:
+      requests:
+        cpu: '250m'
+        memory: 2560Mi
+      limits:
+        cpu: '2'
+        memory: 4Gi
