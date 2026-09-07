@@ -7,344 +7,283 @@ require_relative 'libeasy/et'
 
 $ts = get_test_setup("mesa_pc_b2b_2x")
 
-$dpl_cnt = $ts.dut.call("mesa_capability", "MESA_CAP_QOS_DPL_CNT")
-t_i("$dpl_cnt: #{$dpl_cnt}  ")
+################################################
+# Capability & Configuration
+################################################
 
-idx_list = port_idx_shuffle($ts)
-$igr_port = idx_list[0]
-$egr_port = idx_list[1]
-t_i("$igr_port: #{$igr_port}  $egr_port: #{$egr_port}")
+$igr_port = 0
+$egr_port = 1
 
-MESA_VID_NULL = 0
+# DSCP in -> DSCP out, one entry per DSCP sent by every test case
+DSCP_UNCHANGED = { 0 => 0, 32 => 32, 63 => 63 }
 
-$cos_conf_restore = $ts.dut.call("mesa_qos_conf_get")
-$igr_qconf_restore = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$igr_port])
-$igr_qdconf_restore = $ts.dut.call("mesa_qos_dpl_conf_get", $dpl_cnt)
-$egr_qconf_restore = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$egr_port])
-$egr_pdconf_restore = $ts.dut.call("mesa_qos_port_dpl_conf_get", $ts.dut.p[$egr_port], $dpl_cnt)
-$egr_vconf_restore = $ts.dut.call("mesa_vlan_port_conf_get", $ts.dut.p[$egr_port])
-$egr_ddconf_restore = $ts.dut.call("mesa_qos_dscp_dpl_conf_get", $dpl_cnt)
+# DSCP translation table
+DSCP_TRANSLATE_MAP = { 0 => 1, 32 => 33, 63 => 0 }
 
+# DSCP and DPL to DSCP remapping table, DPL zero
+DSCP_DPL_MAP = { 0 => 12, 32 => 34, 63 => 56 }
 
-t_i ("Configure egress port to C tag all")
-vconf = $ts.dut.call("mesa_vlan_port_conf_get", $ts.dut.p[$egr_port])
-vconf["port_type"] = "MESA_VLAN_PORT_TYPE_C"
-vconf["untagged_vid"] = MESA_VID_NULL
-$ts.dut.call("mesa_vlan_port_conf_set", $ts.dut.p[$egr_port], vconf)
+# DSCP to queue and DPL mapping table
+DSCP_QUEUE_DPL_MAP = [
+    { dscp: 0,  trust: true,  prio: 1, dpl: 0 },
+    { dscp: 32, trust: false, prio: 2, dpl: 1 },
+    { dscp: 63, trust: true,  prio: 3, dpl: 1 },
+]
 
-t_i("Configure egress prio and dpl mapping to 1:1")
-dconf = $ts.dut.call("mesa_qos_port_dpl_conf_get", $ts.dut.p[$egr_port], $dpl_cnt)
-dconf[0]["pcp"] = [0,1,2,3,4,5,6,7]
-dconf[0]["dei"] = [0,0,0,0,0,0,0,0]
-dconf[1]["pcp"] = [0,1,2,3,4,5,6,7]
-dconf[1]["dei"] = [1,1,1,1,1,1,1,1]
-$ts.dut.call("mesa_qos_port_dpl_conf_set", $ts.dut.p[$egr_port], $dpl_cnt, dconf)
+################################################
+# Test Tables
+################################################
 
-t_i("Configure egress prio and dpl tagging to mapped.")
-qconf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$egr_port])
-qconf["tag"]["remark_mode"] = "MESA_TAG_REMARK_MODE_MAPPED"
-$ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], qconf)
+test_table =
+[
+    {
+        txt: "DSCP translate off",
+        cfg: { translate: false, rx: DSCP_UNCHANGED },
+        fun: -> (t) { dscp_translate_test_func(t[:cfg]) }
+    },
+    {
+        txt: "DSCP translate on, no egress remark",
+        cfg: { translate: true, rx: DSCP_UNCHANGED },
+        fun: -> (t) { dscp_translate_test_func(t[:cfg]) }
+    },
+    {
+        txt: "DSCP translate on + egress remark",
+        cfg: { translate: true, emode: "MESA_DSCP_EMODE_REMARK", rx: DSCP_TRANSLATE_MAP },
+        fun: -> (t) { dscp_translate_test_func(t[:cfg]) }
+    },
+    {
+        txt: "DSCP to queue and DPL mapping",
+        cfg: { map: DSCP_QUEUE_DPL_MAP, rx: DSCP_UNCHANGED },
+        fun: -> (t) { dscp_map_test_func(t[:cfg]) }
+    },
+    {
+        txt: "Queue and DPL mapping to DSCP for all",
+        cfg: { map: DSCP_QUEUE_DPL_MAP, mode: "MESA_DSCP_MODE_ALL",
+               emode: "MESA_DSCP_EMODE_REMARK",
+               rx: { 0 => 33, 32 => 11, 63 => 66 } },
+        fun: -> (t) { dscp_map_test_func(t[:cfg]) }
+    },
+    {
+        txt: "Queue and DPL mapping to DSCP for selected",
+        cfg: { map: DSCP_QUEUE_DPL_MAP, mode: "MESA_DSCP_MODE_SEL",
+               emode: "MESA_DSCP_EMODE_REMARK",
+               remark: { 0 => true, 32 => true, 63 => false },
+               rx: { 0 => 33, 32 => 11, 63 => 63 } },
+        fun: -> (t) { dscp_map_test_func(t[:cfg]) }
+    },
+    {
+        txt: "DSCP+DPL to DSCP remap",
+        cfg: { rx: DSCP_DPL_MAP },
+        fun: -> (t) { dscp_dpl_remap_test_func(t[:cfg]) }
+    }
+]
 
-def send_dhcp(translate, pcp, dei)
-    test "send_dhcp" do
+################################################
+# General/Helper Functions
+################################################
 
-    txframe = "eth dmac ff:ff:ff:ff:ff:ff smac 00:00:00:00:00:0a ipv4 dscp "
+def qos_port_conf_get(port)
+    $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[port])
+end
 
-    t_i("Send DSCP 0")
-    rxframe = "eth dmac ff:ff:ff:ff:ff:ff smac 00:00:00:00:00:0a ctag vid 1 pcp #{pcp[0]} dei #{dei[0]} ipv4 dscp #{translate[0]}"
-    $ts.pc.run("sudo ef tx #{$ts.pc.p[$igr_port]} #{txframe} 0 data pattern cnt 40 rx #{$ts.pc.p[$egr_port]} #{rxframe} data pattern cnt 40")
+def qos_port_conf_set(port, conf)
+    $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[port], conf)
+end
 
-    t_i("Send DSCP 32")
-    rxframe = "eth dmac ff:ff:ff:ff:ff:ff smac 00:00:00:00:00:0a ctag vid 1 pcp #{pcp[1]} dei #{dei[1]} ipv4 dscp #{translate[1]}"
-    $ts.pc.run("sudo ef tx #{$ts.pc.p[$igr_port]} #{txframe} 32  data pattern cnt 40 rx #{$ts.pc.p[$egr_port]} #{rxframe} data pattern cnt 40")
+# Apply the given overrides to the port DSCP conf
+def config_port_dscp(port, cfg)
+    conf = qos_port_conf_get(port)
+    cfg.each { |k, v| conf["dscp"][k.to_s] = v }
+    qos_port_conf_set(port, conf)
+end
 
-    t_i("Send DSCP 63")
-    rxframe = "eth dmac ff:ff:ff:ff:ff:ff smac 00:00:00:00:00:0a ctag vid 1 pcp #{pcp[2]} dei #{dei[2]} ipv4 dscp #{translate[2]}"
-    $ts.pc.run("sudo ef tx #{$ts.pc.p[$igr_port]} #{txframe} 63 data pattern cnt 40 rx #{$ts.pc.p[$egr_port]} #{rxframe} data pattern cnt 40")
+# Get the global DSCP conf, hand it to the block and set it back
+def config_qos_dscp
+    conf = $ts.dut.call("mesa_qos_conf_get")
+    yield conf["dscp"]
+    $ts.dut.call("mesa_qos_conf_set", conf)
+end
 
+# Send one frame per DSCP in the map, expecting the mapped DSCP and tag on egress
+def send_frames(rx_map, tags = {})
+    eth = "eth dmac ff:ff:ff:ff:ff:ff smac 00:00:00:00:00:0a"
+
+    rx_map.each do |tx, rx|
+        tag = fld_get(tags, tx, {})
+        pcp = fld_get(tag, :pcp, 0)
+        dei = fld_get(tag, :dei, 0)
+        t_i("Send DSCP #{tx}, expect DSCP #{rx} PCP #{pcp} DEI #{dei}")
+
+        txframe = "#{eth} ipv4 dscp #{tx}"
+        rxframe = "#{eth} ctag vid 1 pcp #{pcp} dei #{dei} ipv4 dscp #{rx}"
+        $ts.pc.run("sudo ef tx #{$ts.pc.p[$igr_port]} #{txframe} data pattern cnt 40 rx #{$ts.pc.p[$egr_port]} #{rxframe} data pattern cnt 40")
     end
 end
 
 def check_queue_counters(queues, counters)
-    test "Check QoS counters" do
+    t_i("Check QoS Counters: Queues = #{queues}, Counters = #{counters}")
 
     icounters = $ts.dut.call("mesa_port_counters_get", $ts.dut.p[$igr_port])
     ecounters = $ts.dut.call("mesa_port_counters_get", $ts.dut.p[$egr_port])
 
-    queues.each_with_index do |q_value, q_idx|
-        if ((icounters["prio"][q_value]["rx"] != counters[q_idx]) || (ecounters["prio"][q_value]["tx"] != counters[q_idx]))
-            t_e("ingress/egress counters not as expected. queue #{q_value} rx green #{icounters["prio"][q_value]["rx"]}   tx green #{ecounters["prio"][q_value]["tx"]}  expected #{counters[q_idx]}")
-        end
-        if ($cap_cnt_evc)
-            t_i("Check colour counter")
-            if ($cap_cnt_evc && (icounters["prio"][q_value]["rx_green"] != counters[q_idx]) || (ecounters["prio"][q_value]["rx_green"] != counters[q_idx]))
-                t_e("ingress/egress counters not as expected. queue #{q_value}  rx green #{icounters["prio"][q_value]["rx_green"]}   tx green #{ecounters["prio"][q_value]["rx_green"]}  expected #{counters[q_idx]}")
-            end
-        end
-    end
-
+    queues.zip(counters).each do |queue, expected|
+        check_counter("queue #{queue} rx", icounters["prio"][queue]["rx"], expected)
+        check_counter("queue #{queue} tx", ecounters["prio"][queue]["tx"], expected)
     end
 end
 
-def pscp_translate_test_func
-    test "pscp_translate_test_func" do
-
+def configure_dscp_translate_table
     t_i("Configure DSCP translation table")
-    cos_conf = $ts.dut.call("mesa_qos_conf_get")
-    dscp = cos_conf["dscp"]
-    dscp[0]["dscp"] = 1
-    dscp[32]["dscp"] = 33
-    dscp[63]["dscp"] = 0
-    $ts.dut.call("mesa_qos_conf_set", cos_conf)
+    config_qos_dscp() { |dscp| DSCP_TRANSLATE_MAP.each { |from, to| dscp[from]["dscp"] = to } }
+end
 
-    igr_conf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$igr_port])
-    egr_conf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$egr_port])
-
-    test "Test no translation - no analyser update - no rewriter update" do
-        igr_conf["dscp"]["translate"] = false
-        igr_conf["dscp"]["mode"] = "MESA_DSCP_MODE_NONE"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
-
-        egr_conf["dscp"]["emode"] = "MESA_DSCP_EMODE_DISABLE"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], egr_conf)
-
-        send_dhcp([0,32,63], [0,0,0], [0,0,0])
-    end
-
-    test "Test translation - no analyser update - no rewriter update" do
-        igr_conf["dscp"]["translate"] = true
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
-
-        send_dhcp([0,32,63], [0,0,0], [0,0,0])
-    end
-
-    test "Test translation - no analyser update - rewriter update" do
-        egr_conf["dscp"]["emode"] = "MESA_DSCP_EMODE_REMARK"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], egr_conf)
-
-        send_dhcp([1,33,0], [0,0,0], [0,0,0])
-    end
-
+def configure_dscp_queue_dpl_map(map, remark = nil)
+    t_i("Configure DSCP to queue and DPL mapping table")
+    config_qos_dscp() do |dscp|
+        map.each do |m|
+            e = dscp[m[:dscp]]
+            m.each { |k, v| e[k.to_s] = v unless (k == :dscp) }
+            e["remark"] = remark[m[:dscp]] if remark
+        end
     end
 end
 
-def pscp_qos_dpl_test_func
-    test "pscp_qos_dpl_test_func" do
+def configure_dpl_dscp_map
+    t_i("Configure queue and DPL to DSCP mapping table")
+    map = { 0 => { 0 => 11, 1 => 33, 3 => 55 },  # [dpl][prio] -> DSCP
+            1 => { 0 => 22, 1 => 44, 3 => 66 } }
 
-    igr_conf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$igr_port])
-    egr_conf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$egr_port])
+    dpl_cnt = cap_get("QOS_DPL_CNT")
+    conf = $ts.dut.call("mesa_qos_dpl_conf_get", dpl_cnt)
+    map.each { |dpl, prios| prios.each { |prio, dscp| conf[dpl]["dscp"][prio] = dscp } }
+    $ts.dut.call("mesa_qos_dpl_conf_set", dpl_cnt, conf)
+end
 
-    test "Test no translation - no queue mapping - no rewriter update" do
-        $ts.dut.run("mesa-cmd port statis clear")
+def configure_dscp_dpl_map
+    t_i("Configure DSCP and DPL to DSCP remapping table")
+    dpl_cnt = cap_get("QOS_DPL_CNT")
+    conf = $ts.dut.call("mesa_qos_dscp_dpl_conf_get", dpl_cnt)
+    DSCP_DPL_MAP.each { |dscp, remap| conf[dscp][0]["dscp"] = remap }
+    $ts.dut.call("mesa_qos_dscp_dpl_conf_set", dpl_cnt, conf)
+end
 
-        igr_conf["dscp"]["translate"] = false
-        igr_conf["dscp"]["mode"] = "MESA_DSCP_MODE_NONE"
-        igr_conf["dscp"]["class_enable"] = false
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
+def baseline_no_mapping_test
+    t_i("Test: no translation - no queue mapping - no rewriter update")
+    $ts.dut.run("mesa-cmd port statis clear")
 
-        egr_conf["dscp"]["emode"] = "MESA_DSCP_EMODE_DISABLE"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], egr_conf)
+    config_port_dscp($igr_port, translate: false, mode: "MESA_DSCP_MODE_NONE",
+                                class_enable: false)
+    config_port_dscp($egr_port, emode: "MESA_DSCP_EMODE_DISABLE")
 
-        send_dhcp([0,32,63], [0,0,0], [0,0,0])
-        check_queue_counters([0], [3])
+    send_frames(DSCP_UNCHANGED)
+    check_queue_counters([0], [3])
+end
+
+################################################
+# Test Section
+################################################
+
+test "conf" do
+    t_i("Configure egress port to C tag all")
+    vconf = $ts.dut.call("mesa_vlan_port_conf_get", $ts.dut.p[$egr_port])
+    vconf["port_type"] = "MESA_VLAN_PORT_TYPE_C"
+    vconf["untagged_vid"] = 0 # MESA_VID_NULL
+    $ts.dut.call("mesa_vlan_port_conf_set", $ts.dut.p[$egr_port], vconf)
+
+    t_i("Configure egress prio and dpl mapping to 1:1")
+    dpl_cnt = cap_get("QOS_DPL_CNT")
+    dconf = $ts.dut.call("mesa_qos_port_dpl_conf_get", $ts.dut.p[$egr_port], dpl_cnt)
+    dconf[0]["pcp"] = dconf[1]["pcp"] = (0..7).to_a
+    dconf[0]["dei"] = Array.new(8, 0)
+    dconf[1]["dei"] = Array.new(8, 1)
+    $ts.dut.call("mesa_qos_port_dpl_conf_set", $ts.dut.p[$egr_port], dpl_cnt, dconf)
+
+    t_i("Configure egress prio and dpl tagging to mapped.")
+    qconf = qos_port_conf_get($egr_port)
+    qconf["tag"]["remark_mode"] = "MESA_TAG_REMARK_MODE_MAPPED"
+    qos_port_conf_set($egr_port, qconf)
+
+end
+
+def dscp_translate_test_func(cfg)
+    t_i("Test DSCP translate with cfg = #{cfg}")
+    configure_dscp_translate_table()
+
+    config_port_dscp($igr_port, translate: cfg[:translate],
+                                mode: fld_get(cfg, :mode, "MESA_DSCP_MODE_NONE"))
+    config_port_dscp($egr_port, emode: fld_get(cfg, :emode, "MESA_DSCP_EMODE_DISABLE"))
+
+    send_frames(cfg[:rx])
+end
+
+# DSCP to queue and DPL mapping, optionally remarked back to DSCP on egress
+def dscp_map_test_func(cfg)
+    # Egress tag expected per DSCP once queue and DPL mapping is enabled
+    tags = { 0  => { pcp: 1, dei: 0 },
+             32 => { pcp: 0, dei: 0 },
+             63 => { pcp: 3, dei: 1 } }
+
+    baseline_no_mapping_test()
+
+    t_i("Test DSCP mapping with cfg = #{cfg}")
+    $ts.dut.run("mesa-cmd port statis clear")
+
+    config_port_dscp($igr_port, class_enable: true,
+                                mode: fld_get(cfg, :mode, "MESA_DSCP_MODE_NONE"))
+
+    configure_dscp_queue_dpl_map(cfg[:map], fld_get(cfg, :remark, nil))
+
+    if (cfg[:emode] != nil)
+        configure_dpl_dscp_map()
+        config_port_dscp($egr_port, emode: cfg[:emode])
     end
 
-    test "Test DSCP to queue and DPL mapping" do
-        $ts.dut.run("mesa-cmd port statis clear")
+    send_frames(cfg[:rx], tags)
+    check_queue_counters([0,1,3], [1,1,1])
+end
 
-        igr_conf["dscp"]["class_enable"] = true
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
+def dscp_dpl_remap_test_func(cfg)
+    t_i("Test DSCP and DPL mapping to DSCP")
+    $ts.dut.run("mesa-cmd port statis clear")
 
-        t_i("Configure DSCP queue mapping table")
-        cos_conf = $ts.dut.call("mesa_qos_conf_get")
-        dscp = cos_conf["dscp"]
-        dscp[0]["trust"] = true
-        dscp[0]["prio"] = 1
-        dscp[0]["dpl"] = 0
-        dscp[32]["trust"] = false
-        dscp[32]["prio"] = 2
-        dscp[32]["dpl"] = 1
-        dscp[63]["trust"] = true
-        dscp[63]["prio"] = 3
-        dscp[63]["dpl"] = 1
-        $ts.dut.call("mesa_qos_conf_set", cos_conf)
+    config_port_dscp($igr_port, class_enable: false, mode: "MESA_DSCP_MODE_NONE")
 
-        send_dhcp([0,32,63], [1,0,3], [0,0,1])
-        check_queue_counters([0,1,3], [1,1,1])
-    end
+    configure_dscp_dpl_map()
 
+    config_port_dscp($egr_port, emode: "MESA_DSCP_EMODE_REMAP")
+
+    send_frames(cfg[:rx])
+    check_queue_counters([0], [3])
+end
+
+################################################
+# Test Runners
+################################################
+
+def test_runner(t)
+    fun = fld_get(t, :fun, nil)
+
+    fun.call(t) if (fun != nil)
+end
+
+# Run all or selected test
+sel = table_lookup(test_table, :sel)
+test_table.each do |t|
+    next if (t[:sel] != sel)
+    rep = fld_get(t, :rep, 1)
+    rep.times do |i|
+        txt = (rep == 1) ? t[:txt] : "#{t[:txt]} (#{i + 1}/#{rep})"
+        test(txt) do
+            test_runner(t)
+        end
     end
 end
 
-def qos_dpl_pscp_test_func
-    test "qos_dpl_pscp_test_func" do
+################################################
+# Test Dump & Summary
+################################################
 
-    igr_conf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$igr_port])
-    egr_conf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$egr_port])
-
-    test "Test no translation - no queue mapping - no rewriter update" do
-        $ts.dut.run("mesa-cmd port statis clear")
-
-        igr_conf["dscp"]["translate"] = false
-        igr_conf["dscp"]["mode"] = "MESA_DSCP_MODE_NONE"
-        igr_conf["dscp"]["class_enable"] = false
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
-
-        egr_conf["dscp"]["emode"] = "MESA_DSCP_EMODE_DISABLE"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], egr_conf)
-
-        send_dhcp([0,32,63], [0,0,0], [0,0,0])
-        check_queue_counters([0], [3])
-    end
-
-    test "Test queue and DPL mapping to DSCP for all" do
-        $ts.dut.run("mesa-cmd port statis clear")
-
-        igr_conf["dscp"]["class_enable"] = true
-        igr_conf["dscp"]["mode"] = "MESA_DSCP_MODE_ALL"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
-
-        t_i("Configure DSCP to queue and DPL mapping table")
-        cos_conf = $ts.dut.call("mesa_qos_conf_get")
-        dscp = cos_conf["dscp"]
-        dscp[0]["trust"] = true
-        dscp[0]["prio"] = 1
-        dscp[0]["dpl"] = 0
-        dscp[32]["trust"] = false
-        dscp[32]["prio"] = 2
-        dscp[32]["dpl"] = 1
-        dscp[63]["trust"] = true
-        dscp[63]["prio"] = 3
-        dscp[63]["dpl"] = 1
-        $ts.dut.call("mesa_qos_conf_set", cos_conf)
-
-        t_i("Configure queue and DPL to DSCP mapping table")
-        cos_conf = $ts.dut.call("mesa_qos_dpl_conf_get", $dpl_cnt)
-        cos_conf[0]["dscp"][0] = 11
-        cos_conf[1]["dscp"][0] = 22
-        cos_conf[0]["dscp"][1] = 33
-        cos_conf[1]["dscp"][1] = 44
-        cos_conf[0]["dscp"][3] = 55
-        cos_conf[1]["dscp"][3] = 66
-        $ts.dut.call("mesa_qos_dpl_conf_set", $dpl_cnt, cos_conf)
-
-        egr_conf["dscp"]["emode"] = "MESA_DSCP_EMODE_REMARK"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], egr_conf)
-
-       #send_dhcp(translate,  pcp,     dei)
-        send_dhcp([33,11,66], [1,0,3], [0,0,1])
-        check_queue_counters([0,1,3], [1,1,1])
-    end
-
-    test "Test queue and DPL mapping to DSCP for selected" do
-        $ts.dut.run("mesa-cmd port statis clear")
-
-        igr_conf["dscp"]["class_enable"] = true
-        igr_conf["dscp"]["mode"] = "MESA_DSCP_MODE_SEL"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
-
-        t_i("Configure DSCP to queue and DPL mapping table")
-        cos_conf = $ts.dut.call("mesa_qos_conf_get")
-        dscp = cos_conf["dscp"]
-        dscp[0]["trust"] = true
-        dscp[0]["remark"] = true
-        dscp[0]["prio"] = 1
-        dscp[0]["dpl"] = 0
-        dscp[32]["trust"] = false
-        dscp[32]["remark"] = true
-        dscp[32]["prio"] = 2
-        dscp[32]["dpl"] = 1
-        dscp[63]["trust"] = true
-        dscp[63]["remark"] = false
-        dscp[63]["prio"] = 3
-        dscp[63]["dpl"] = 1
-        $ts.dut.call("mesa_qos_conf_set", cos_conf)
-
-        t_i("Configure queue and DPL to DSCP mapping table")
-        cos_conf = $ts.dut.call("mesa_qos_dpl_conf_get", $dpl_cnt)
-        cos_conf[0]["dscp"][0] = 11
-        cos_conf[1]["dscp"][0] = 22
-        cos_conf[0]["dscp"][1] = 33
-        cos_conf[1]["dscp"][1] = 44
-        cos_conf[0]["dscp"][3] = 55
-        cos_conf[1]["dscp"][3] = 66
-        $ts.dut.call("mesa_qos_dpl_conf_set", $dpl_cnt, cos_conf)
-
-        egr_conf["dscp"]["emode"] = "MESA_DSCP_EMODE_REMARK"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], egr_conf)
-
-       #send_dhcp(translate,  pcp,     dei)
-        send_dhcp([33,11,63], [1,0,3], [0,0,1])
-        check_queue_counters([0,1,3], [1,1,1])
-    end
-
-    end
-end
-
-
-def pscp_dpl_pscp_test_func
-    test "pscp_dpl_pscp_test_func" do
-
-    igr_conf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$igr_port])
-    egr_conf = $ts.dut.call("mesa_qos_port_conf_get", $ts.dut.p[$egr_port])
-
-#    test "Test no translation - no queue mapping - no rewriter update" do
-#        $ts.dut.run("mesa-cmd port statis clear")
-#
-#        igr_conf["dscp"]["translate"] = false
-#        igr_conf["dscp"]["mode"] = "MESA_DSCP_MODE_NONE"
-#        igr_conf["dscp"]["class_enable"] = false
-#        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
-#
-#        egr_conf["dscp"]["emode"] = "MESA_DSCP_EMODE_DISABLE"
-#        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], egr_conf)
-#
-#        send_dhcp([0,32,63], [0,0,0], [0,0,0])
-#        check_queue_counters([0], [3])
-#    end
-
-    test "Test DSCP and DPL mapping to DSCP" do
-        $ts.dut.run("mesa-cmd port statis clear")
-
-        igr_conf["dscp"]["class_enable"] = false
-        igr_conf["dscp"]["mode"] = "MESA_DSCP_MODE_NONE"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], igr_conf)
-
-        conf = $ts.dut.call("mesa_qos_dscp_dpl_conf_get", $dpl_cnt)
-        conf[0][0]["dscp"] = 12
-        conf[32][0]["dscp"] = 34
-        conf[63][0]["dscp"] = 56
-        $ts.dut.call("mesa_qos_dscp_dpl_conf_set", $dpl_cnt, conf)
-
-        egr_conf["dscp"]["emode"] = "MESA_DSCP_EMODE_REMAP"
-        $ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], egr_conf)
-
-       #send_dhcp(translate,  pcp,     dei)
-        send_dhcp([12,34,56], [0,0,0], [0,0,0])
-        check_queue_counters([0], [3])
-    end
-
-    end
-end
-
-
-test "test_run" do
-#    pscp_translate_test_func
-#    pscp_qos_dpl_test_func
-#    qos_dpl_pscp_test_func
-    pscp_dpl_pscp_test_func
-end
-
-t_i("Clean up")
-$ts.dut.call("mesa_qos_conf_set", $cos_conf_restore)
-$ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$igr_port], $igr_qconf_restore)
-$ts.dut.call("mesa_qos_dpl_conf_set", $dpl_cnt, $igr_qdconf_restore)
-$ts.dut.call("mesa_qos_port_conf_set", $ts.dut.p[$egr_port], $egr_qconf_restore)
-$ts.dut.call("mesa_qos_port_dpl_conf_set", $ts.dut.p[$egr_port], $dpl_cnt, $egr_pdconf_restore)
-$ts.dut.call("mesa_vlan_port_conf_set", $ts.dut.p[$egr_port], $egr_vconf_restore)
-$ts.dut.call("mesa_qos_dscp_dpl_conf_set", $dpl_cnt, $egr_ddconf_restore)
-
-test_summary
+test_summary()
 
 test "dump" do
     #$ts.dut.run("mesa-cmd deb api ai qos")
