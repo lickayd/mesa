@@ -918,9 +918,9 @@ mepa_rc _lan80xx_csr_warm_wrm(const mepa_device_t *dev,
     if (data->sync_calling_private) {
         MEPA_RC(lan80xx_csr_rd(dev, port_no, io->mmd, io->is32, io->addr, &curr_val));
         if ((curr_val ^ value) & mask & chk_mask) { /* Change in bit field */
-            T_N(MEPA_TRACE_GRP_GEN, "Warm start synch. field changed: Port:%u MMD:%d Register:0x%X\n", port_no, io->mmd, io->addr);
-            T_N(MEPA_TRACE_GRP_GEN, "Mask:0x%X Chip value:0x%X API value:0x%X\n", mask, curr_val, value);
-            T_N(MEPA_TRACE_GRP_GEN, "Function:%s, Line:%d (chk_mask:0x%X)\n", function, line, chk_mask);
+            T_D(MEPA_TRACE_GRP_GEN, "Warm start synch. field changed: Port:%u MMD:%d Register:0x%X\n", port_no, io->mmd, io->addr);
+            T_D(MEPA_TRACE_GRP_GEN, "Mask:0x%X Chip value:0x%X API value:0x%X\n", mask, curr_val, value);
+            T_D(MEPA_TRACE_GRP_GEN, "Function:%s, Line:%d (chk_mask:0x%X)\n", function, line, chk_mask);
             data->warm_start_reg_changed = TRUE; /* Signaling that a register for this port has changed. */
             MEPA_RC(lan80xx_csr_wrm(dev, port_no, io->mmd, io->is32, io->addr, value, mask));
         }

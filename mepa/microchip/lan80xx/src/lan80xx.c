@@ -30,7 +30,7 @@ static mepa_rc lan80xx_delete(mepa_device_t *dev)
     }
     lan80xx_mamcsec_mem_free(dev);
 
-    T_I(MEPA_TRACE_GRP_GEN, "\n Dev to be Deleted\n");
+    T_I(MEPA_TRACE_GRP_GEN, "Port Instance to be Deleted\n");
     return mepa_delete_int(dev);
 }
 
