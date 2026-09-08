@@ -960,7 +960,7 @@ static void IFH_ENCODE_BITFIELD(u8 *const bin_hdr, u64 value, u32 pos, u32 width
 /*****************************************************************************/
 static u32 pdu_type_calc(const vtss_packet_tx_info_t *const info)
 {
-    u32 retval = 0U;
+    u32  retval = 0U;
     BOOL ptp_pdu;
     switch (info->oam_type) {
     case VTSS_PACKET_OAM_TYPE_NONE:      break; // Do nothing
