@@ -177,6 +177,8 @@ run "rm -rf #{$out_name}"
 days = 10
 if git_branch == "master"
   days = 90
+elsif git_branch == "master.nightly"
+  days = 30
 elsif git_branch =~ /^\d\d\d\d.\d\d-soak$/
   days = 180
 end
