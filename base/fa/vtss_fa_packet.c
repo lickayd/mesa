@@ -961,6 +961,7 @@ static void IFH_ENCODE_BITFIELD(u8 *const bin_hdr, u64 value, u32 pos, u32 width
 static u32 pdu_type_calc(const vtss_packet_tx_info_t *const info)
 {
     u32 retval = 0U;
+    BOOL ptp_pdu;
     switch (info->oam_type) {
     case VTSS_PACKET_OAM_TYPE_NONE:      break; // Do nothing
     case VTSS_PACKET_OAM_TYPE_MRP_TST:   retval = 10U; break;
@@ -975,7 +976,17 @@ static u32 pdu_type_calc(const vtss_packet_tx_info_t *const info)
         return retval;
     }
 
-    if (info->ptp_action != VTSS_PACKET_PTP_ACTION_NONE) {
+    ptp_pdu = (info->ptp_action != VTSS_PACKET_PTP_ACTION_NONE) ? TRUE : FALSE;
+#if defined(VTSS_FEATURE_REDBOX)
+    if (info->rb_tag_ptp) {
+        // TC0: The rewriter needs the pdu type and offset to locate the ptp header when
+        // inserting the hsr tag. No VSTAX.REW_CMD is encoded without a ptp action, so no
+        // field within the pdu is modified.
+        ptp_pdu = TRUE;
+    }
+#endif
+
+    if (ptp_pdu) {
         if (info->inj_encap.type == VTSS_PACKET_ENCAP_TYPE_IP4) {
             return 6U;
         }
@@ -1111,6 +1122,13 @@ vtss_rc vtss_cil_packet_tx_hdr_encode(struct vtss_state_s *const         vtss_st
             rewrite = (info->tag.tpid == 0U && info->tag.vid != VTSS_VID_NULL);
 #if defined(VTSS_FEATURE_PORT_CPU_MASQUERADING)
             if (vtss_state->port.map[info->dst_port].cpu_masquerade != VTSS_CPU_MASQUERADE_NONE) {
+                rewrite = TRUE;
+            }
+#endif
+#if defined(VTSS_FEATURE_REDBOX)
+            if (vtss_state->vtss_features[FEATURE_REDBOX] && info->rb_tag_ptp) {
+                // TC0: The RedBox hsr tag is inserted by the rewriter, so the rewriter must
+                // not be bypassed.
                 rewrite = TRUE;
             }
 #endif
