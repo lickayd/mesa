@@ -380,6 +380,7 @@ pipeline {
                     // Archive per-system console logs immediately, even if the
                     // Publish stage never runs (e.g. mass test failure path).
                     archiveArtifacts artifacts: 'easytest-logs/**/*.console.log', allowEmptyArchive: true
+                    junit testResults: '**/easytest-logs/**/*_JUNIT.xml', allowEmptyResults: true
                 }
             }
         }
@@ -398,7 +399,6 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: '**/easytest-logs/**/*', allowEmptyArchive: true
-                    junit testResults: '**/easytest-logs/**/*_JUNIT.xml', allowEmptyResults: true
                 }
             }
         }
