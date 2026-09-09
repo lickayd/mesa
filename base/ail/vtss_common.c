@@ -555,7 +555,7 @@ void vtss_debug_print_port_members(vtss_state_t *vtss_state,
     vtss_debug_print_ports(vtss_state, ss, member, nl);
 }
 
-#if defined(VTSS_FEATURE_AFI_SWC)
+#if defined(VTSS_FEATURE_AFI_SWC) && VTSS_OPT_DEBUG_PRINT_AFI
 static void vtss_debug_print_afi(vtss_state_t                  *vtss_state,
                                  lmu_ss_t                      *ss,
                                  const vtss_debug_info_t *const info)
@@ -612,27 +612,27 @@ static vtss_rc vtss_debug_ail_print(vtss_state_t                  *vtss_state,
 
     vtss_debug_print_init(vtss_state, ss, info);
 
-#if defined(VTSS_FEATURE_MISC)
+#if defined(VTSS_FEATURE_MISC) && VTSS_OPT_DEBUG_PRINT_MISC
     vtss_misc_debug_print(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_MISC */
 
-#if defined(VTSS_FEATURE_PORT_CONTROL)
+#if defined(VTSS_FEATURE_PORT_CONTROL) && VTSS_OPT_DEBUG_PRINT_PORT
     vtss_port_debug_print(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_PORT_CONTROL */
 
-#if defined(VTSS_FEATURE_LAYER2)
+#if defined(VTSS_FEATURE_LAYER2) && VTSS_OPT_DEBUG_PRINT_L2
     vtss_l2_debug_print(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_LAYER2 */
 
-#if defined(VTSS_FEATURE_VCAP)
+#if defined(VTSS_FEATURE_VCAP) && VTSS_OPT_DEBUG_PRINT_ACL
     vtss_vcap_debug_print_acl(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_VCAP */
 
-#if defined(VTSS_FEATURE_QOS)
+#if defined(VTSS_FEATURE_QOS) && VTSS_OPT_DEBUG_PRINT_QOS
     vtss_qos_debug_print(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_QOS */
 
-#if defined(VTSS_FEATURE_HQOS)
+#if defined(VTSS_FEATURE_HQOS) && VTSS_OPT_DEBUG_PRINT_HQOS
     vtss_hqos_debug_print(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_HQOS */
 
@@ -642,33 +642,33 @@ static vtss_rc vtss_debug_ail_print(vtss_state_t                  *vtss_state,
     }
 #endif
 
-#if defined(VTSS_FEATURE_PACKET)
+#if defined(VTSS_FEATURE_PACKET) && VTSS_OPT_DEBUG_PRINT_PACKET
     vtss_packet_debug_print(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_PACKET */
 
-#if defined(VTSS_AFI_V2)
+#if defined(VTSS_AFI_V2) && VTSS_OPT_DEBUG_PRINT_AFI
     vtss_afi_debug_print(vtss_state, ss, info);
 #endif /* VTSS_AFI_V2 */
 
-#if defined(VTSS_FEATURE_TIMESTAMP)
+#if defined(VTSS_FEATURE_TIMESTAMP) && VTSS_OPT_DEBUG_PRINT_TS
     vtss_ts_debug_print(vtss_state, ss, info);
 #endif /* VTSS_FEATURE_TIMESTAMP */
 
-#if defined(VTSS_FEATURE_VOP)
+#if defined(VTSS_FEATURE_VOP) && VTSS_OPT_DEBUG_PRINT_VOP
     vtss_oam_debug_print(vtss_state, ss, info);
 #endif
 
-#if defined(VTSS_FEATURE_MRP)
+#if defined(VTSS_FEATURE_MRP) && VTSS_OPT_DEBUG_PRINT_MRP
     vtss_mrp_debug_print(vtss_state, ss, info);
 #endif
 
-#if defined(VTSS_FEATURE_LAYER3)
+#if defined(VTSS_FEATURE_LAYER3) && VTSS_OPT_DEBUG_PRINT_L3
     if (vtss_debug_group_enabled(ss, info, VTSS_DEBUG_GROUP_L3)) {
         vtss_debug_print_l3(vtss_state, ss, info);
     }
 #endif /* VTSS_FEATURE_LAYER3 */
 
-#if defined(VTSS_FEATURE_AFI_SWC)
+#if defined(VTSS_FEATURE_AFI_SWC) && VTSS_OPT_DEBUG_PRINT_AFI
     vtss_debug_print_afi(vtss_state, ss, info);
 #endif
 
