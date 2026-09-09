@@ -1111,7 +1111,8 @@ vtss_rc vtss_cil_ts_status_change(struct vtss_state_s *vtss_state, vtss_port_no_
                 tx_delay = seriel_10G_kr_delay[port].tx;
                 REG_RD(VTSS_PCS_10GBASE_R_KR_FEC_STATUS(VTSS_TO_PCS_TGT(port)), &value);
                 rx_delay +=
-                    ((VTSS_X_PCS_10GBASE_R_KR_FEC_STATUS_FEC_RX_SHIFT_CNT(value) - 1) % 66) * -97;
+                    ((VTSS_X_PCS_10GBASE_R_KR_FEC_STATUS_FEC_RX_SHIFT_CNT(value) + 65U) % 66U) *
+                    -97;
             } else {
                 rx_delay = seriel_10G_delay[port].rx;
                 tx_delay = seriel_10G_delay[port].tx;
