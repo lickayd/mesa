@@ -442,6 +442,10 @@ def tod_latency_test(port0, port1, text)
     if $meba_cap[:out].include?("COPPER")
         min = -11
     end
+    sfp = $ts.dut.run("mesa-cmd deb sfp #{port0+1},#{port1+1}")
+    if (sfp[:out] =~ /_(SR|LR|LRM|ER|SX|LX|ZX|BX10)\b/)
+        max = 25  #Optical SFP
+    end
     if (cap_get("MISC_CHIP_FAMILY") == chip_family_to_id("MESA_CHIP_FAMILY_LAN966X"))
         min = -11
         max = 11
