@@ -960,8 +960,7 @@ static void IFH_ENCODE_BITFIELD(u8 *const bin_hdr, u64 value, u32 pos, u32 width
 /*****************************************************************************/
 static u32 pdu_type_calc(const vtss_packet_tx_info_t *const info)
 {
-    u32  retval = 0U;
-    BOOL ptp_pdu;
+    u32 retval = 0U;
     switch (info->oam_type) {
     case VTSS_PACKET_OAM_TYPE_NONE:      break; // Do nothing
     case VTSS_PACKET_OAM_TYPE_MRP_TST:   retval = 10U; break;
@@ -976,17 +975,7 @@ static u32 pdu_type_calc(const vtss_packet_tx_info_t *const info)
         return retval;
     }
 
-    ptp_pdu = (info->ptp_action != VTSS_PACKET_PTP_ACTION_NONE) ? TRUE : FALSE;
-#if defined(VTSS_FEATURE_REDBOX)
-    if (info->rb_tag_ptp) {
-        // TC0: The rewriter needs the pdu type and offset to locate the ptp header when
-        // inserting the hsr tag. No VSTAX.REW_CMD is encoded without a ptp action, so no
-        // field within the pdu is modified.
-        ptp_pdu = TRUE;
-    }
-#endif
-
-    if (ptp_pdu) {
+    if (info->ptp_action != VTSS_PACKET_PTP_ACTION_NONE) {
         if (info->inj_encap.type == VTSS_PACKET_ENCAP_TYPE_IP4) {
             return 6U;
         }
