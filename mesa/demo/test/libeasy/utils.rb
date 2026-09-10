@@ -593,6 +593,12 @@ def measure_counters_report(delta, ig, eg, line_rate_fps)
         exp_fps = line_rate_fps[ig_idx].to_i
         percent = (exp_fps > 0) ? ((fps * 100) / exp_fps) : 0
         t_i("Ingress port #{port} received #{rx} frames in #{'%.3f' % secs} sec: #{fps} fps, #{percent} % of the #{exp_fps} fps line rate")
+
+        # An ingress port that also transmits means the traffic is flooded, which loads the shared egress resources
+        ig_tx = delta[:tx][port]
+        if ((port != eg) && (ig_tx > secs))
+            t_i("WARNING: ingress port #{port} transmitted #{ig_tx} frames in #{'%.3f' % secs} sec. The traffic is flooded, the measurement is not only about the egress port")
+        end
     end
 
     tx = delta[:tx][eg]
