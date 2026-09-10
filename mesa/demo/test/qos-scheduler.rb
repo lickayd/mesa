@@ -194,8 +194,20 @@ test "config" do
     $ts.dut.call("mesa_qos_port_conf_set", port, c)
 
     if (cap_get("MISC_CHIP_FAMILY") == chip_family_to_id("MESA_CHIP_FAMILY_OCELOT"))
-        # For some reason on Ocelot if flooding is not prevented tests will - by far - not pass
-        $ts.pc.run("sudo ef tx #{$ts.pc.p[eg]} eth smac 00:00:00:00:01:01")
+        # For some reason on Ocelot if flooding is not prevented tests will - by far - not pass.
+        # A locked entry never ages out mid-run, the way a learned one does
+        t_i("Add a static entry for the dmac check_rate transmits to")
+        entry = {
+            vid_mac: {vid: 1, mac: {addr: [0,0,0,0,1,1]}},
+            destination: "#{$ts.dut.p[eg]}",
+            copy_to_cpu: false,
+            copy_to_cpu_smac: false,
+            locked: true,
+            index_table: false,
+            aged: false,
+            cpu_queue: 0,
+        }
+        $ts.dut.call("mesa_mac_table_add", entry)
     end
 end
 
