@@ -7,11 +7,9 @@ require_relative 'libeasy/et'
 
 $ts = get_test_setup("mesa_pc_b2b_4x")
 
-# Use random ingress/egress port
-idx_list = port_idx_shuffle($ts)
-eg = idx_list[0]
+idx_list = $ts.pc.p.each_index.to_a
+eg = idx_list[-1]
 ig = (idx_list - [eg])
-ig_list = port_idx_list_str(ig)
 
 test_table =
 [
