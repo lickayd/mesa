@@ -475,7 +475,16 @@ test_table =
                      {idx_rx: "b", hsr: {lan_id: 1}}]}]
     },
     {
-        txt: "HSR-tag Tx to LRE",
+        txt: "HSR-tag Tx to LRE-A",
+        cfg: {mode: "HSR_SAN", npi: "d"},
+        tab: [{fwd: [{idx_tx: "d", ifh_tx: "a", rb_fwd: "A", rb_tag_ptp: true, rb_seq_no: 0x6789, rb_path_id: 8},
+                     {idx_rx: "a", hsr: {net_id: 4, lan_id: 0, seqn: 0x6789}}]}],
+        cnt: [{port: "a", name: "tx_dupl_zero", val: 0},
+              {port: "c", name: "rx_untagged", val: 0},
+              {port: "c", name: "rx_tagged", val: 1}]
+    },
+    {
+        txt: "HSR-tag Tx to LRE-B",
         cfg: {mode: "HSR_SAN", npi: "d"},
         tab: [{fwd: [{idx_tx: "d", ifh_tx: "a", rb_fwd: "B", rb_tag_ptp: true, rb_seq_no: 0x6789, rb_path_id: 9},
                      {idx_rx: "b", hsr: {net_id: 4, lan_id: 1, seqn: 0x6789}}]}],
@@ -1596,10 +1605,6 @@ def rb_frame_test(mode, entry, exp, dupl_incr, index)
                 info[:rb_fwd] = ("MESA_PACKET_RB_FWD_" + rb_fwd)
                 rb_tag_ptp = fld_get(e, :rb_tag_ptp, false)
                 info[:rb_tag_ptp] = rb_tag_ptp
-                if (rb_tag_ptp)
-                    info[:ptp_action] = "MESA_PACKET_PTP_ACTION_TWO_STEP"
-                    info[:pdu_offset] = 20
-                end
                 info[:rb_seq_no] = fld_get(e, :rb_seq_no)
                 info[:rb_path_id] = fld_get(e, :rb_path_id)
                 cmd += (" " + cmd_tx_ifh_push(info))

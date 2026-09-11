@@ -1242,6 +1242,11 @@ vtss_rc vtss_cil_packet_tx_hdr_encode(struct vtss_state_s *const         vtss_st
             // RB.RB_TC0
             IFH_ENCODE_BITFIELD(bin_hdr, 1U, 271U, 1U);
 
+            if (info->rb_fwd == VTSS_PACKET_RB_FWD_A) {
+                // RB.RB_SRC set when forwarding to port A
+                IFH_ENCODE_BITFIELD(bin_hdr, 1U, 277U, 1U);
+            }
+
             if ((path_id & 1U) > 0U) {
                 // DST.MPLS_SBIT: LAN_B flag
                 IFH_ENCODE_BITFIELD(bin_hdr, 1U, 165U, 1U);
