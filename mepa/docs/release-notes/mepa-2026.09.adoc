@@ -12,8 +12,97 @@
 |Description:      |Release Notes
 |===
 
-=== MEPA: Update APB callout function formal argument update
+=== MEPA: Update APB callout function formal argument
 
-Update apb read/write callout formal argument value to 32bit.
-This is to allow 32bit register read/write for the PHYs using APB access.
+Update the apb read/write callout formal argument value to 32 bit.
+This is to allow 32 bit register read/write for the PHYs using APB access.
 
+=== Add support for vsc8574 light version
+
+Add the driver vsc8574 under mepa/microchip. This is a subset of the vtss driver
+which supports only the vsc8574/vsc8504 rev E family. On the host side it supports
+only the QSGMII interface, while on the line side it supports only SGMII and
+1000BASE-X. It doesn't support any of the advanced features like PTP, SQI, etc.;
+it supports only basic link up and link down.
+
+=== Add support for Aeonsemi
+
+The AeonSemi AS21xxx/AS22xxx is a firmware-driven multi-gigabit BASE-T PHY,
+configured almost entirely through an IPC mailbox over MDIO. On the line
+side it negotiates 100M, 1G, 2.5G, 5G and 10G, full duplex only.
+Every rate above 100M requires auto-negotiation, so 100M is the one speed
+that can be forced. The host side runs XFI/SFI, SGMII, SGMII-2G5 or USXGMII but
+does not rate-adapt in XFI. Diagnostics cover die temperature, an eye scan,
+transmit FIR taps, and per-block packet, SerDes, NGPHY and copper auto-negotiation
+counters. Both line and host loopbacks can be enabled.
+
+=== MEPA tunables API
+
+Add an API to allow configuring different parameters of the PHY.
+It is possible to configure the PHY interface towards the host or towards the
+media side. Currently only the vsc8574 driver implements this API, and it is
+possible to configure only the TX_AMPL towards the line side.
+
+=== MEPA add pre- and post-cursor FIR taps to mepa_serdes_tx_conf_t
+
+A transmitter described by FIR taps cannot be expressed as a single boost
+value. Add pre and post next to level and boost, so a driver whose PHY takes
+taps can be handed them directly, with level as the main tap. The existing
+fields keep their meaning, so drivers implementing only level and boost are
+unaffected.
+
+=== LAN80XX: Fix possible deadlocks in the functions
+
+There were possible deadlocks in the lan80xx, as in some cases it was returning
+without releasing the lock.
+
+=== LAN8814: Add support for LAN8814 LP
+
+Add support for a new version of the LAN8814, the LAN8814 Low power mode. The
+only difference between the LAN8814 and the LAN8814LP is the current usage.
+
+=== LAN8814: Add support for temperature monitoring
+
+Add support for reading the temperature of the PHY.
+
+=== LAN8X8X: Add support for cable diagnostics
+
+Extend the lan8x8x driver to implement the cable diagnostics API.
+
+=== LAN80XX: Fix for Number of VLAN Tag matching and Priority config in MACsec
+
+Enabled Number of VLAN Tag matching along with VLAN ID matching in MACsec. Also,
+the MACsec IP of the LAN80XX supports Priority from 0 - 7 but MEPA supports
+0 - 15, so this is now mapped to the LAN80XX range.
+
+=== LAN80XX: Fix for Data Traffic loss when different FEC is enabled on Host and Line side
+
+Enabled Host MAC DIC when RS-FEC is enabled on the host side to handle the
+back pressure. Also fixed the incorrect RX_READ_THRESHOLD config caused by
+asymmetric FEC configured on the host and line side of the PHY, by reading the
+actual FEC from HW and updating the RX_READ_THRESHOLD accordingly.
+
+=== LAN8814: Fix lan8842 timestamping support
+
+It was noticed that there was a crash when using timestamping on the lan8842.
+The problem was that sometimes it was accessing the registers through the base
+device, which the lan8842 doesn't have, so we would see crashes.
+
+=== LAN80XX: Fix MACsec Egress/Ingress TCAM VLAN sub-port matching
+
+secy->tag_bypass is the tags-in-the-clear count and only controls the
+SecTag offset. Using it to program KEY0 NUM_TAGS breaks any SecY where
+the number of tags left in the clear differs from the number of tags the
+pattern matches on (e.g. double-tagged SecY with no tags in the clear —
+tag_bypass=0 causes the TCAM rule to match untagged frames, so traffic
+is never classified to the correct SecY). Derive NUM_TAGS from the encap
+pattern booleans instead:
+	u32 num_tags = pattern->has_vlan_inner_tag ? 2 : pattern->has_vlan_tag ? 1 : 0;
+
+=== LAN80XX: Fix missing in_pkts_no_sci accumulation in secy counters
+
+In lan80xx_macsec_secy_counters_get_, the INPKTSNOSCI hardware counter
+was read into 'cnt' but the accumulate line was missing. The subsequent
+in_pkts_unknown_sci read immediately overwrote 'cnt', silently discarding
+the NoSCI count. This also caused in_pkts_no_sa_error to be understated
+since it is derived from in_pkts_no_sci.
