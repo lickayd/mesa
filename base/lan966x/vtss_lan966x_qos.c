@@ -1300,7 +1300,7 @@ static vtss_rc tas_list_start(vtss_state_t             *vtss_state,
            QSYS_TAS_STARTUP_CFG_OBSOLETE_IDX((obsolete_list_idx != TAS_LIST_IDX_NONE)
                                                  ? obsolete_list_idx
                                                  : list_idx) |
-               QSYS_TAS_STARTUP_CFG_STARTUP_TIME(startup_time / 256));
+               QSYS_TAS_STARTUP_CFG_STARTUP_TIME((startup_time + 255) / 256));
     REG_WR(QSYS_TAS_LIST_CFG, QSYS_TAS_LIST_CFG_LIST_BASE_ADDR(entry_idx));
 
     /* Configure the profile */
