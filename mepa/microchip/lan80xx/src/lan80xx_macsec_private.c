@@ -2702,6 +2702,7 @@ static mepa_rc lan80xx_macsec_secy_counters_get_(mepa_device_t                 *
     } else {
         LAN80XX_MACSEC_CNT64_RD(dev, port_no, LAN80XX_MACSEC_INGR_CORE_STAT_SECY_COUNTERS_PAGE1_INPKTSNOSCI_LO(secy_id - LAN80XX_MACSEC_SC_REC_PAGE0_NUM), &cnt);
     }
+    secy->secy_cnt.in_pkts_no_sci += cnt;
     //in_pkts_unknown_sci
     if (secy_id < LAN80XX_MACSEC_SC_REC_PAGE0_NUM) {
         LAN80XX_MACSEC_CNT64_RD(dev, port_no, LAN80XX_MACSEC_INGR_CORE_STAT_SECY_COUNTERS_PAGE0_INPKTSUNKNOWNSCI_LO(secy_id), &cnt);
