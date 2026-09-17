@@ -2055,10 +2055,11 @@ static mepa_rc lan80xx_macsec_sa_tcam_key_mask_set(mepa_device_t *dev,
         return rc;
     }
     u8 page1 = record < LAN80XX_MACSEC_XFORM_REC_NUM_PAGE0 ? 0 : 1;
-    u32 tag_bypass = secy->tag_bypass;
+    /* Use encap pattern booleans for TCAM tag count; tag_bypass only controls SecTag offset. */
+    u32 num_tags = pattern->has_vlan_inner_tag ? 2 : pattern->has_vlan_tag ? 1 : 0;
     if (record < LAN80XX_MACSEC_XFORM_REC_NUM_PAGE0) {
         LAN80XX_CSR_WR(dev, port_no, LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_KEY0(record)),
-                       LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_KEY0_NUM_TAGS(1 << tag_bypass)) |
+                       LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_KEY0_NUM_TAGS(1 << num_tags)) |
                        LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_M, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_KEY0_MACSEC_TAGGED));
 
         LAN80XX_CSR_WR(dev, port_no, LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_KEY1(record)),
@@ -2074,7 +2075,7 @@ static mepa_rc lan80xx_macsec_sa_tcam_key_mask_set(mepa_device_t *dev,
                        MACSEC_BS(pattern->vid_inner) << 8);
     } else {
         LAN80XX_CSR_WR(dev, port_no, LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_KEY_MASK_PAGE1_TCAM_KEY0(record - LAN80XX_MACSEC_XFORM_REC_NUM_PAGE0)),
-                       LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_KEY_MASK_PAGE1_TCAM_KEY0_NUM_TAGS(1 << tag_bypass)) |
+                       LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_KEY_MASK_PAGE1_TCAM_KEY0_NUM_TAGS(1 << num_tags)) |
                        LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_M, egr, CORE_EIP_TCAM_KEY_MASK_PAGE1_TCAM_KEY0_MACSEC_TAGGED));
 
         LAN80XX_CSR_WR(dev, port_no, LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX, egr, CORE_EIP_TCAM_KEY_MASK_PAGE1_TCAM_KEY1(record - LAN80XX_MACSEC_XFORM_REC_NUM_PAGE0)),
@@ -2117,7 +2118,7 @@ static mepa_rc lan80xx_macsec_sa_tcam_key_mask_set(mepa_device_t *dev,
                         LAN80XX_EGR_INGR_REG_EXPAN(LAN80XX_F, egr, CORE_EIP_TCAM_KEY_MASK_PAGE0_TCAM_MASK4_ETHERTYPE_MASK(LAN80XX_MACSEC_TCAM_ETHTYPE_MASK)));
     }
 
-    /* KEY0 NUM_TAGS is  (1 << tag_bypass). MASK0 must enable compare on those
+    /* KEY0 NUM_TAGS is (1 << num_tags). MASK0 must enable compare on those
      * bits (0x7F); without it tag count is don't-care and the highest-priority rule
      * (untagged) wins every frame.
      */
