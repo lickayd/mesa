@@ -809,17 +809,26 @@ static mepa_rc vsc8574_phy_set_private_atom(mepa_device_t *dev, const vtss_phy_m
 static mepa_rc vsc8574_phy_pass_through_speed_mode(mepa_device_t *dev)
 {
     vsc8574_data_t *data = (vsc8574_data_t *)(dev->data);
+    BOOL            aneg_ena = data->conf.mac_if_pcs.serdes_aneg_ena;
+    u16             new_reg_value;
 
     // From Protocol Transfer mode Guide (Written by James McIntosh and Jim Barnette)
     MEPA_RC(vsc8574_phy_page_std(dev));
-    //Protocol Transfer mode Guide : Section 4.1.1 - Aneg must be enabled
-    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_MODE_CONTROL, VTSS_F_PHY_MODE_CONTROL_AUTO_NEG_ENA, VTSS_F_PHY_MODE_CONTROL_AUTO_NEG_ENA));
+    // Protocol Transfer mode Guide : Section 4.1.1 - Aneg must be enabled.
+    // That holds for a Cu SFP, where the PHY inside the module negotiates and
+    // reports the result in the Cl37 code words which the line side passes on.
+    // A DAC to another MAC has no such link partner, so follow the in-band ANEG
+    // setting of the board instead: with it disabled neither the line side
+    // (register 0) nor the MAC side (register 16E3) negotiates.
+    new_reg_value = (u16)(aneg_ena ? VTSS_F_PHY_MODE_CONTROL_AUTO_NEG_ENA : 0U);
+    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_MODE_CONTROL, new_reg_value,
+                               VTSS_F_PHY_MODE_CONTROL_AUTO_NEG_ENA));
 
     MEPA_RC(vsc8574_phy_page_ext3(dev));
 
     // Default clear "force advertise ability" bit as well
-    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_MAC_SERDES_PCS_CONTROL,
-                               VTSS_F_MAC_SERDES_PCS_CONTROL_ANEG_ENA,
+    new_reg_value = (u16)(aneg_ena ? VTSS_F_MAC_SERDES_PCS_CONTROL_ANEG_ENA : 0U);
+    MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_MAC_SERDES_PCS_CONTROL, new_reg_value,
                                VTSS_F_MAC_SERDES_PCS_CONTROL_ANEG_ENA | VTSS_F_MAC_SERDES_PCS_CONTROL_FORCE_ADV_ABILITY));
 
     // Protocol Transfer mode Guide : Section 4.1.3
@@ -855,7 +864,8 @@ static mepa_rc vsc8574_phy_pass_through_speed_mode(mepa_device_t *dev)
     // user simply re-applies the current config, forcing ANEG would drop the link
     // temporarily. The warm-start branch of the original is dropped - vsc8574 has
     // no warm-start support, and there the flag is only set, never acted on.
-    if (!data->cu_sfp_config_complete && data->conf.mode == VTSS_PHY_MODE_ANEG) {
+    if (aneg_ena && !data->cu_sfp_config_complete &&
+        data->conf.mode == VTSS_PHY_MODE_ANEG) {
         MEPA_RC(PHY_WR_MASKED_PAGE(dev, VTSS_PHY_MODE_CONTROL,
                                    VTSS_F_PHY_MODE_CONTROL_AUTO_NEG_ENA |
                                    VTSS_F_PHY_MODE_CONTROL_RESTART_AUTO_NEG,
@@ -2393,9 +2403,18 @@ static mepa_rc vsc8574_conf_set(mepa_device_t *dev,
     phy_config = data->conf;
 
     if (config->admin.enable) {
-        if (config->speed == MESA_SPEED_AUTO ||
-                config->speed == MESA_SPEED_1G) {
-            phy_config.mode = VTSS_PHY_MODE_ANEG;
+        if (config->speed == MESA_SPEED_AUTO || config->speed == MESA_SPEED_1G) {
+            // With in-band ANEG disabled in pass-through mode nothing
+            // negotiates, so the line side status is only available in the
+            // protocol transfer bits of 24E3, which are decoded in forced
+            // mode. Staying in ANEG mode would instead gate the link on an
+            // ANEG that never completes.
+            if (vsc8574_is_media_if_passthru(data->media_if) &&
+                !config->mac_if_aneg_ena) {
+                phy_config.mode = VTSS_PHY_MODE_FORCED;
+            } else {
+                phy_config.mode = VTSS_PHY_MODE_ANEG;
+            }
         } else {
             phy_config.mode = VTSS_PHY_MODE_FORCED;
         }
