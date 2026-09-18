@@ -20,6 +20,11 @@ spdx-elements:
     version: "5.10.1"
     group: doc
     description: Icon toolkit (fonts, CSS and JS) used by the documentation.
+    # purl: confirmed on npm registry (@fortawesome/fontawesome-free@5.10.1 exists).
+    # cpe: no library-level CPE namespace in NVD (only a WordPress-plugin-scoped entry).
+    external_refs:
+      - type: purl
+        locator: "pkg:npm/%40fortawesome/fontawesome-free@5.10.1"
 
   - id: SPDXRef-jquery
     name: "LIB: jQuery"
@@ -32,6 +37,13 @@ spdx-elements:
     version: "1.7.2"
     group: doc
     description: JavaScript DOM/AJAX library used by the documentation.
+    # purl: confirmed on npm registry (jquery@1.7.2 exists).
+    # cpe: confirmed in NVD -- 146 CVEs filed under cpe:2.3:a:jquery:jquery.
+    external_refs:
+      - type: purl
+        locator: "pkg:npm/jquery@1.7.2"
+      - type: cpe23Type
+        locator: "cpe:2.3:a:jquery:jquery:1.7.2:-:*:*:*:*:*:*"
 
   - id: SPDXRef-bootstrap
     name: "LIB: Bootstrap"
@@ -44,3 +56,10 @@ spdx-elements:
     version: "3.2.0"
     group: doc
     description: CSS framework used to style the documentation.
+    # purl: confirmed on npm registry (bootstrap@3.2.0 exists).
+    # cpe: confirmed in NVD -- 6 CVEs filed under cpe:2.3:a:getbootstrap:bootstrap:3.2.0.
+    external_refs:
+      - type: purl
+        locator: "pkg:npm/bootstrap@3.2.0"
+      - type: cpe23Type
+        locator: "cpe:2.3:a:getbootstrap:bootstrap:3.2.0:-:*:*:*:*:*:*"

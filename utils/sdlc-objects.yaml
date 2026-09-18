@@ -33,6 +33,11 @@ spdx-elements:
     download_location: https://github.com/ARM-software/optimized-routines
     version: "v23.01"
     description: Optimized implementations of memset/memcmp and other library functions for ARM.
+    # purl: confirmed -- tag v23.01 exists on GitHub (ARM-software/optimized-routines).
+    # cpe: no CPE namespace for this library in the NVD.
+    external_refs:
+      - type: purl
+        locator: "pkg:github/ARM-software/optimized-routines@v23.01"
 
   - id: SPDXRef-arm-tf-memset
     name: "LIB: Arm Trusted Firmware memset"
@@ -46,6 +51,14 @@ spdx-elements:
       (lib/libc/memset.c), upstream commit 9881bb93a3bc0a3ea37e9f093e09ab4b360a9e48.
     version: "v2.8.0"
     description: memset() implementation from ARM Trusted Firmware libc.
+    # purl: confirmed -- tag v2.8.0 exists on GitHub (ARM-software/arm-trusted-firmware).
+    # cpe: confirmed in NVD -- CVEs filed under cpe:2.3:o:trustedfirmware:trusted_firmware-a
+    #   (part 'o:' firmware/OS, vendor 'trustedfirmware', not 'arm' -- verified against NVD).
+    external_refs:
+      - type: purl
+        locator: "pkg:github/ARM-software/arm-trusted-firmware@v2.8.0"
+      - type: cpe23Type
+        locator: "cpe:2.3:o:trustedfirmware:trusted_firmware-a:2.8.0:-:*:*:*:*:*:*"
 
   # Test cases adapted from LLVM libc; not compiled into the shipped library.
   - id: SPDXRef-llvm-libc-tests
@@ -65,3 +78,10 @@ spdx-elements:
     version: "15.0.7"
     group: test
     description: LLVM libc test cases adapted for the lm_utils string functions.
+    # purl: confirmed -- tag llvmorg-15.0.7 exists on GitHub (llvm/llvm-project).
+    # cpe: confirmed in NVD -- 43 CPE entries under cpe:2.3:a:llvm:llvm (versions 1.0--8.0+).
+    external_refs:
+      - type: purl
+        locator: "pkg:github/llvm/llvm-project@llvmorg-15.0.7"
+      - type: cpe23Type
+        locator: "cpe:2.3:a:llvm:llvm:15.0.7:-:*:*:*:*:*:*"

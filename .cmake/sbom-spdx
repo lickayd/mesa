@@ -67,6 +67,16 @@ def package_hash(c)
   }
   h["sourceInfo"]  = c.source_info.strip if c.source_info
   h["description"] = c.description.strip if c.description
+  # SPDX 2.3 externalRefs: PACKAGE-MANAGER (purl) and SECURITY (cpe*).
+  # referenceCategory is fully determined by referenceType.
+  unless c.external_refs.empty?
+    cat = { "purl" => "PACKAGE-MANAGER", "cpe23Type" => "SECURITY", "cpe22Type" => "SECURITY" }
+    h["externalRefs"] = c.external_refs.map do |r|
+      { "referenceCategory" => cat.fetch(r["type"], "OTHER"),
+        "referenceType"     => r["type"],
+        "referenceLocator"  => r["locator"] }
+    end
+  end
   h
 end
 

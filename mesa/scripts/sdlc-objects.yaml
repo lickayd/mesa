@@ -16,3 +16,8 @@ spdx-elements:
     version: "0.3"
     group: build-tool
     description: Expression-based calculation language used by the build-time header parser.
+    # purl: confirmed -- kalc 0.3 exists on RubyGems.org.
+    # cpe: no NVD entries for this gem; too niche for a CPE namespace.
+    external_refs:
+      - type: purl
+        locator: "pkg:gem/kalc@0.3"

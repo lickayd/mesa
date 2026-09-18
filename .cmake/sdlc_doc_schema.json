@@ -233,6 +233,29 @@
                     "minLength": 1,
                     "description": "Short component description -> SPDX PackageDescription"
                 },
+                "external_refs": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "description": "SPDX externalRefs: PURL (PACKAGE-MANAGER) and CPE (SECURITY) identifiers for vulnerability scanning and supply-chain tooling. Only add entries that are verified against an authoritative source (registry or NVD); do not guess.",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["type", "locator"],
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": ["purl", "cpe23Type", "cpe22Type"],
+                                "description": "SPDX externalRef referenceType. 'purl' maps to referenceCategory PACKAGE-MANAGER; 'cpe23Type'/'cpe22Type' map to SECURITY."
+                            },
+                            "locator": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "The SPDX externalRef referenceLocator value, e.g. 'pkg:npm/jquery@1.7.2' or 'cpe:2.3:a:jquery:jquery:1.7.2:-:*:*:*:*:*:*'."
+                            }
+                        }
+                    }
+                },
                 "external-spdx": {
                     "type": "object",
                     "additionalProperties": false,

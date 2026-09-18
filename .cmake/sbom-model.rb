@@ -33,7 +33,7 @@ class SbomElement
   attr_reader :id, :name, :directory, :files, :license, :license_file,
               :download_location, :source_info, :version, :use_packet_version,
               :copyright, :no_src_aggr, :sbom_add_kids, :description, :yaml_dir, :path,
-              :group, :external_spdx
+              :group, :external_spdx, :external_refs
   attr_reader :kids, :parents
 
   # d: the spdx-element mapping; path: the yaml file it was loaded from.
@@ -56,6 +56,7 @@ class SbomElement
     @group = d["group"] || "product"
     @external_spdx = d["external-spdx"]   # nil, or { "provider" =>, "import" => }
     @sbom_add_kids = d["sbom_add_kids"] || []
+    @external_refs = d["external_refs"] || []
     @description = d["description"]
     @kids = []
     @parents = []

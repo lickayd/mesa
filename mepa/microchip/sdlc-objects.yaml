@@ -120,3 +120,8 @@ spdx-elements:
     download_location: git+https://github.com/LekKit/sha256.git
     version: "c6cf8e509a713ef28c0b1b2f12578735b6402323"
     description: SHA-256 algorithm implementation (C/C++), used by the LAN80xx PHY driver.
+    # purl: confirmed -- commit c6cf8e5 exists on GitHub (LekKit/sha256).
+    # cpe: no NVD entries for this library; too niche for a CPE namespace.
+    external_refs:
+      - type: purl
+        locator: "pkg:github/LekKit/sha256@c6cf8e509a713ef28c0b1b2f12578735b6402323"
