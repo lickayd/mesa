@@ -1145,6 +1145,13 @@ int main(int argc, char **argv)
     // Parse options
     main_parse_options(argc, argv);
 
+    fprintf(stderr, "\n"
+                    "*** MESA DEMONSTRATION FIRMWARE - NOT FOR PRODUCTION USE ***\n"
+                    "This software is for evaluation and integration purposes only.\n"
+                    "It must only be operated in a safe, operator-controlled environment.\n"
+                    "Do NOT connect to untrusted networks. See SECURITY.md for full details.\n"
+                    "\n");
+
     if (!run_in_foreground) {
         if (daemon(0, 1) < 0) {
             T_E("daemon failed");
