@@ -152,12 +152,20 @@ end
 # child's output): sbom-spdx's progress and any validation/attribution errors
 # must be visible in the build log, while a non-zero exit still fails the build.
 sys ".cmake/sbom-spdx --release --bin-tree #{$out_name}/bin #{ext.join(' ')} " \
-    "-o #{$out_name}/mesa-sbom.spdx.json"
+    "-o #{$out_name}/mesa-binary.spdx.json"
 
 # Bake a standalone, browsable HTML viewer with the SBOM inlined, shipped next to
 # the JSON so the release can be inspected without a server or file picker.
-run ".cmake/spdx-outline-inline.rb #{$out_name}/mesa-sbom.spdx.json " \
-    "#{$out_name}/mesa-sbom-outline.html 2>&1"
+run ".cmake/spdx-outline-inline.rb #{$out_name}/mesa-binary.spdx.json " \
+    "#{$out_name}/mesa-binary-outline.html 2>&1"
+
+# Generate the source-only SBOM: covers only the MESA/MEPA/MEBA library source
+# components (SPDXRef-group-source). This is the relevant SBOM for library
+# integrators who do not use the demonstration firmware; it contains none of the
+# BSP/rootfs packages and produces a focused, manageable CVE report.
+sys ".cmake/sbom-spdx --source -o #{$out_name}/mesa-source.spdx.json"
+run ".cmake/spdx-outline-inline.rb #{$out_name}/mesa-source.spdx.json " \
+    "#{$out_name}/mesa-source-outline.html 2>&1"
 
 run "tar -czvf #{$out_name}.tar.gz #{$out_name}"
 
@@ -167,10 +175,13 @@ if File.exist? "./images"
   run "cp #{$out_name}/bin/arm64/mesa/demo/*.itb images/."
   run "cp #{$out_name}/bin/arm/mesa/demo/*.ext4.gz images/."
   run "cp #{$out_name}/bin/arm64/mesa/demo/*.ext4.gz images/."
-  # The SBOM (and its browsable HTML outline) as loose artifacts, so they can be
-  # picked up and viewed directly without unpacking the release tarball.
-  run "cp #{$out_name}/mesa-sbom.spdx.json images/."
-  run "cp #{$out_name}/mesa-sbom-outline.html images/."
+  # The SBOMs, VEX files, and their browsable HTML outlines as loose artifacts,
+  # so they can be picked up and viewed directly without unpacking the tarball.
+  run "cp #{$out_name}/mesa-binary.spdx.json images/."
+  run "cp #{$out_name}/mesa-binary-outline.html images/."
+  run "cp #{$out_name}/mesa-source.spdx.json images/."
+  run "cp #{$out_name}/mesa-source-outline.html images/."
+  try "cp #{$out_name}/.vex/mesa-source.openvex.json images/."
 end
 run "rm -rf #{$out_name}"
 
