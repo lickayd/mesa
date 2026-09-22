@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/microchip-ung/mesa/blob/master/mesa-vex-library.openvex.json",
+  "author": "Microchip Technology Inc.",
+  "timestamp": "2026-09-22T00:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2022-47630",
+        "description": "Out-of-bounds read in Arm Trusted Firmware-A's i.MX platform SiP/PSCI handler (plat/imx/common/imx_sip_handler.c and plat/imx/imx8m/imx8m_psci.c)."
+      },
+      "products": [
+        {
+          "@id": "pkg:github/ARM-software/arm-trusted-firmware@v2.8.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "MESA vendors a single file from ARM Trusted Firmware-A v2.8.0: lib/libc/memset.c (vendored as src/lm_utils_memset.c, upstream commit 9881bb93). This file is a standalone memset() implementation with no dependencies on TF-A platform code, secure-world services, or boot chain infrastructure. CVE-2022-47630 is in the i.MX platform SiP/PSCI handler, which is not present in MESA."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-31339",
+        "description": "Buffer overflow in Arm Trusted Firmware-A before 2.10.1 in the TBBR (Trusted Board Boot Requirements) certificate parsing path."
+      },
+      "products": [
+        {
+          "@id": "pkg:github/ARM-software/arm-trusted-firmware@v2.8.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "MESA vendors a single file from ARM Trusted Firmware-A v2.8.0: lib/libc/memset.c (vendored as src/lm_utils_memset.c, upstream commit 9881bb93). This file is a standalone memset() implementation with no dependencies on TF-A platform code, secure-world services, or boot chain infrastructure. CVE-2023-31339 is in the TBBR certificate parsing path, which is not present in MESA."
+    }
+  ]
+}
