@@ -1,4 +1,4 @@
-# Copyright (c) 2026 Microchip Technology Inc. and its subsidiaries.
+# Copyright (c) 2004-2026 Microchip Technology Inc. and its subsidiaries.
 # SPDX-License-Identifier: MIT
 
 # Security Policy
