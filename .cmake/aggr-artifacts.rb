@@ -152,7 +152,7 @@ end
 # child's output): sbom-spdx's progress and any validation/attribution errors
 # must be visible in the build log, while a non-zero exit still fails the build.
 sys ".cmake/sbom-spdx --release --bin-tree #{$out_name}/bin #{ext.join(' ')} " \
-    "-o #{$out_name}/mesa-binary.spdx.json"
+    "-o #{$out_name}/mesa-binary.spdx.json 2>&1"
 
 # Bake a standalone, browsable HTML viewer with the SBOM inlined, shipped next to
 # the JSON so the release can be inspected without a server or file picker.
@@ -163,7 +163,7 @@ run ".cmake/spdx-outline-inline.rb #{$out_name}/mesa-binary.spdx.json " \
 # components (SPDXRef-group-source). This is the relevant SBOM for library
 # integrators who do not use the demonstration firmware; it contains none of the
 # BSP/rootfs packages and produces a focused, manageable CVE report.
-sys ".cmake/sbom-spdx --source -o #{$out_name}/mesa-source.spdx.json"
+sys ".cmake/sbom-spdx --source -o #{$out_name}/mesa-source.spdx.json 2>&1"
 run ".cmake/spdx-outline-inline.rb #{$out_name}/mesa-source.spdx.json " \
     "#{$out_name}/mesa-source-outline.html 2>&1"
 
