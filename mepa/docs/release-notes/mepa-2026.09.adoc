@@ -93,7 +93,7 @@ device, which the lan8842 doesn't have, so we would see crashes.
 secy->tag_bypass is the tags-in-the-clear count and only controls the
 SecTag offset. Using it to program KEY0 NUM_TAGS breaks any SecY where
 the number of tags left in the clear differs from the number of tags the
-pattern matches on (e.g. double-tagged SecY with no tags in the clear —
+pattern matches on (e.g. double-tagged SecY with no tags in the clear --
 tag_bypass=0 causes the TCAM rule to match untagged frames, so traffic
 is never classified to the correct SecY). Derive NUM_TAGS from the encap
 pattern booleans instead:
